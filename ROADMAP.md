@@ -183,12 +183,21 @@
 |---------|-------|--------|-------|-------------- |
 | [v0.88.0](roadmap/v0.88.0.md) | **Datalog-native PageRank & graph analytics** — iterative PageRank via Datalog^agg + tabling; `pg:pagerank()` / `pg:pagerank(?node, ?topic)` SPARQL functions; personalized + predicate-scoped PR; magic-sets partial-graph PR; `pg_ripple.pagerank_run()` SQL function; **pg-trickle incremental refresh** (K-hop Z-set, score bounds, staleness columns, selective recomputation); confidence-weighted edges (v0.87 integration); topic-sensitive multi-run; edge-weight predicates; reverse/in-degree direction; temporal decay; SHACL constraint-aware ranking (`sh:importance`, `sh:excludeFromRanking`, `shacl_score()` threshold); sketch-based `pg:topN_approx()`; score-explanation trees (`explain_pagerank()`); graph-partitioned parallel computation; standard-format export (Turtle/JSON-LD/CSV/N-Triples); federation blend mode; four alternative centrality measures via `pg:centrality()` (betweenness, closeness, eigenvector, Katz); IVM queue metrics; **six v0.87×v0.88 synergies**: confidence-attenuated K-hop propagation (PR-TRICKLE-CONF-01), probabilistic PageRank via `@weight` rules (PR-PROB-DATALOG-01), centrality-guided entity deduplication (PR-ENTITY-RESOLUTION-01), source-trust-weighted eigenvector centrality (PR-TRUST-EIGEN-01), confidence-gated federation edges (PR-FED-CONF-01), temporal authority via Katz centrality (PR-KATZ-TEMPORAL-01); PT0401–PT0423 error catalog | Released ✅ | Very Large | [Full details](roadmap/v0.88.0-full.md) |
 
+### Assessment 14 Remediation (v0.89.0 – v0.92.0)
+
+| Version | Theme | Status | Scope | Full details |
+|---------|-------|--------|-------|-------------- |
+| [v0.89.0](roadmap/v0.89.0.md) | **A14 High remediation** — delete `src/gucs/registration.rs.bak` + CI lint; migration-chain checkpoints v0.84–v0.88 + structural version-sync assertion; bump `COMPATIBLE_EXTENSION_MIN` to v0.88.0; `just bump-version X.Y.Z` recipe; confidence noisy-OR proptest vs reference oracle; `check_auth_write` on mutating PageRank handlers; GUC name audit before API freeze; default rate limit 100 req/s; `fuzzy_max_input_length` + `pagerank_max_seeds` guards; IRI escaping in `export_pagerank()` | Planned | Large | [Full details](roadmap/v0.89.0-full.md) |
+| [v0.90.0](roadmap/v0.90.0.md) | **A14 Medium: correctness, performance, concurrency, code quality** — PageRank convergence-norm GUC + K-hop drift bound doc; SPARQL MINUS blank-scope regression; export format enum validation; WCOJ integration for large-graph PageRank; `clippy::unwrap_used` workspace lint gate; PageRank streaming without temp materialisation; embedding fast-path gate; confidence ANALYZE; `pagerank_dirty_edges` deadlock test; advisory lock for concurrent PageRank runs; confidence + PageRank proptests; confidence-loader fuzz target; PageRank scale gate; concurrent SPARQL+PageRank test; pre-emptive splits of seven 1,300–1,700 line files; `src/pagerank/` + `src/uncertain/` module splits; probabilistic weight parser validation; cyclic-convergence documentation | Planned | Large | [Full details](roadmap/v0.90.0-full.md) |
+| [v0.91.0](roadmap/v0.91.0.md) | **A14 Medium: observability, API, standards, build, docs** — PageRank IVM Prometheus gauges; SHACL score-log retention GUC + background vacuum; SSE endpoint verification; HTTP routing middleware extraction; Arrow Flight COUNT→EXPLAIN swap; `explain_pagerank_json()` JSONB variant; PT error code registry (PT0301–PT0423); SPARQL 1.2 tracking update; RDF-star compliance matrix; ProbLog citation; `lint-version-sync` CI extension; dedicated `migration-chain.yml` workflow; ureq + arrow/parquet upgrade triage; IVM boundary documentation; CWB confidence-propagation test; CDC LSN watermark batching; compatibility matrix v0.87/v0.88 rows; `pagerank.md` completeness audit | Planned | Medium | [Full details](roadmap/v0.91.0-full.md) |
+| [v0.92.0](roadmap/v0.92.0.md) | **A14 Low-severity polish** — PageRank bounds source comment; damping tuning guide; SERVICE SILENT TLS test; `describe_form` alias contract; RSA dependency audit; `pagerank_dirty_edges` RLS; `pagerank_find_duplicates` STABLE; cargo-audit `--deny unmaintained`; `pagerank_partition` auto-tune default; `fuzzy_match` IMMUTABLE; Datalog cyclic-dep regression; confidence sub-xact rollback test; benchmark throughput history; `.unwrap()` audit v0.87/v0.88; `diagnostic_report()` v0.87/v0.88 catalog; `SOURCE_DATE_EPOCH` reproducible builds; `owl:sameAs` PageRank dedup doc; CDC `pg_notify` payload bound; SSE backpressure load test; WC-01–WC-05 post-v1.0 aspirational tracking issues filed | Planned | Medium | [Full details](roadmap/v0.92.0-full.md) |
+
 ### Stable Release & Ecosystem (v1.0.0 – v1.1.0)
 
 | Version | Theme | Status | Scope | Full details |
 |---------|-------|--------|-------|-------------- |
 | [v1.0.0](roadmap/v1.0.0-full.md) | Production hardening: 72-hour continuous load test, third-party security audit, API stability guarantee, documentation final audit and freeze, public BSBM/WatDiv benchmark results published | Planned | Medium | [Full details](roadmap/v1.0.0-full.md) |
-| [v1.1.0](roadmap/v1.1.0.md) | Post-1.0 ecosystem: Cypher/GQL read-only transpiler (`MATCH … RETURN`) + write operations (`CREATE`/`SET`/`DELETE`), Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink, materialized SPARQL views, dbt adapter | Planned | Large | [Full details](roadmap/v1.1.0-full.md) |
+| [v1.1.0](roadmap/v1.1.0.md) | Post-1.0 ecosystem: Cypher/GQL read-only transpiler (`MATCH … RETURN`) + write operations (`CREATE`/`SET`/`DELETE`), Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink, materialized SPARQL views, dbt adapter, SPARQL endpoint FDW, pgai in-database embedding generation, logical replication for pg_ripple knowledge graphs | Planned | Large | [Full details](roadmap/v1.1.0-full.md) |
 
 ## How these versions fit together
 
@@ -296,9 +305,19 @@ v0.88          ─── Graph analytics: Datalog-native PageRank + four central
                │   pg:centrality() (betweenness/closeness/eigenvector/Katz);
                │   PT0401–PT0420
        │
+v0.89–v0.92    ─── Assessment 14 remediation: delete stale .bak file + CI lint;
+               │   migration-chain checkpoints v0.84–v0.88 + structural version-sync;
+               │   COMPATIBLE_EXTENSION_MIN bump + just bump-version automation;
+               │   confidence noisy-OR proptest; check_auth_write on PageRank handlers;
+               │   GUC name audit; WCOJ integration for large-graph PageRank;
+               │   clippy::unwrap_used lint gate; module splits (7 files, pagerank/,
+               │   uncertain/); PageRank IVM Prometheus gauges; SHACL log retention;
+               │   PT0301–PT0423 error registry; SPARQL 1.2 + RDF-star matrices;
+               │   migration-chain CI workflow; ureq/arrow upgrades; Low-severity polish
+       │
 v1.0.0         ─── Stable release: 72-hour continuous load test, third-party security audit, documentation freeze, public benchmarks
        │
-v1.1           ─── Post-stable: Cypher/GQL transpiler (read-only + write ops), Jupyter kernel, LangChain/LlamaIndex tools, Kafka CDC sink, materialized SPARQL views, dbt adapter
+v1.1           ─── Post-stable: Cypher/GQL transpiler (read-only + write ops), Jupyter kernel, LangChain/LlamaIndex tools, Kafka CDC sink, materialized SPARQL views, dbt adapter, SPARQL endpoint FDW, pgai embedding, logical replication
 ```
 
 v0.1.0 through v0.5.1 build the complete core storage and query engine.
@@ -437,10 +456,39 @@ centrality-guided entity deduplication combining betweenness + `pg:fuzzy_match()
 `pg:sourceTrust` values (PR-TRUST-EIGEN-01), confidence-gated federation edges
 (PR-FED-CONF-01), and temporal authority detection via Katz centrality with
 time-aware edge weights (PR-KATZ-TEMPORAL-01); PT0401–PT0423 error catalog.
+v0.89.0 through v0.92.0 address all 97 findings from PLAN_OVERALL_ASSESSMENT_14:
+v0.89.0 closes the seven High findings and the five Must-fix pre-v1.0.0 backlog items
+— deleting the stale `src/gucs/registration.rs.bak` backup file (72 KB, bypassing the
+file-size CI lint), adding migration-chain checkpoints for v0.84–v0.88 with a
+structural version-sync assertion that eliminates the recurrence class, bumping
+`COMPATIBLE_EXTENSION_MIN` to v0.88.0 and implementing `just bump-version X.Y.Z`
+to make every future bump atomic, adding a confidence noisy-OR proptest vs a reference
+oracle, hardening mutating PageRank HTTP handlers to require write-level auth,
+auditing v0.87/v0.88 GUC names before the API freeze, and adding `fuzzy_max_input_length`
+/ `pagerank_max_seeds` guards plus IRI escaping in `export_pagerank()`; v0.90.0 sweeps
+the Medium correctness, performance, concurrency, and code-quality findings — PageRank
+convergence-norm GUC, K-hop drift bound documentation, SPARQL MINUS blank-scope
+regression test, export-format enum validation, WCOJ integration for large-graph
+PageRank (10M+ edges), `clippy::unwrap_used` workspace lint gate, streaming VP scans
+to avoid 4–8 GB temp materialisation on 100M-edge graphs, seven pre-emptive module
+splits before the 1,800-line CI gate is tripped, `src/pagerank/` and `src/uncertain/`
+submodule restructuring, probabilistic `@weight` parser validation, and cyclic
+convergence documentation; v0.91.0 addresses the remaining Medium observability, API,
+standards, build, and documentation findings — PageRank IVM Prometheus gauges,
+SHACL score-log retention GUC, SSE endpoint verification, HTTP routing middleware
+extraction, Arrow Flight row-count estimation improvement, `explain_pagerank_json()`
+JSONB variant, PT error code registry completeness (PT0301–PT0423), SPARQL 1.2
+tracking page update, RDF-star compliance matrix, dedicated `migration-chain.yml`
+CI workflow, and compatibility matrix rows for v0.87/v0.88; v0.92.0 polishes all
+39 Low-severity findings — bounds source comments, damping tuning guide, SERVICE
+SILENT TLS test, RLS on `pagerank_dirty_edges`, `fuzzy_match` IMMUTABLE annotation,
+`pagerank_partition` auto-tune, `SOURCE_DATE_EPOCH` reproducible builds, and
+WC-01–WC-05 post-v1.0.0 aspirational tracking issues filed for the v1.1.0–v1.2.0 arc.
 v1.0.0 is the stable release: a 72-hour continuous load test, a
 third-party security audit, documentation final audit and freeze, an API stability
 guarantee, and public BSBM/WatDiv benchmark results. v1.1.0 delivers
 post-stable improvements: Cypher/GQL transpiler (read-only and write operations),
 Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink,
-materialized SPARQL views, and a dbt adapter.
+materialized SPARQL views, a dbt adapter, a SPARQL endpoint FDW, pgai in-database
+embedding generation, and logical replication for pg_ripple knowledge graphs.
 
