@@ -185,7 +185,7 @@ mod pg_ripple {
                 ),
                 Some("ci/regress: v068_features.sql (EXPLAIN citus_service_pruning GUC)".to_string()),
                 Some("docs/src/reference/scalability.md".to_string()),
-                Some("src/citus.rs: citus_service_shard_annotation()".to_string()),
+                Some("src/citus/mod.rs: citus_service_shard_annotation()".to_string()),
             ),
             (
                 "citus_hll_distinct".to_string(),
@@ -259,7 +259,7 @@ mod pg_ripple {
                 ),
                 Some("ci/regress: v068_features.sql".to_string()),
                 Some("docs/src/reference/scalability.md".to_string()),
-                Some("src/citus.rs: is_citus_worker_endpoint, citus_service_shard_annotation".to_string()),
+                Some("src/citus/mod.rs: is_citus_worker_endpoint, citus_service_shard_annotation".to_string()),
             ),
             // ── Arrow Flight ───────────────────────────────────────────────
             (
@@ -643,7 +643,7 @@ mod pg_ripple {
                      and pg:confPath() SPARQL extension functions backed by pg_trgm.".to_string()),
                 Some("ci/regress: probabilistic.sql".to_string()),
                 Some("docs/src/features/uncertain-knowledge.md".to_string()),
-                Some("src/sparql/expr.rs".to_string()),
+                Some("src/sparql/expr/mod.rs".to_string()),
             ),
             (
                 "confidence_side_table".to_string(),
@@ -653,7 +653,7 @@ mod pg_ripple {
                      per-statement probabilistic scores with model column.".to_string()),
                 Some("sql/pg_ripple--0.86.0--0.87.0.sql".to_string()),
                 Some("docs/src/features/uncertain-knowledge.md".to_string()),
-                Some("src/uncertain_knowledge_api.rs".to_string()),
+                Some("src/uncertain_knowledge_api/mod.rs".to_string()),
             ),
             (
                 "soft_shacl_scoring".to_string(),
@@ -684,7 +684,7 @@ mod pg_ripple {
                      Datalog^agg + subsumptive tabling; pg_ripple.pagerank_run().".to_string()),
                 Some("ci/regress: pagerank.sql".to_string()),
                 Some("docs/src/features/pagerank.md".to_string()),
-                Some("src/pagerank.rs".to_string()),
+                Some("src/pagerank/mod.rs".to_string()),
             ),
             (
                 "pagerank_incremental".to_string(),
@@ -694,7 +694,7 @@ mod pg_ripple {
                      via _pg_ripple.pagerank_dirty_edges queue.".to_string()),
                 Some("ci/regress: pagerank.sql".to_string()),
                 Some("docs/src/features/pagerank.md".to_string()),
-                Some("src/pagerank.rs".to_string()),
+                Some("src/pagerank/mod.rs".to_string()),
             ),
             (
                 "pagerank_confidence_weighted".to_string(),
@@ -704,7 +704,7 @@ mod pg_ripple {
                      from _pg_ripple.confidence (v0.87 integration).".to_string()),
                 Some("ci/regress: pagerank.sql".to_string()),
                 Some("docs/src/features/pagerank.md".to_string()),
-                Some("src/pagerank.rs".to_string()),
+                Some("src/pagerank/mod.rs".to_string()),
             ),
             (
                 "pagerank_centrality".to_string(),
@@ -714,7 +714,7 @@ mod pg_ripple {
                      and Katz centrality via pg_ripple.centrality_run().".to_string()),
                 Some("ci/regress: pagerank.sql".to_string()),
                 Some("docs/src/features/pagerank.md".to_string()),
-                Some("src/pagerank.rs".to_string()),
+                Some("src/pagerank/mod.rs".to_string()),
             ),
             (
                 "pagerank_explain".to_string(),
@@ -724,7 +724,7 @@ mod pg_ripple {
                      score explanation tree with top-K contributor chain.".to_string()),
                 Some("ci/regress: pagerank.sql".to_string()),
                 Some("docs/src/features/pagerank.md".to_string()),
-                Some("src/pagerank.rs".to_string()),
+                Some("src/pagerank/mod.rs".to_string()),
             ),
             (
                 "pagerank_export".to_string(),
@@ -734,7 +734,7 @@ mod pg_ripple {
                      JSON-LD, CSV, or N-Triples.".to_string()),
                 Some("ci/regress: pagerank.sql".to_string()),
                 Some("docs/src/features/pagerank.md".to_string()),
-                Some("src/pagerank.rs".to_string()),
+                Some("src/pagerank/mod.rs".to_string()),
             ),
             (
                 "pagerank_entity_resolution".to_string(),
@@ -744,7 +744,7 @@ mod pg_ripple {
                      combining centrality + fuzzy matching for entity deduplication.".to_string()),
                 Some("ci/regress: pagerank.sql".to_string()),
                 Some("docs/src/features/pagerank.md".to_string()),
-                Some("src/pagerank.rs".to_string()),
+                Some("src/pagerank/mod.rs".to_string()),
             ),
             (
                 "pagerank_http_api".to_string(),
