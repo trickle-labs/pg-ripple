@@ -1214,6 +1214,51 @@ jobs:
             echo "No duplicate dependencies found."
           fi
 
+  # BUILD-01 (v0.91.0): Version sync lint — all version sources must agree.
+  lint-version-sync:
+    name: Lint — version sync across Cargo/control/HTTP (BUILD-01, v0.91.0)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Check version consistency
+        run: |
+          set -euo pipefail
+
+          # Extension Cargo.toml
+          EXT_VER=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          # pg_ripple.control
+          CTL_VER=$(grep '^default_version' pg_ripple.control | sed "s/.*'\(.*\)'.*/\1/")
+          # pg_ripple_http Cargo.toml
+          HTTP_VER=$(grep '^version' pg_ripple_http/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          # COMPATIBLE_EXTENSION_MIN in pg_ripple_http/src/main.rs
+          COMPAT_MIN=$(grep 'COMPATIBLE_EXTENSION_MIN' pg_ripple_http/src/main.rs | grep -oP '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"')
+
+          echo "Extension Cargo.toml : ${EXT_VER}"
+          echo "pg_ripple.control    : ${CTL_VER}"
+          echo "pg_ripple_http       : ${HTTP_VER}"
+          echo "COMPATIBLE_EXT_MIN   : ${COMPAT_MIN}"
+
+          FAIL=0
+          if [[ "${EXT_VER}" != "${CTL_VER}" ]]; then
+            echo "::error::Version mismatch: Cargo.toml (${EXT_VER}) != pg_ripple.control (${CTL_VER})"
+            FAIL=1
+          fi
+          if [[ "${EXT_VER}" != "${HTTP_VER}" ]]; then
+            echo "::error::Version mismatch: Cargo.toml (${EXT_VER}) != pg_ripple_http/Cargo.toml (${HTTP_VER})"
+            FAIL=1
+          fi
+          # COMPATIBLE_EXTENSION_MIN must be <= EXT_VER (semver check via sort)
+          LOWEST=$(printf '%s\n%s' "${COMPAT_MIN}" "${EXT_VER}" | sort -V | head -1)
+          if [[ "${LOWEST}" != "${COMPAT_MIN}" ]]; then
+            echo "::error::COMPATIBLE_EXTENSION_MIN (${COMPAT_MIN}) is higher than extension version (${EXT_VER})"
+            FAIL=1
+          fi
+          if [[ "${FAIL}" -eq 1 ]]; then
+            exit 1
+          fi
+          echo "All version sources are in sync."
+
   # v0.51.0: SPDX licence compliance gate
   lint-spdx-license:
     name: Lint - SPDX licence compliance (v0.51.0)

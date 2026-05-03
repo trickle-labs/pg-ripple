@@ -1,0 +1,20 @@
+-- Migration 0.90.0 → 0.91.0: Observability, API, Standards, Build & Documentation
+--
+-- New in v0.91.0:
+--   SQL functions:
+--     pg_ripple.vacuum_shacl_score_log()  → BIGINT
+--       Purges rows from _pg_ripple.shacl_score_log older than
+--       pg_ripple.shacl_score_log_retention_days. Returns count of deleted rows.
+--
+--     pg_ripple.explain_pagerank_json(node_iri TEXT, top_k INT DEFAULT 5) → JSONB
+--       Returns PageRank explanation tree as JSONB (same data as
+--       explain_pagerank(), but in structured JSON form).
+--
+--   New GUCs (no DDL changes — registered in _PG_init):
+--     pg_ripple.shacl_score_log_retention_days  (INT, default 30, Suset)
+--     pg_ripple.cdc_watermark_batch_size         (INT, default 100, Userset)
+--     pg_ripple.cdc_watermark_flush_interval_ms  (INT, default 50, Userset)
+--
+-- No schema changes (no ALTER TABLE, CREATE TABLE, or CREATE INDEX required).
+-- All new SQL functions are compiled from Rust and loaded automatically when
+-- the extension shared library is updated.

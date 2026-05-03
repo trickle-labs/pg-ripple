@@ -166,6 +166,7 @@
 - [SHACL Reference](reference/shacl.md)
 - [Storage Reference](reference/storage.md)
 - [CONSTRUCT Writeback Rules](reference/construct-rules.md)
+- [IVM Boundary: CWB vs. PageRank](reference/ivm.md)
 - [Federation Reference](reference/federation.md)
 - [CDC Reference](reference/cdc.md)
 - [GraphRAG Reference](reference/graphrag.md)

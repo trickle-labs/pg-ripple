@@ -101,6 +101,14 @@ jobs:
             pgbench -f benchmarks/hybrid_search.sql -t 1 \
             | tee hybrid_search_raw.txt
 
+      # ── CDC-02 (v0.91.0): Bidirectional relay throughput ────────────────────
+      - name: Benchmark — bidi relay throughput
+        id: bench_bidi_relay
+        run: |
+          PGHOST=localhost PGPORT=28818 PGUSER="$USER" PGDATABASE=postgres \
+            pgbench -f benchmarks/bidi_relay_throughput.sql -t 1 \
+            | tee bidi_relay_throughput_raw.txt
+
       # ── Append results to CSV history ───────────────────────────────────────
       - name: Append results to CSV trend files
         run: |
@@ -133,6 +141,7 @@ jobs:
             insert_throughput_raw.txt
             merge_throughput_raw.txt
             hybrid_search_raw.txt
+            bidi_relay_throughput_raw.txt
             benchmarks/*_history.csv
           retention-days: 90
 

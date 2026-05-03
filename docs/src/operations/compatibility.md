@@ -19,6 +19,11 @@ extension version is outside its known-compatible range.
 
 | pg_ripple_http version | pg_ripple extension range | Notes |
 |------------------------|---------------------------|-------|
+| 0.91.x | ≥ 0.88.0 | OBS-01 PageRank IVM Prometheus gauges; HTTP-03 middleware extraction; HTTP-04 EXPLAIN row estimation; API-05 `explain_pagerank_json()`; CDC watermark batching GUCs |
+| 0.90.x | ≥ 0.88.0 | A14 Medium correctness/performance: PageRank streaming, convergence-norm GUC, advisory lock, module splits |
+| 0.89.x | ≥ 0.88.0 | A14 High remediation: `check_auth_write` on mutating handlers, GUC name audit, rate limit 100 req/s default |
+| 0.88.x | ≥ 0.87.0 | Adds `pagerank_scores`, `centrality_scores`, `pagerank_dirty_edges`; requires `COMPATIBLE_EXTENSION_MIN = "0.87.0"` |
+| 0.87.x | ≥ 0.86.0 | Adds `_pg_ripple.confidence`, `shacl_score_log`; probabilistic Datalog, fuzzy SPARQL filters, soft SHACL scoring |
 | 0.86.x | ≥ 0.85.0 | D13-01 (v0.86.0): SSE streaming, graceful shutdown, new Prometheus metrics (O13-02), Arrow 413 guard (S13-08), CORS counter (S13-03), structured JSON logs (O13-04) |
 | 0.85.x | ≥ 0.84.0 | COMPATIBLE_EXTENSION_MIN bumped to 0.84.0 (S13-05); strict compat mode (PG_RIPPLE_HTTP_STRICT_COMPAT); schema.rs/federation.rs splits; encode_batch GUC API |
 | 0.84.x | ≥ 0.83.0 | OpenAPI spec served at /openapi; per-query-type metrics (METRICS-LABELS-01); /health/ready deep check (HEALTH-DEEP-01); SPARQL Update in HTTP |

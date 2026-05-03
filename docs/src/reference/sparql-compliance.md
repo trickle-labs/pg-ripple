@@ -372,3 +372,28 @@ when serializing `xsd:dateTime` literals back to N-Triples format.
 Sub-millisecond precision is silently dropped in the output. If you require
 sub-millisecond precision, store the value as a plain string literal and
 perform comparisons manually.
+
+---
+
+## RDF 1.2 / SPARQL-star Compliance Matrix (STD-02, v0.91.0)
+
+pg_ripple supports RDF-star via the `oxrdf` 0.3 data model and the `qt_s`/`qt_p`/`qt_o`
+dictionary columns introduced in v0.4.0. The table below maps each RDF 1.2 / SPARQL-star
+feature to its implementation status.
+
+| Feature | Status | Since | Notes |
+|---|---|---|---|
+| `<< s p o >>` in subject position (BGP) | ✅ Implemented | v0.4.0 | Stored via `qt_s/qt_p/qt_o` dictionary columns |
+| `<< s p o >>` in `BIND` | ✅ Implemented | v0.16.0 | Full expression support |
+| `<< s p o >>` in `FILTER` | ✅ Implemented | v0.16.0 | Comparison and isTriple() |
+| `<< s p o >>` in `CONSTRUCT` | ✅ Implemented | v0.16.0 | Emitted as Turtle-star |
+| `<< s p o >>` in `SELECT` projections | ✅ Implemented | v0.16.0 | |
+| Annotation syntax `{| p o |}` | ⚠ Partial | v0.16.0 | Parse-only; SPARQL write via `INSERT DATA` not yet supported |
+| `TRIPLE(s, p, o)` constructor function | ❌ Not implemented | — | Depends on spargebra SPARQL 1.2 grammar update |
+| `SUBJECT()` / `PREDICATE()` / `OBJECT()` destructuring | ❌ Not implemented | — | Dictionary join required; planned post-spargebra-1.2 |
+| `REIF` keyword (RDF 1.2 reification syntax) | ❌ Not started | — | spargebra grammar update required |
+| `isTriple()` function | ✅ Implemented | v0.16.0 | Returns true for quoted-triple subjects |
+
+**Overall**: pg_ripple's RDF-star foundation (v0.4.0) covers the most widely-used SPARQL-star
+patterns. Remaining gaps depend on `spargebra` 0.x adopting the SPARQL 1.2 grammar and are
+tracked as post-v1.0.0 work (see [SPARQL 1.2 tracking](../../../plans/sparql12_tracking.md)).

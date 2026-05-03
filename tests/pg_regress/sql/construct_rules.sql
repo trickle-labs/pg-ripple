@@ -394,3 +394,30 @@ SELECT pg_ripple.drop_construct_rule('cwb_explain') AS explain_rule_dropped;
 -- subsequent tests (e.g. datalog_owl_rl_deletion) start with a clean vp_rare.
 DELETE FROM _pg_ripple.vp_rare WHERE source = 1;
 SELECT TRUE AS isolation_cleanup_done;
+
+-- ── IVM-02 (v0.91.0): CWB confidence propagation ─────────────────────────────
+-- Verify that inferred triples produced by a CONSTRUCT rule carry the source=1
+-- marker and that the confidence propagation path honours prov_confidence.
+-- This test only checks that source=1 triples are written (the actual confidence
+-- value computation lives in the Rust layer and is covered by pg_test).
+
+SELECT pg_ripple.create_construct_rule(
+    'cwb_ivm02_conf',
+    'CONSTRUCT { ?s <https://cwb.test/ivm02/derived> ?o }
+     WHERE { ?s <https://cwb.test/ivm02/raw> ?o }',
+    'https://cwb.test/ivm02/target'
+) IS NULL AS ivm02_rule_created;
+
+SELECT pg_ripple.rdf_insert('https://cwb.test/ivm02/raw',
+    '<https://cwb.test/ivm02/A> <https://cwb.test/ivm02/raw> <https://cwb.test/ivm02/B> .');
+
+SELECT pg_ripple.run_full_recompute('cwb_ivm02_conf') >= 0 AS ivm02_recompute_ok;
+
+-- Inferred triples must have source = 1
+SELECT COUNT(*) >= 1 AS ivm02_inferred_triple_present
+FROM _pg_ripple.vp_rare
+WHERE source = 1;
+
+SELECT pg_ripple.drop_construct_rule('cwb_ivm02_conf') AS ivm02_rule_dropped;
+DELETE FROM _pg_ripple.vp_rare WHERE source = 1;
+SELECT TRUE AS ivm02_cleanup_done;

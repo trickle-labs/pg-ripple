@@ -1,0 +1,91 @@
+name: Migration Chain
+
+# BUILD-02 (v0.91.0): Dedicated migration chain workflow.
+#
+# Runs the full SQL migration chain test on every PR and push to main.
+# Ensures that ALTER EXTENSION pg_ripple UPDATE works end-to-end from the
+# earliest shipped version to the current default_version.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sql/**.sql'
+      - 'pg_ripple.control'
+      - 'tests/test_migration_chain.sh'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sql/**.sql'
+      - 'pg_ripple.control'
+      - 'tests/test_migration_chain.sh'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  PGRX_VERSION: "0.18.0"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  migration-chain:
+    name: Migration chain — full upgrade path (BUILD-02, v0.91.0)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: pg_ripple_test
+          POSTGRES_USER: pg_ripple
+          POSTGRES_PASSWORD: pg_ripple
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Install pgrx
+        run: cargo install cargo-pgrx --version ${{ env.PGRX_VERSION }} --locked
+
+      - name: Initialize pgrx for system Postgres
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: pg_ripple
+          PGPASSWORD: pg_ripple
+        run: |
+          PG_CONFIG=$(which pg_config || echo '')
+          if [[ -n "$PG_CONFIG" ]]; then
+            cargo pgrx init --pg18 "$PG_CONFIG"
+          else
+            echo "::warning::pg_config not found — skipping pgrx init, running header-only migration check"
+            exit 0
+          fi
+
+      - name: Build extension
+        run: cargo build --features pg18
+
+      - name: Run migration chain test
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: pg_ripple
+          PGPASSWORD: pg_ripple
+        run: bash tests/test_migration_chain.sh

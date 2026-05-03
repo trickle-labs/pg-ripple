@@ -1,8 +1,9 @@
 # SPARQL 1.2 Tracking — pg_ripple Design Document
 
 **ID**: SPARQL12-01  
-**Version**: v0.73.0  
+**Version**: v0.91.0  
 **Status**: Tracking — post-v1.0.0 unless `spargebra` ships 1.2 support before v1.0.0  
+**Last reviewed**: 2026-05-03 (W3C SPARQL 1.2 Working Draft, April 2026 snapshot)  
 
 ---
 
@@ -119,9 +120,9 @@ the v1.0.0 release.
 
 ---
 
-## Gap Analysis vs. W3C SPARQL 1.2 Draft (D13-03, v0.86.0)
+## Gap Analysis vs. W3C SPARQL 1.2 Draft (D13-03, v0.86.0; updated v0.91.0 STD-01)
 
-Last reviewed: 2026-05-02. Community draft source: <https://w3c.github.io/sparql-query/>
+Last reviewed: 2026-05-03. Community draft source: <https://w3c.github.io/sparql-query/>
 
 | SPARQL 1.2 Feature | pg_ripple Status | Notes |
 |---|---|---|

@@ -63,7 +63,9 @@ use spargebra::SparqlParser;
 pub fn sparql(query_text: &str) -> Vec<pgrx::JsonB> {
     // Normalize ARQ aggregate extensions (MEDIAN/MODE) before parsing.
     let preprocessed = parse::preprocess_arq_aggregates(query_text);
-    let query_text = preprocessed.as_str();
+    // API-04 (v0.91.0): auto-inject `PREFIX pg: <http://pg-ripple.org/fn/>` when needed.
+    let with_prefix = parse::inject_pg_prefix_if_needed(preprocessed.as_str());
+    let query_text = with_prefix.as_ref();
 
     // Determine query type.
     let query = SparqlParser::new()
@@ -141,6 +143,9 @@ fn decode_lfti_bindings_to_jsonb(bindings: Vec<wcoj::LftiBinding>) -> Vec<pgrx::
 
 /// Execute a SPARQL ASK query; returns a boolean.
 pub fn sparql_ask(query_text: &str) -> bool {
+    // API-04 (v0.91.0): auto-inject `PREFIX pg: <http://pg-ripple.org/fn/>` when needed.
+    let with_prefix = parse::inject_pg_prefix_if_needed(query_text);
+    let query_text = with_prefix.as_ref();
     let query = SparqlParser::new()
         .parse_query(query_text)
         .unwrap_or_else(|e| pgrx::error!("SPARQL parse error: {}", e));

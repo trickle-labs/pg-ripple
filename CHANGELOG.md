@@ -13,6 +13,59 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.91.0] — 2026-05-03 — Assessment 14 Medium: Observability, API, Standards, Build & Documentation
+
+**Implements v0.91.0 roadmap: completes the second half of PLAN_OVERALL_ASSESSMENT_14
+Medium remediations. Adds PageRank IVM Prometheus gauges, SHACL score log retention GUC
++ vacuum function, PostgreSQL jsonlog documentation, HTTP middleware extraction, Arrow
+Flight EXPLAIN row estimation, SPARQL `pg:` prefix auto-declaration, `explain_pagerank_json()`,
+PT0301–PT0423 error code docs, RDF-star compliance matrix, compatibility table rows through
+v0.91.x, ProbLog citation, IVM boundary architecture doc, named-argument pagerank_run examples,
+SSE regression test, BUILD lint-version-sync CI job, dedicated migration-chain workflow,
+bidi relay throughput benchmark wiring, and two new GUCs for CDC watermark control.**
+
+### Added
+
+- **OBS-01**: `pg_ripple_http/src/metrics.rs` — Three new Prometheus gauges for PageRank IVM queue telemetry: `pg_ripple_pagerank_queue_depth`, `pg_ripple_pagerank_queue_max_delta`, `pg_ripple_pagerank_queue_oldest_enqueue_seconds`. Exposed in `/metrics` endpoint via `pg_ripple_http/src/routing/admin_handlers.rs`.
+- **OBS-02**: `src/gucs/observability.rs` + `src/gucs/registration/observability.rs` — `pg_ripple.shacl_score_log_retention_days` GUC (INT, default 30, range 0–3650, Suset). `src/uncertain_knowledge_api/mod.rs` — `vacuum_shacl_score_log()` `pg_extern` function purges rows older than the retention window.
+- **OBS-03**: `docs/src/reference/observability.md` — PostgreSQL Structured Logging section explaining `pgrx::log!` → `log_destination=jsonlog` mapping; no double-serialisation risk.
+- **HTTP-02**: `tests/integration/sse_stream.sh` — SSE stream regression test for `/sparql/stream` endpoint (validates `Content-Type: text/event-stream` and `data:` event emission).
+- **HTTP-03**: `pg_ripple_http/src/routing/middleware.rs` (new file) — Extracted `apply_rate_limit()` and `build_cors_layer()` middleware helpers. `pg_ripple_http/src/routing/mod.rs` — `pub mod middleware;` declaration added.
+- **HTTP-04**: `pg_ripple_http/src/arrow_encode.rs` — Replaced COUNT(*) row-count pre-check with `EXPLAIN (FORMAT JSON, ANALYZE FALSE)` plan row estimation. `extract_plan_rows_from_explain()` helper with COUNT(*) fallback.
+- **API-04**: `src/sparql/parse.rs` — `PG_FN_NAMESPACE` constant + `inject_pg_prefix_if_needed()` auto-declares `PREFIX pg: <http://pg-ripple.org/fn/>` when a query uses `pg:` without an explicit prefix. Wired into `sparql()` and `sparql_ask()` in `src/sparql/mod.rs`. `docs/src/reference/sparql.md` — SPARQL Extension Function IRI Namespace section with function reference table and federation note.
+- **API-05**: `src/pagerank_api.rs` — `explain_pagerank_json(node_iri, top_k)` `pg_extern` function returning JSONB explanation tree.
+- **API-06**: `docs/src/reference/error-codes.md` — PT0301–PT0307 (Uncertain Knowledge) and PT0401–PT0423 (PageRank) error code tables.
+- **STD-01**: `plans/sparql12_tracking.md` — Updated version to v0.91.0; last_reviewed to 2026-05-03.
+- **STD-02**: `docs/src/reference/sparql-compliance.md` — RDF 1.2 / SPARQL-star Compliance Matrix section.
+- **STD-03**: `docs/src/features/uncertain-knowledge.md` — ProbLog citation (De Raedt, Kimmig & Toivonen 2007) with extension-vs-standard note.
+- **DOC-01**: `docs/src/operations/compatibility.md` — Compatibility table rows for v0.87.x through v0.91.x.
+- **DOC-02**: `docs/src/features/pagerank.md` — Named-argument `pagerank_run()` examples; `explain_pagerank_json()` function documentation.
+- **IVM-01**: `docs/src/reference/ivm.md` (new file) — IVM boundary architecture document for CWB-IVM vs. PageRank-IVM; monitoring commands; GUC reference. Added to `docs/src/SUMMARY.md`.
+- **IVM-02**: `tests/pg_regress/sql/construct_rules.sql` + `tests/pg_regress/expected/construct_rules.out` — CWB confidence propagation regression test verifying `source=1` marking for inferred triples.
+- **BUILD-01**: `.github/workflows/ci.yml` — `lint-version-sync` job checks `Cargo.toml` == `pg_ripple.control` == `pg_ripple_http/Cargo.toml` and validates `COMPATIBLE_EXTENSION_MIN` ≤ extension version.
+- **BUILD-02**: `.github/workflows/migration-chain.yml` (new file) — Dedicated migration chain workflow triggered on SQL/control file changes.
+- **CDC-02**: `.github/workflows/performance_trend.yml` — `benchmarks/bidi_relay_throughput.sql` wired as `bench_bidi_relay` benchmark step.
+- **New GUCs** (v0.91.0):
+  - `pg_ripple.shacl_score_log_retention_days` (INT, default 30): days to retain SHACL score log entries.
+  - `pg_ripple.cdc_watermark_batch_size` (INT, default 100): number of CDC events per watermark flush batch.
+  - `pg_ripple.cdc_watermark_flush_interval_ms` (INT, default 50): milliseconds between watermark flush cycles.
+
+### Changed
+
+- `pg_ripple_http` version bumped to `0.91.0` (in sync with extension).
+- `COMPATIBLE_EXTENSION_MIN` updated to `"0.90.0"` in `pg_ripple_http/src/main.rs`.
+
+### Dependency Triage (DEP-01, DEP-02)
+
+- **ureq 3.x** (DEP-01): ureq remains at 2.x in this release. The 3.x API is a breaking
+  change requiring significant refactoring of the federation HTTP client. Triage decision:
+  defer to post-v1.0.0 hardening cycle. Tracking: <https://github.com/algesten/ureq/blob/main/CHANGELOG.md>.
+- **arrow / parquet** (DEP-02): `cargo update --dry-run` shows compatible minor bumps
+  available (arrow 55.x → 55.y). These are patch-compatible and will be picked up by
+  Dependabot/Renovate in the normal dependency update cycle. No blocking issue identified.
+
+---
+
 ## [0.90.0] — 2026-05-XX — Assessment 14 Medium Remediation
 
 **Implements v0.90.0 roadmap: closes 24 Medium-severity findings from

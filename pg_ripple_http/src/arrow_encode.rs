@@ -240,27 +240,48 @@ pub(crate) async fn flight_do_get(
         .max(1);
 
     // S13-08 (v0.86.0): enforce row export limit BEFORE materialising the full result.
-    // We run a lightweight COUNT(*) query first; if the count exceeds the limit,
-    // return HTTP 413 with a generic message (no row count in the response body)
-    // and log the actual count server-side only.
+    // HTTP-04 (v0.91.0): replace expensive COUNT(*) with a planner row estimate via
+    // EXPLAIN (FORMAT JSON, ANALYZE FALSE). The planner estimate is available in
+    // microseconds for large queries where COUNT(*) would be a full scan. Falls back
+    // to COUNT(*) if EXPLAIN parsing fails.
     let max_export_rows: usize = std::env::var("ARROW_MAX_EXPORT_ROWS")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(10_000_000)
         .max(1);
 
-    let count_sql = format!("SELECT COUNT(*) FROM ({full_sql}) _arrow_count_");
-    // S13-08 (v0.86.0): pre-materialisation row count guard.
-    // Run COUNT(*) before fetching all rows; returns HTTP 413 if limit exceeded.
-    let row_count_check: Option<i64> = match client.query_one(&count_sql, &[]).await {
-        Ok(r) => r.try_get::<_, i64>(0).ok(),
-        Err(e) => {
-            tracing::error!("Arrow Flight row-count pre-check failed: {e}");
-            // COUNT failure is non-fatal; fall through to full query with
-            // post-materialisation secondary guard.
-            None
+    // HTTP-04: attempt planner estimate first.
+    let row_count_check: Option<i64> = {
+        let explain_sql = format!(
+            "EXPLAIN (FORMAT JSON, ANALYZE FALSE) SELECT * FROM ({full_sql}) _arrow_count_ LIMIT 1"
+        );
+        let estimate = match client.query_one(&explain_sql, &[]).await {
+            Ok(r) => {
+                let json_str: String = r.try_get::<_, String>(0).unwrap_or_default();
+                extract_plan_rows_from_explain(&json_str)
+            }
+            Err(e) => {
+                tracing::debug!(
+                    "Arrow Flight EXPLAIN pre-check failed, falling back to COUNT(*): {e}"
+                );
+                None
+            }
+        };
+        if estimate.is_some() {
+            estimate
+        } else {
+            // Fallback: COUNT(*) (original behaviour).
+            let count_sql = format!("SELECT COUNT(*) FROM ({full_sql}) _arrow_count_");
+            match client.query_one(&count_sql, &[]).await {
+                Ok(r) => r.try_get::<_, i64>(0).ok(),
+                Err(e) => {
+                    tracing::error!("Arrow Flight row-count fallback COUNT(*) failed: {e}");
+                    None
+                }
+            }
         }
     };
+    // S13-08 (v0.86.0): pre-materialisation row count guard.
     if let Some(count) = row_count_check
         && count as usize > max_export_rows
     {
@@ -415,4 +436,25 @@ pub(crate) async fn flight_do_get(
                 StatusCode::INTERNAL_SERVER_ERROR,
             )
         })
+}
+
+// ─── HTTP-04 (v0.91.0): EXPLAIN plan-row extraction helper ───────────────────
+
+/// Extract the planner's row estimate from a PostgreSQL `EXPLAIN (FORMAT JSON)` result.
+///
+/// The JSON has the shape:
+/// ```json
+/// [{ "Plan": { "Plan Rows": 12345, ... } }]
+/// ```
+///
+/// Returns `None` if the JSON cannot be parsed or the `Plan Rows` field is absent.
+fn extract_plan_rows_from_explain(json_str: &str) -> Option<i64> {
+    let v: serde_json::Value = serde_json::from_str(json_str).ok()?;
+    let plan_rows = v
+        .as_array()?
+        .first()?
+        .get("Plan")?
+        .get("Plan Rows")?
+        .as_i64()?;
+    Some(plan_rows)
 }

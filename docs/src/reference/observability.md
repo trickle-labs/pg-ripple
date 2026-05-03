@@ -63,3 +63,42 @@ object containing:
 - [GUC Reference](guc-reference.md)
 - [HTTP API Reference](http-api.md)
 - [Feature Status Taxonomy](feature-status-taxonomy.md)
+
+---
+
+## PostgreSQL Structured Logging (OBS-03, v0.91.0)
+
+pg_ripple uses `pgrx::log!` and `pgrx::warning!` for all diagnostic output inside the
+PostgreSQL extension. These emit standard PostgreSQL log messages that appear in the
+PostgreSQL server log.
+
+When `log_destination = jsonlog` is active (PostgreSQL 15+), PostgreSQL natively serialises
+all log messages — including those from pg_ripple — as JSON objects in the following format:
+
+```json
+{
+  "timestamp": "2026-05-03 10:00:00.123 UTC",
+  "pid": 12345,
+  "session_id": "abc123",
+  "log_level": "LOG",
+  "message": "pg_ripple merge worker: merged 10000 rows into vp_42_main"
+}
+```
+
+**No duplicate fields**: pg_ripple does not emit its own JSON log wrapper; all structured
+field mapping is handled by PostgreSQL's native `log_destination = jsonlog` facility.
+There is no risk of double-serialisation.
+
+To enable JSON logs in PostgreSQL, add to `postgresql.conf`:
+
+```
+log_destination = 'jsonlog'
+logging_collector = on
+log_directory = 'pg_log'
+```
+
+Alternatively, for combined text + JSON output:
+
+```
+log_destination = 'stderr,jsonlog'
+```

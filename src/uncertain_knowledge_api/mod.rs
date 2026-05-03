@@ -173,6 +173,35 @@ mod pg_ripple {
         .unwrap_or_else(|e| pgrx::warning!("log_shacl_score insert error: {e}"));
     }
 
+    // ── OBS-02 (v0.91.0): vacuum_shacl_score_log ─────────────────────────────
+
+    /// Delete `_pg_ripple.shacl_score_log` rows older than
+    /// `pg_ripple.shacl_score_log_retention_days` days.
+    ///
+    /// Returns the number of rows deleted. A return of 0 either means nothing
+    /// was old enough to delete, or the GUC is set to 0 (disabled).
+    ///
+    /// ```sql
+    /// SELECT pg_ripple.vacuum_shacl_score_log();
+    /// ```
+    #[pg_extern]
+    fn vacuum_shacl_score_log() -> i64 {
+        let retention_days = crate::gucs::observability::SHACL_SCORE_LOG_RETENTION_DAYS.get();
+        if retention_days <= 0 {
+            return 0;
+        }
+        Spi::get_one_with_args::<i64>(
+            "WITH deleted AS ( \
+                DELETE FROM _pg_ripple.shacl_score_log \
+                WHERE logged_at < NOW() - ($1 || ' days')::interval \
+                RETURNING 1 \
+             ) SELECT COUNT(*)::bigint FROM deleted",
+            &[pgrx::datum::DatumWithOid::from(retention_days as i64)],
+        )
+        .unwrap_or(None)
+        .unwrap_or(0)
+    }
+
     // ── CONF-EXPORT-01a: export_turtle_with_confidence ───────────────────────
 
     /// Export a graph as Turtle with RDF* confidence annotations.
