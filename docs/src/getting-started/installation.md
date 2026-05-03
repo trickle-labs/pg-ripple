@@ -32,11 +32,11 @@ Build and install directly into a local PostgreSQL 18 instance.
 
 - Rust (stable, edition 2024)
 - PostgreSQL 18 development headers
-- `cargo-pgrx` 0.17
+- `cargo-pgrx` 0.18
 
 ```bash
 # Install cargo-pgrx
-cargo install cargo-pgrx --version 0.17 --locked
+cargo install cargo-pgrx --version 0.18 --locked
 
 # Initialize pgrx with PostgreSQL 18
 cargo pgrx init --pg18 $(which pg_config)
@@ -87,10 +87,10 @@ If you see errors about shared memory or the merge worker not starting, ensure `
 
 ### pgrx version mismatch
 
-pg_ripple requires `cargo-pgrx` 0.17. If you have an older version:
+pg_ripple requires `cargo-pgrx` 0.18. If you have an older version:
 
 ```bash
-cargo install cargo-pgrx --version 0.17 --locked --force
+cargo install cargo-pgrx --version 0.18 --locked --force
 ```
 
 ### Extension not found after install

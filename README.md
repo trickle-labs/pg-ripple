@@ -20,9 +20,9 @@ No separate graph database. No data pipelines. No extra infrastructure.
 
 ---
 
-## What works today (v0.76.0)
+## What works today (v0.91.0)
 
-pg_ripple passes **100% of the W3C SPARQL 1.1, SHACL Core, and OWL 2 RL conformance test suites** — the industry benchmarks for correctness in knowledge graph systems. After 76 releases it covers the full feature set described below.
+pg_ripple passes **100% of the W3C SPARQL 1.1, SHACL Core, and OWL 2 RL conformance test suites** — the industry benchmarks for correctness in knowledge graph systems. After 91 releases it covers the full feature set described below.
 
 | What you can do | How it works |
 |---|---|
@@ -49,6 +49,8 @@ pg_ripple passes **100% of the W3C SPARQL 1.1, SHACL Core, and OWL 2 RL conforma
 | **SHACL-SPARQL rules** | SHACL Advanced Features: `sh:SPARQLRule` and `sh:SPARQLConstraint` are evaluated as native SPARQL queries against the VP store, enabling complex cross-shape validation that cannot be expressed with pure property-path SHACL. |
 | **JSON↔RDF mapping registry** | Register named bidirectional JSON↔RDF mappings with `register_json_mapping(name, context_jsonb, shape_iri)`. `ingest_json(mapping, document)` converts a JSON document to RDF triples using the stored context; `export_json_node(mapping, iri)` converts a graph node back to JSON. Mapping inconsistencies with the optional SHACL shape are recorded in `_pg_ripple.json_mapping_warnings`. |
 | **R2RML direct mapping** | `pg_ripple.r2rml_load(mapping_ttl)` applies an R2RML mapping document to convert relational tables in the same database into RDF triples, inserted directly into the VP store. |
+| **Graph analytics (PageRank)** | Datalog-native iterative PageRank via `pg_ripple.pagerank_run()`. Supports topic-sensitive, personalized, confidence-weighted, and temporal-decay variants. Incremental refresh via IVM dirty-edge queue. Four centrality measures (betweenness, closeness, degree, Katz). `pg:pagerank()` SPARQL function. Score-explanation trees via `explain_pagerank()`. Sketch-based approximate top-N. SHACL-aware ranking. Standard-format export (CSV, Turtle, N-Triples, JSON-LD). |
+| **Probabilistic reasoning** | `@weight(FLOAT)` annotations on Datalog rules for probabilistic inference with noisy-OR confidence propagation. `pg:confidence()`, `pg:fuzzy_match()`, `pg:token_set_ratio()` SPARQL functions. Soft SHACL scoring (`shacl_score()`). Confidence-weighted bulk load. PROV-O source-trust propagation. Cyclic probabilistic programs with well-founded convergence guarantees. |
 | **Live, auto-updating views** | Define a SPARQL query as a view; pg_ripple (with the optional `pg_trickle` companion) keeps it automatically up to date as data changes. |
 | **Access control** | Named graphs have row-level security backed by PostgreSQL's built-in permission system. Each graph can be granted to specific database roles, just like a table. Read-replica routing sends read queries to replicas automatically when `pg_ripple.read_replica_dsn` is configured. |
 | **Full-text search** | Search the text of literal values (names, descriptions, notes) using PostgreSQL's fast full-text search indexes. |
@@ -161,11 +163,7 @@ Token budgets matter. `sparql_construct_jsonld()` takes a SPARQL CONSTRUCT query
 
 One release remains on the path to v1.0.0.
 
-The v0.64.0–v0.76.0 Assessment Remediation & Production Polish sequence is complete. Key milestones: honest feature-status SQL API (`feature_status()`), GitHub Actions SHA pinning and Docker release digest integrity, CONSTRUCT writeback incremental delta maintenance, true portal-based SPARQL cursor streaming (bounded memory), HMAC-SHA256 signed Arrow Flight tickets with nonce replay protection, real Arrow IPC streaming in `pg_ripple_http`, 72-hour soak test artifacts, security audit closure, public benchmark baselines, upgrade and backup acceptance tests, operator runbooks, a mandatory release evidence dashboard, module restructuring along single-responsibility boundaries (v0.69.0), sub-transaction savepoint/rollback support (v0.72.0), SPARQL live subscription API with SSE (v0.73.0), JSON↔RDF mapping registry (v0.73.0), mutation journal wired through Datalog inference (v0.74.0), VP promotion plan-cache invalidation and interrupted-promotion recovery (v0.74.0), Citus and Arrow CI integration jobs (v0.75.0), RLS policy hash widened to XXH3-128, reproducible toolchain pin (v0.76.0), 227 regression tests (v0.76.0), and benchmark baselines refreshed to current HTAP performance levels (v0.76.0).
-
-### v0.79.0 — Query Engine Completeness
-
-v0.79.0 delivers the last two pre-1.0 features: a true **Leapfrog Triejoin executor** for Worst-Case Optimal Joins (WCOJ-LFTI-01), replacing the previous planner-hint-only mode with a full in-memory trie intersection algorithm; and full **`sh:SPARQLRule`** evaluation (SHACL-SPARQL-01), enabling SHACL Advanced Features forward-chaining rules to materialise triples via native SPARQL CONSTRUCT queries. Every row in `pg_ripple.feature_status()` now shows `implemented`. Run `SELECT * FROM pg_ripple.feature_status()` for the machine-readable status surface.
+The v0.64.0–v0.91.0 development cycle is complete. Key milestones across recent releases include: Leapfrog Triejoin executor for WCOJ (v0.79.0), `sh:SPARQLRule` evaluation (v0.79.0), Datalog-native iterative PageRank with IVM (v0.80.0–v0.82.0), probabilistic reasoning with noisy-OR confidence propagation (v0.83.0–v0.85.0), bidirectional relay for pg-trickle CDC (v0.86.0), comprehensive assessment remediations covering observability, error codes, API ergonomics, and build hardening (v0.87.0–v0.91.0), PageRank WCOJ integration and IVM Prometheus gauges (v0.90.0–v0.91.0), and 242 regression tests with full conformance across all four suites. Every row in `pg_ripple.feature_status()` shows `implemented`.
 
 ### v1.0.0 — Production Release
 
@@ -186,7 +184,7 @@ This means you get:
 
 ### How it compares
 
-> **Note**: pg_ripple features marked "Yes" in the table below are implemented across v0.1.0–v0.76.0. W3C SPARQL 1.1 Query, Update, SHACL Core, and OWL 2 RL conformance is 100%. Competitor capabilities reflect publicly documented feature sets.
+> **Note**: pg_ripple features marked "Yes" in the table below are implemented across v0.1.0–v0.91.0. W3C SPARQL 1.1 Query, Update, SHACL Core, and OWL 2 RL conformance is 100%. Competitor capabilities reflect publicly documented feature sets.
 
 | Capability | pg_ripple | Blazegraph | Virtuoso | Apache Fuseki |
 |---|---|---|---|---|
@@ -366,14 +364,14 @@ pg_ripple is built to production-grade standards:
 - **LUBM conformance suite** — all 14 canonical LUBM queries pass against a synthetic university OWL ontology; includes a Datalog validation sub-suite confirming that `infer('owl-rl')` produces correct supertype entailments (v0.44.0)
 - **W3C OWL 2 RL conformance suite** — W3C OWL 2 RL test manifests (entailment, consistency, and inconsistency tests) run in CI; **100% pass rate (66/66) achieved at v0.51.0** — blocking gate in CI (v0.51.0)
 - **Property-based testing** — `proptest` suites assert algebraic invariants: SPARQL algebra round-trips produce byte-identical SQL, dictionary encode/decode is always stable and collision-free for 10,000 random distinct terms, JSON-LD framing preserves all matching IRIs (v0.51.0)
-- **Extensive test suite** — 227 pg_regress tests cover every SQL-exposed function, every feature, and every edge case (as of v0.76.0)
+- **Extensive test suite** — 242 pg_regress tests cover every SQL-exposed function, every feature, and every edge case (as of v0.91.0)
 - **Security testing** — resistance to injection attacks, malformed inputs, and resource exhaustion
 - **Fuzz testing** — the federation result decoder, query pipeline, and URL host parser are continuously fuzz-tested (nightly, 120 s per target); arbitrary XML/JSON from remote SERVICE endpoints cannot cause a crash or panic (v0.51.0)
 - **Performance regression CI** — BSBM benchmark (1M-triple product dataset, 12 explore queries) and automated throughput benchmarks fail the build if performance drops by more than 10% (v0.51.0)
 - **Security CI** — `cargo audit --deny warnings` runs on every pull request; SBOM (CycloneDX) generated and attached to every release; GitHub Actions refs pinned to full SHA; Docker release images scanned via Trivy with immutable digest
 - **Stability** — 72-hour soak test with published artifacts (memory trend, merge latency, query p50/p95/p99, error counts), memory leak detection, and crash recovery testing (v0.67.0)
 - **Upgrade and backup acceptance** — migration chain from all supported 0.x versions, `pg_dump`/restore round trip, and rollback guidance tested in CI (v0.67.0)
-- **Public benchmark baselines** — BSBM, WatDiv, LUBM, bulk N-Triples/Turtle load, HTAP merge throughput, construct-rule incremental maintenance, Datalog DRed, vector hybrid search, Arrow IPC export, and Citus fan-out benchmarks published with hardware, dataset size, and raw output; baselines refreshed to v0.76.0 (p50 merge throughput +7–15% over v0.53.0)
+- **Public benchmark baselines** — BSBM, WatDiv, LUBM, bulk N-Triples/Turtle load, HTAP merge throughput, construct-rule incremental maintenance, Datalog DRed, vector hybrid search, Arrow IPC export, Citus fan-out, and bidi relay throughput benchmarks published with hardware, dataset size, and raw output; baselines refreshed to v0.91.0
 
 ---
 

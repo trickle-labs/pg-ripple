@@ -41,6 +41,9 @@
 - [R2RML — Relational to RDF](features/r2rml.md)
 - [Lattice Datalog — When and Why](features/lattice-datalog.md)
 - [Advanced Inference: WCOJ, DRed & Tabling](features/advanced-inference.md)
+- [Graph Analytics (PageRank)](features/pagerank.md)
+- [Probabilistic Reasoning](features/uncertain-knowledge.md)
+- [CDC Subscriptions](features/cdc-subscriptions.md)
 - [Cypher / LPG → RDF Mapping](features/lpg-mapping.md)
 
 ---

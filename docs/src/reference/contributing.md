@@ -16,8 +16,8 @@ pg_ripple is open source and welcomes contributions of all kinds — bug reports
 |---|---|---|
 | Rust | Edition 2024, stable toolchain | Language |
 | PostgreSQL | 18.x | Target database |
-| pgrx | 0.17 | PostgreSQL extension framework |
-| cargo-pgrx | 0.17 | Build and test tooling |
+| pgrx | 0.18 | PostgreSQL extension framework |
+| cargo-pgrx | 0.18 | Build and test tooling |
 | git | 2.x+ | Version control |
 
 ### Setup
@@ -28,7 +28,7 @@ git clone https://github.com/your-org/pg_ripple.git
 cd pg_ripple
 
 # 2. Install cargo-pgrx if not already installed
-cargo install cargo-pgrx --version 0.17 --locked
+cargo install cargo-pgrx --version 0.18 --locked
 
 # 3. Initialize pgrx with PostgreSQL 18
 cargo pgrx init --pg18 $(which pg_config)

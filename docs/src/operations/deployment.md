@@ -26,7 +26,7 @@ Install pg_ripple into a standard PostgreSQL 18 instance. This is the recommende
 
 - PostgreSQL 18.x installed from packages or source
 - Rust toolchain (for building from source) or a pre-built `.so`/`.dylib`
-- `pgrx` 0.17 (if building from source)
+- `pgrx` 0.18 (if building from source)
 
 ### Installation
 

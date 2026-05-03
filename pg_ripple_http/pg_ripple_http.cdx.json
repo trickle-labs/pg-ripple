@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.4",
   "version": 1,
-  "serialNumber": "urn:uuid:6c3402ca-bf5f-43d9-894e-9235946bec8f",
+  "serialNumber": "urn:uuid:78acf34d-2a0d-4dfb-a3ea-44f23df82e6f",
   "metadata": {
-    "timestamp": "2026-05-02T21:28:36.979670000Z",
+    "timestamp": "2026-05-03T13:53:33.534518000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "application",
-      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.87.0",
+      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.91.0",
       "name": "pg_ripple_http",
-      "version": "0.87.0",
+      "version": "0.91.0",
       "description": "SPARQL 1.1 Protocol HTTP endpoint for pg_ripple",
       "scope": "required",
       "licenses": [
@@ -24,7 +24,7 @@
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/pg_ripple_http@0.87.0?download_url=file://.",
+      "purl": "pkg:cargo/pg_ripple_http@0.91.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -34,10 +34,10 @@
       "components": [
         {
           "type": "application",
-          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.87.0 bin-target-0",
+          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.91.0 bin-target-0",
           "name": "pg_ripple_http",
-          "version": "0.87.0",
-          "purl": "pkg:cargo/pg_ripple_http@0.87.0?download_url=file://.#src/main.rs"
+          "version": "0.91.0",
+          "purl": "pkg:cargo/pg_ripple_http@0.91.0?download_url=file://.#src/main.rs"
         }
       ]
     },
@@ -7973,7 +7973,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.87.0",
+      "ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.91.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#arrow@55.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#axum@0.8.9",

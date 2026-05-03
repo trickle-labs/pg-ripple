@@ -1,8 +1,10 @@
-# PageRank & Graph Analytics (v0.88.0)
+# PageRank & Graph Analytics (v0.88.0+)
 
 pg_ripple v0.88.0 adds a **Datalog-native PageRank engine** that runs entirely inside PostgreSQL
 via SPI and the existing Datalog aggregation infrastructure.  All scores are persisted in
 `_pg_ripple.pagerank_scores` and are queryable with standard SQL — no external process required.
+v0.90.0 adds WCOJ integration, convergence norm GUC, IVM full-recompute threshold, and
+Count-Min Sketch approximate top-N. v0.91.0 adds IVM Prometheus gauges and `explain_pagerank_json()`.
 
 ## Quick Start
 
