@@ -1,0 +1,23 @@
+-- Migration 0.89.0 → 0.90.0
+-- Assessment 14 Medium findings — correctness, performance, concurrency, code quality
+-- Schema changes: None (module restructuring + GUC additions only)
+--
+-- New GUCs registered at extension load time (no SQL required):
+--   pg_ripple.pagerank_convergence_norm        TEXT    DEFAULT 'l1'
+--   pg_ripple.pagerank_full_recompute_threshold FLOAT8  DEFAULT 0.01
+--   pg_ripple.pagerank_wcoj_threshold          BIGINT  DEFAULT 10000000
+--   pg_ripple.pagerank_sketch_width            INT     DEFAULT 2000
+--   pg_ripple.pagerank_sketch_depth            INT     DEFAULT 5
+--   pg_ripple.pagerank_temp_threshold          BIGINT  DEFAULT 0 (auto from work_mem)
+--
+-- Behaviour changes:
+--   export_pagerank() raises PT0417 for unknown format (was: silent default to CSV)
+--   pagerank_run() acquires pg_advisory_xact_lock per topic (prevents concurrent races)
+--   load_triples_with_confidence() now runs ANALYZE at completion
+--   @weight(NaN)/@weight(<0)/@weight(>1) raises PT0301 (was: undefined)
+--
+-- Module restructuring (code-only; no SQL API changes):
+--   src/pagerank.rs → src/pagerank/{executor,ivm,sketch,centrality,export,explain,mod}.rs
+--   src/uncertain_knowledge_api.rs → src/uncertain/{api,fuzzy,shacl,prov,confidence_table,mod}.rs
+--   pg_ripple_http/src/datalog.rs → pg_ripple_http/src/routing/datalog_handlers.rs
+--   Seven large files pre-emptively split (CQ-02)

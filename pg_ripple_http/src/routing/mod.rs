@@ -18,7 +18,9 @@ use utoipa::OpenApi;
 
 use crate::arrow_encode::flight_do_get;
 use crate::common::{AppState, check_auth};
-use crate::datalog;
+// CQ-05 (v0.90.0): datalog handlers moved into the routing sub-module.
+pub(crate) mod datalog_handlers;
+use self::datalog_handlers as datalog;
 
 // ─── OpenAPI specification (K-1, v0.55.0) ────────────────────────────────────
 

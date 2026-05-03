@@ -92,11 +92,93 @@ Returns candidate duplicate node pairs detected via centrality + label similarit
 | `pg_ripple.pagerank_damping` | `0.85` | Damping factor |
 | `pg_ripple.pagerank_max_iterations` | `100` | Iteration cap |
 | `pg_ripple.pagerank_convergence_delta` | `0.0001` | Convergence threshold |
+| `pg_ripple.pagerank_convergence_norm` | `'l1'` | Convergence norm (`l1`, `l2`, `linf`) |
+| `pg_ripple.pagerank_full_recompute_threshold` | `0.01` | Stale fraction triggering full recompute |
+| `pg_ripple.pagerank_wcoj_threshold` | `10` | WCOJ path threshold (millions of edges) |
+| `pg_ripple.pagerank_sketch_width` | `2000` | Count-Min Sketch width (columns) |
+| `pg_ripple.pagerank_sketch_depth` | `5` | Count-Min Sketch depth (rows/hash functions) |
+| `pg_ripple.pagerank_temp_threshold` | `0` | Temp-table threshold bytes (0 = auto) |
 | `pg_ripple.pagerank_incremental` | `off` | Enable IVM (k-hop refresh) |
 | `pg_ripple.pagerank_confidence_weighted` | `off` | Weight edges by confidence scores |
 | `pg_ripple.pagerank_partition` | `off` | Partition evaluation per named graph |
 | `pg_ripple.pagerank_probabilistic` | `off` | Probabilistic Datalog score bounds |
 | `pg_ripple.pagerank_queue_warn_threshold` | `100000` | Warn when dirty-edge queue exceeds this |
+
+---
+
+## Convergence Norm (v0.90.0)
+
+pg_ripple uses the **L1 norm** (sum of absolute differences) to test convergence
+between iterations, consistent with NetworkX's default behaviour. The convergence
+threshold `pg_ripple.pagerank_convergence_delta` (default 0.0001) is compared
+against the L1 norm of the score delta vector.
+
+Alternative norms can be selected via the `pg_ripple.pagerank_convergence_norm` GUC:
+
+| Value | Formula | Notes |
+|-------|---------|-------|
+| `'l1'` (default) | $\sum_i \|\Delta s_i\|$ | Fastest to compute; matches NetworkX |
+| `'l2'` | $\sqrt{\sum_i \Delta s_i^2}$ | Matches igraph default |
+| `'linf'` | $\max_i \|\Delta s_i\|$ | Most conservative; slowest convergence |
+
+```sql
+-- Match igraph convergence behaviour
+SET pg_ripple.pagerank_convergence_norm = 'l2';
+SELECT node_iri, score FROM pg_ripple.pagerank_run();
+```
+
+---
+
+## Incremental Refresh Error Bounds (v0.90.0)
+
+The bounded K-hop incremental refresh approximates the full PageRank recomputation.
+The theoretical error bound after K hops of incremental propagation is:
+
+$$|\Delta \text{score}| \leq \alpha^K \times \max\_\text{delta\_per\_iteration}$$
+
+where $\alpha$ is the damping factor (default 0.85) and $K$ is
+`pagerank_khop_limit` (default 30). At K=30:
+
+$$\alpha^{30} = 0.85^{30} \approx 0.0076$$
+
+The maximum error per dirty node is **< 1% of the per-iteration delta** — acceptable
+for most use cases. For high-precision applications, use `pagerank_run()` directly.
+
+### Automatic Full Recompute
+
+When the fraction of `stale = true` rows in `pagerank_scores` for a given topic
+exceeds `pg_ripple.pagerank_full_recompute_threshold` (default 0.01 = 1%), the
+next IVM worker cycle automatically triggers a full `pagerank_run()` for that topic.
+
+```sql
+-- Lower threshold: trigger full recompute when 0.5% of scores are stale
+SET pg_ripple.pagerank_full_recompute_threshold = 0.005;
+```
+
+---
+
+## Count-Min Sketch Parameters (v0.90.0)
+
+The top-K PageRank query path uses a Count-Min Sketch to track approximate
+frequency distributions without materialising the full score table. Two GUCs
+control sketch memory:
+
+| GUC | Default | Formula |
+|-----|---------|---------|
+| `pg_ripple.pagerank_sketch_width` | `2000` | Columns per hash function |
+| `pg_ripple.pagerank_sketch_depth` | `5` | Number of hash functions (rows) |
+
+Memory usage: `width × depth × 8 bytes` per active topic. With defaults:
+`2000 × 5 × 8 = 80 KB` per topic — negligible even for thousands of topics.
+
+**Error bound**: with probability $1 - e^{-\text{depth}}$ the frequency estimate
+overestimates by at most $e / \text{width}$ of the total stream mass.
+
+```sql
+-- Increase accuracy for large graphs at the cost of more memory
+SET pg_ripple.pagerank_sketch_width = 10000;
+SET pg_ripple.pagerank_sketch_depth = 7;
+```
 
 ## REST API (pg_ripple_http)
 

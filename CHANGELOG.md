@@ -13,6 +13,67 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.90.0] — 2026-05-XX — Assessment 14 Medium Remediation
+
+**Implements v0.90.0 roadmap: closes 24 Medium-severity findings from
+PLAN_OVERALL_ASSESSMENT_14. Adds PageRank WCOJ integration, convergence norm GUC,
+IVM full-recompute threshold, Count-Min Sketch GUCs, temp-threshold GUC, advisory
+lock for concurrent runs, ANALYZE after confidence bulk load, SPARQL MINUS blank-node
+regression test, seven pre-emptive module splits, pagerank/uncertain_knowledge_api
+module directories, datalog_handlers routing migration, clippy::unwrap_used lint gate,
+convergence norm documentation, IVM error bounds documentation, cyclic convergence
+guarantee documentation, and new test coverage (proptest oracle, fuzz confidence
+loader, concurrency scripts, scale benchmark).**
+
+### Added
+
+- **CB-02**: `docs/src/features/pagerank.md` — Convergence Norm section documenting L1/L2/Linf norm selection via `pg_ripple.pagerank_convergence_norm` GUC; NetworkX vs. igraph behaviour comparison.
+- **CB-04**: `docs/src/features/pagerank.md` — Incremental Refresh Error Bounds section with formal $\alpha^K$ bound and automatic full-recompute threshold documentation.
+- **CB-05**: `tests/pg_regress/sql/sparql_minus_blank_scope.sql` + expected output — regression test for SPARQL MINUS blank-node scoping (per SPARQL 1.1 §18.6).
+- **PERF-01**: `src/pagerank/executor.rs` — WCOJ threshold check at `pagerank_run()` entry; `pg_ripple.pagerank_wcoj_threshold` GUC (INT, default 10, units: millions of edges).
+- **PERF-02**: `docs/src/features/pagerank.md` — Count-Min Sketch parameter documentation with error bound formula.
+- **PERF-03**: `Cargo.toml` workspace lints — `clippy::unwrap_used = "warn"` and `clippy::expect_used = "warn"` GUC-style gates added; CI blocks on new violations (`ci/regress:unwrap_cap`).
+- **PERF-06**: `src/bulk_load.rs` — `ANALYZE _pg_ripple.confidence` after `load_triples_with_confidence()` completion.
+- **CON-01**: `tests/concurrency/pagerank_during_merge.sh` — deadlock test: 8 concurrent writers + HTAP merge + `pagerank_run()`.
+- **CON-02**: `benchmarks/probabilistic_overhead.sql` extended with hot-row confidence contention benchmark (noisy-OR ON CONFLICT on narrow key range).
+- **CON-03**: `src/pagerank/executor.rs` — `pg_advisory_xact_lock(hashtext($1))` per topic at `pagerank_run()` entry.
+- **TEST-02**: `tests/proptest/pagerank_oracle.rs` — pure-Rust PageRank oracle proptest (5 invariants: sum, positivity, fixed-point, damping monotonicity, sink handling).
+- **TEST-03**: `fuzz/fuzz_targets/confidence_loader.rs` — cargo-fuzz target for adversarial confidence float inputs (NaN, ±∞, negative, >1.0, denormals).
+- **TEST-04**: `benchmarks/pagerank_scale.sh` — scale benchmark gate (1M/10M edges with wall-time assertions).
+- **TEST-05**: `tests/concurrency/confidence_subxact_rollback.sql` — SAVEPOINT/ROLLBACK confidence table consistency test.
+- **DL-02**: `docs/src/features/uncertain-knowledge.md` — Convergence Guarantees for Cyclic Probabilistic Rules section with Knaster–Tarski fixed-point theorem citation.
+- **CQ-02 / DL-03**: Pre-emptive module splits for 7 files approaching the 1,800-line CI gate:
+  - `src/sparql/execute.rs` → `execute/{exec_core,construct,describe,update,explain}.rs`
+  - `src/sparql/expr.rs` → `expr/{functions,filters,aggregates,cast}.rs`
+  - `src/datalog/compiler.rs` → `compiler/{sql,prob,shacl_rules,builtins}.rs`
+  - `src/storage/ops.rs` → `ops/{insert,delete,scan,merge}.rs`
+  - `src/export.rs` → `export/{turtle,jsonld,ntriples,csv,common}.rs`
+  - `src/citus.rs` → `citus/{sharding,rls,aggregate,federation}.rs`
+  - `src/views.rs` → `views/{construct,describe,sparql}.rs`
+- **CQ-03**: `src/pagerank.rs` → `src/pagerank/` directory split (executor, ivm, sketch, centrality, export, explain, mod).
+- **CQ-04**: `src/uncertain_knowledge_api.rs` → `src/uncertain_knowledge_api/` directory split (mod + confidence_table, fuzzy, prov, shacl stubs).
+- **CQ-05**: `pg_ripple_http/src/datalog.rs` → `pg_ripple_http/src/routing/datalog_handlers.rs` with backward-compat re-export shim.
+- **New GUCs** (v0.90.0):
+  - `pg_ripple.pagerank_convergence_norm` (TEXT, default `'l1'`): convergence norm selection.
+  - `pg_ripple.pagerank_full_recompute_threshold` (FLOAT8, default `0.01`): IVM stale fraction triggering full recompute.
+  - `pg_ripple.pagerank_wcoj_threshold` (INT, default `10`): WCOJ path threshold in millions of edges.
+  - `pg_ripple.pagerank_sketch_width` (INT, default `2000`): Count-Min Sketch columns.
+  - `pg_ripple.pagerank_sketch_depth` (INT, default `5`): Count-Min Sketch depth.
+  - `pg_ripple.pagerank_temp_threshold` (INT, default `0` = auto): streaming temp-table threshold.
+
+### Already implemented (verified in codebase)
+
+- **CB-06**: `pg_ripple.export_pagerank()` raises PT0417 for unknown format (silent CSV default was fixed; `src/pagerank/export.rs`).
+- **PERF-05**: `src/sparql/embedding.rs` fast-path gate on `pg_ripple.pgvector_enabled` GUC.
+- **DL-01**: Probabilistic weight parser validates NaN/negative/> 1.0 and raises PT0301.
+
+### Migration notes
+
+No SQL schema changes. The migration script `sql/pg_ripple--0.89.0--0.90.0.sql` is a
+comment-only file listing the new GUCs and behaviour changes.
+
+---
+
 ## [0.89.0] — 2026-05-03 — Assessment 14 Critical & High Remediation
 
 **Implements v0.89.0 roadmap: deletes stale backup file, extends migration chain test,

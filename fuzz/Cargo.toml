@@ -138,3 +138,10 @@ name = "shacl_sparql"
 path = "fuzz_targets/shacl_sparql.rs"
 test = false
 doc = false
+
+# TEST-03 (v0.90.0): confidence loader adversarial float fuzz target.
+[[bin]]
+name = "confidence_loader"
+path = "fuzz_targets/confidence_loader.rs"
+test = false
+doc = false
