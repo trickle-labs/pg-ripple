@@ -181,3 +181,36 @@ SELECT length(pg_ripple.export_pagerank('csv', 1, NULL)) > 0 AS topk_ok;
 SELECT COUNT(*) >= 1 AS fs_pagerank_ok
 FROM pg_ripple.feature_status()
 WHERE feature_name = 'pagerank_datalog' AND status = 'implemented';
+
+-- ── Test 31 (API-01): deprecated GUC katz_alpha still accessible ─────────────
+SELECT current_setting('pg_ripple.katz_alpha')::float8 >= 0.0 AS katz_alpha_deprecated_ok;
+
+-- ── Test 32 (API-01): canonical GUC pagerank_katz_alpha accessible ────────────
+SELECT current_setting('pg_ripple.pagerank_katz_alpha')::float8 >= 0.0
+    AS katz_alpha_canonical_ok;
+
+-- ── Test 33 (API-01): deprecated GUC federation_minimum_confidence accessible ─
+SELECT current_setting('pg_ripple.federation_minimum_confidence')::float8 >= 0.0
+    AS fed_conf_deprecated_ok;
+
+-- ── Test 34 (API-01): canonical GUC pagerank_federation_confidence_min accessible
+SELECT current_setting('pg_ripple.pagerank_federation_confidence_min')::float8 >= 0.0
+    AS fed_conf_canonical_ok;
+
+-- ── Test 35 (API-01): deprecated GUC default_fuzzy_threshold accessible ───────
+SELECT current_setting('pg_ripple.default_fuzzy_threshold')::float8 >= 0.0
+    AS fuzzy_threshold_deprecated_ok;
+
+-- ── Test 36 (API-01): canonical GUC fuzzy_match_threshold accessible ──────────
+SELECT current_setting('pg_ripple.fuzzy_match_threshold')::float8 >= 0.0
+    AS fuzzy_threshold_canonical_ok;
+
+-- ── Test 37 (SEC-04): export_pagerank with adversarial topic IRI ──────────────
+-- The topic filter only affects WHERE clause; with no rows for this topic the
+-- output should be empty (or just headers for csv).  The key test is that
+-- the query completes without SQL injection.
+SELECT length(pg_ripple.export_pagerank('csv', NULL, E'attacker\'; DROP TABLE pg_ripple.pagerank_scores; --')) >= 0
+    AS sec04_injection_safe;
+
+SELECT length(pg_ripple.export_pagerank('csv', NULL, '<evil>topic</evil>')) >= 0
+    AS sec04_angle_bracket_safe;

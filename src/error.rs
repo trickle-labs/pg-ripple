@@ -59,6 +59,13 @@ pub enum UncertainKnowledgeError {
          to use partial result (PT0307)"
     )]
     ConvergenceTimeout { max_iter: i32, final_delta: f64 },
+
+    /// PT0308 — fuzzy SPARQL input exceeds `pg_ripple.fuzzy_max_input_length` characters.
+    #[error(
+        "fuzzy SPARQL input exceeds pg_ripple.fuzzy_max_input_length characters ({limit}) — \
+         truncate input or raise the GUC (PT0308)"
+    )]
+    FuzzyInputTooLong { limit: i32 },
 }
 
 /// Dictionary-layer errors (PT001–PT099).

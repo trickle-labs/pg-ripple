@@ -174,4 +174,78 @@ mod pg_ripple {
         }
         crate::export::export_turtle_with_confidence_impl(graph)
     }
+
+    // ── CB-03 / SEC-02 (v0.89.0): fuzzy SPARQL guard functions ──────────────
+
+    /// Internal guard for `pg:fuzzy_match(a, b)` — checks pg_trgm availability
+    /// and input length limits before calling `similarity(a, b)`.
+    ///
+    /// Raises PT0302 if pg_trgm is not installed; PT0308 if either input exceeds
+    /// `pg_ripple.fuzzy_max_input_length` characters.
+    ///
+    /// Called from generated SPARQL→SQL; not intended for direct use.
+    #[pg_extern(schema = "pg_ripple", name = "_fuzzy_match_guard")]
+    fn fuzzy_match_guard(a: &str, b: &str) -> f64 {
+        fuzzy_guard_checks(a, b);
+        pgrx::Spi::get_one_with_args::<f64>(
+            "SELECT similarity($1::text, $2::text)",
+            &[
+                pgrx::datum::DatumWithOid::from(a),
+                pgrx::datum::DatumWithOid::from(b),
+            ],
+        )
+        .unwrap_or_else(|e| pgrx::error!("fuzzy_match_guard: {e}"))
+        .unwrap_or(0.0)
+    }
+
+    /// Internal guard for `pg:token_set_ratio(a, b)` — checks pg_trgm availability
+    /// and input length limits before calling `word_similarity(a, b)`.
+    ///
+    /// Raises PT0302 if pg_trgm is not installed; PT0308 if either input exceeds
+    /// `pg_ripple.fuzzy_max_input_length` characters.
+    ///
+    /// Called from generated SPARQL→SQL; not intended for direct use.
+    #[pg_extern(schema = "pg_ripple", name = "_token_set_ratio_guard")]
+    fn token_set_ratio_guard(a: &str, b: &str) -> f64 {
+        fuzzy_guard_checks(a, b);
+        pgrx::Spi::get_one_with_args::<f64>(
+            "SELECT word_similarity($1::text, $2::text)",
+            &[
+                pgrx::datum::DatumWithOid::from(a),
+                pgrx::datum::DatumWithOid::from(b),
+            ],
+        )
+        .unwrap_or_else(|e| pgrx::error!("token_set_ratio_guard: {e}"))
+        .unwrap_or(0.0)
+    }
+
+    /// Shared pre-flight checks for fuzzy SPARQL guard functions (CB-03, SEC-02, v0.89.0).
+    ///
+    /// - Raises PT0302 if pg_trgm is not installed.
+    /// - Raises PT0308 if either argument exceeds `pg_ripple.fuzzy_max_input_length`.
+    fn fuzzy_guard_checks(a: &str, b: &str) {
+        // CB-03: check pg_trgm is installed.
+        let trgm_ok = pgrx::Spi::get_one::<bool>(
+            "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'pg_trgm')",
+        )
+        .unwrap_or_else(|e| pgrx::error!("fuzzy_guard: pg_trgm check error: {e}"))
+        .unwrap_or(false);
+
+        if !trgm_ok {
+            pgrx::error!(
+                "pg_ripple fuzzy SPARQL requires pg_trgm — install it with: \
+                 CREATE EXTENSION IF NOT EXISTS pg_trgm; (PT0302)"
+            );
+        }
+
+        // SEC-02: check input length against GUC.
+        let max_len = crate::FUZZY_MAX_INPUT_LENGTH.get() as usize;
+        if a.len() > max_len || b.len() > max_len {
+            pgrx::error!(
+                "fuzzy SPARQL input exceeds pg_ripple.fuzzy_max_input_length characters ({}) — \
+                 truncate input or raise the GUC (PT0308)",
+                max_len
+            );
+        }
+    }
 }

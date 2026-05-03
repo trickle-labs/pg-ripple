@@ -1470,21 +1470,26 @@ pub(super) fn translate_function_value(
 
                 // ── v0.87.0: pg:fuzzy_match(a, b) — trigram similarity ─────────
                 // Returns pg_trgm similarity(a_text, b_text) as a raw float.
-                // Requires pg_trgm extension (PT0302 if absent).
+                // v0.89.0 CB-03: wraps in pg_ripple._fuzzy_match_guard() for actionable
+                // PT0302 (pg_trgm missing) and PT0308 (input too long) diagnostics.
                 PG_FUZZY_MATCH_IRI => {
                     *is_numeric = true;
                     let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
                     let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
-                    Some(format!("similarity({a_text}, {b_text})"))
+                    Some(format!("pg_ripple._fuzzy_match_guard({a_text}, {b_text})"))
                 }
 
                 // ── v0.87.0: pg:token_set_ratio(a, b) — word-set similarity ────
                 // Returns pg_trgm word_similarity(a_text, b_text) as a raw float.
+                // v0.89.0 CB-03: wraps in pg_ripple._token_set_ratio_guard() for actionable
+                // PT0302 (pg_trgm missing) and PT0308 (input too long) diagnostics.
                 PG_TOKEN_SET_RATIO_IRI => {
                     *is_numeric = true;
                     let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
                     let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
-                    Some(format!("word_similarity({a_text}, {b_text})"))
+                    Some(format!(
+                        "pg_ripple._token_set_ratio_guard({a_text}, {b_text})"
+                    ))
                 }
 
                 _ => None,

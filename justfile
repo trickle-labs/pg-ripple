@@ -198,26 +198,64 @@ release VERSION:
 # and appends a CHANGELOG stub for the new version.
 #
 # Usage:  just bump-version 0.85.0
+# ROAD-02 (v0.89.0): atomically updates all nine version references and creates
+# CHANGELOG + migration stubs. Use bump-version-dry to preview without writing.
 [group: "release"]
 bump-version NEW_VERSION:
-    @OLD_VERSION=$(grep '^version = ' Cargo.toml | head -1 | grep -oP '"\\K[^"]+'); \
+    @OLD_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/.*"\([^"]*\)".*/\1/'); \
      echo "Bumping $$OLD_VERSION → {{NEW_VERSION}}"; \
      sed -i '' "s/^version = \"$$OLD_VERSION\"/version = \"{{NEW_VERSION}}\"/" Cargo.toml; \
      sed -i '' "s/^version = \"$$OLD_VERSION\"/version = \"{{NEW_VERSION}}\"/" pg_ripple_http/Cargo.toml; \
      sed -i '' "s/^default_version = '$$OLD_VERSION'/default_version = '{{NEW_VERSION}}'/" pg_ripple.control; \
-     sed -i '' "s/const COMPATIBLE_EXTENSION_MIN: &str = \"$$OLD_VERSION\"/const COMPATIBLE_EXTENSION_MIN: \&str = \"{{NEW_VERSION}}\"/" pg_ripple_http/src/main.rs; \
+     sed -i '' "s/COMPATIBLE_EXTENSION_MIN: \&str = \"$$OLD_VERSION\"/COMPATIBLE_EXTENSION_MIN: \&str = \"{{NEW_VERSION}}\"/" pg_ripple_http/src/main.rs; \
      sed -i '' "s|ghcr.io/grove/pg_ripple:$$OLD_VERSION|ghcr.io/grove/pg_ripple:{{NEW_VERSION}}|g" docker-compose.yml; \
      MIGRATION_FILE="sql/pg_ripple--$$OLD_VERSION--{{NEW_VERSION}}.sql"; \
      if [ ! -f "$$MIGRATION_FILE" ]; then \
-       echo "-- Migration $$OLD_VERSION → {{NEW_VERSION}}" > "$$MIGRATION_FILE"; \
-       echo "-- Schema changes: TODO" >> "$$MIGRATION_FILE"; \
+       printf -- "-- Migration $$OLD_VERSION → {{NEW_VERSION}}\n-- Schema changes: TODO\n" > "$$MIGRATION_FILE"; \
        echo "Created $$MIGRATION_FILE"; \
      else \
        echo "$$MIGRATION_FILE already exists"; \
      fi; \
+     CHANGELOG_SECTION="## v{{NEW_VERSION}} — $(date +%Y-%m-%d)\n\n### Added\n- TODO\n\n### Changed\n- TODO\n\n### Fixed\n- TODO\n\n"; \
+     if grep -q "## v{{NEW_VERSION}}" CHANGELOG.md 2>/dev/null; then \
+       echo "CHANGELOG.md already contains ## v{{NEW_VERSION}} section"; \
+     else \
+       TMP=$(mktemp); \
+       awk -v section="$$CHANGELOG_SECTION" '/^## v[0-9]/{if(!done){printf section; done=1}} {print}' CHANGELOG.md > "$$TMP" && mv "$$TMP" CHANGELOG.md; \
+       echo "Added CHANGELOG.md section for v{{NEW_VERSION}}"; \
+     fi; \
      echo ""; \
      echo "=== Version bump complete ==="; \
-     echo "Next: update CHANGELOG.md and sql/$$MIGRATION_FILE"
+     echo "Files updated: Cargo.toml, pg_ripple_http/Cargo.toml, pg_ripple.control,"; \
+     echo "  pg_ripple_http/src/main.rs, docker-compose.yml, CHANGELOG.md"; \
+     echo "Next: fill in CHANGELOG.md and $$MIGRATION_FILE"
+
+# Dry-run for bump-version: prints proposed changes without writing any files.
+# ROAD-02 (v0.89.0)
+# Usage: just bump-version-dry 0.86.0
+[group: "release"]
+bump-version-dry NEW_VERSION:
+    @OLD_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/.*"\([^"]*\)".*/\1/'); \
+     echo "=== bump-version dry-run: $$OLD_VERSION → {{NEW_VERSION}} ==="; \
+     echo ""; \
+     echo "[Cargo.toml]          version = \"{{NEW_VERSION}}\""; \
+     echo "[pg_ripple_http/Cargo.toml] version = \"{{NEW_VERSION}}\""; \
+     echo "[pg_ripple.control]   default_version = '{{NEW_VERSION}}'"; \
+     echo "[pg_ripple_http/src/main.rs] COMPATIBLE_EXTENSION_MIN = \"{{NEW_VERSION}}\""; \
+     echo "[docker-compose.yml]  ghcr.io/grove/pg_ripple:{{NEW_VERSION}}"; \
+     MIGRATION_FILE="sql/pg_ripple--$$OLD_VERSION--{{NEW_VERSION}}.sql"; \
+     if [ -f "$$MIGRATION_FILE" ]; then \
+       echo "[migration]           $$MIGRATION_FILE (already exists)"; \
+     else \
+       echo "[migration]           $$MIGRATION_FILE (will be created)"; \
+     fi; \
+     if grep -q "## v{{NEW_VERSION}}" CHANGELOG.md 2>/dev/null; then \
+       echo "[CHANGELOG.md]        ## v{{NEW_VERSION}} section already exists"; \
+     else \
+       echo "[CHANGELOG.md]        ## v{{NEW_VERSION}} stub section will be added"; \
+     fi; \
+     echo ""; \
+     echo "Run 'just bump-version {{NEW_VERSION}}' to apply."
 
 # BUILD-02 (v0.84.0): Regenerate sbom.json using cargo-cyclonedx.
 # Requires cargo install cargo-cyclonedx.

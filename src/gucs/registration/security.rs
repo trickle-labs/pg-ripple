@@ -115,4 +115,20 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.89.0 GUCs — Input Guards (SEC-02) ─────────────────────────────────
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.fuzzy_max_input_length",
+        c"Maximum input string length (characters) for pg:fuzzy_match() and \
+      pg:token_set_ratio(). Arguments exceeding this limit raise PT0308. \
+      Range 1–65536; default 4096. Set to 65536 to effectively disable the guard. \
+      (v0.89.0 SEC-02)",
+        c"",
+        &crate::gucs::sparql::FUZZY_MAX_INPUT_LENGTH,
+        1,
+        65536,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

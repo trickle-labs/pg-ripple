@@ -1757,6 +1757,24 @@ jobs:
           echo "PASS: unsafe count $current is within 10% of baseline $baseline"
 
 
+  lint-no-backup-files:
+    name: No backup files in src/ (DEAD-FILE-01, v0.89.0)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Check for backup/swap files
+        run: |
+          found=$(find src/ pg_ripple_http/src/ -type f \( -name '*.bak' -o -name '*.orig' -o -name '*.swp' \) 2>/dev/null || true)
+          if [ -n "$found" ]; then
+            echo "FAIL: backup/swap files found in source tree:"
+            echo "$found"
+            exit 1
+          fi
+          echo "PASS: no *.bak, *.orig, or *.swp files found in src/ or pg_ripple_http/src/"
+
+
   openapi-validate:
     name: OpenAPI spec validation (A13-02, v0.86.0)
     runs-on: ubuntu-latest

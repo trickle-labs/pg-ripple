@@ -13,6 +13,40 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.89.0] — 2026-05-03 — Assessment 14 Critical & High Remediation
+
+**Implements v0.89.0 roadmap: deletes stale backup file, extends migration chain test,
+bumps HTTP compat min, adds bump-version dry-run, adds confidence noisy-OR proptest,
+GUC name audit with deprecated aliases for v0.87/v0.88 GUCs, default rate limit 100 req/s,
+fuzzy input length guard (SEC-02), pagerank seed array guard (SEC-03), IRI escaping in
+export_pagerank (SEC-04), and actionable pg_trgm diagnostic in fuzzy SPARQL (CB-03).**
+
+### Added
+
+- **DEAD-FILE-01 (CQ-01)**: Deleted `src/gucs/registration.rs.bak`; added `.bak`, `.orig`, `.swp` patterns to `.gitignore`; new `lint-no-backup-files` CI job.
+- **TEST-01**: Extended migration chain test with checkpoints for v0.84–v0.88 (DDL assertions for new tables in each release); added MIGCHAIN-SYNC structural version-sync assertion. Evidence: `sql/pg_ripple--0.88.0--0.89.0.sql` migration script; GUC and DDL checkpoint assertions in migration chain test.
+- **HTTP-COMPAT-01**: `COMPATIBLE_EXTENSION_MIN` bumped from `0.87.0` to `0.88.0` in `pg_ripple_http/src/main.rs`.
+- **ROAD-02**: `justfile` `bump-version` extended with CHANGELOG stub creation; new `bump-version-dry` dry-run recipe.
+- **CB-01**: `tests/proptest/confidence_algebra.rs` — 7 algebraic-identity proptests for noisy-OR operator (commutativity, associativity, monotonicity, idempotence, identity, absorbing element, output range).
+- **SEC-01**: `pg_ripple_http` default rate limit changed from `0` (disabled) to `100` req/s; operators with `PG_RIPPLE_HTTP_RATE_LIMIT=0` are unaffected.
+- **API-01 (GUC canonical names)**: canonical aliases for v0.87/v0.88 GUCs that violated `pg_ripple.noun_verb_unit` convention; deprecated names remain registered until v1.0.0 removal:
+  - `pg_ripple.katz_alpha` → `pg_ripple.pagerank_katz_alpha` (canonical)
+  - `pg_ripple.federation_minimum_confidence` → `pg_ripple.pagerank_federation_confidence_min`
+  - `pg_ripple.default_fuzzy_threshold` → `pg_ripple.fuzzy_match_threshold`
+- **SEC-02**: `pg_ripple.fuzzy_max_input_length` GUC (INT, default 4096, range 1–65536); `pg:fuzzy_match()` and `pg:token_set_ratio()` raise PT0308 when either argument exceeds the limit.
+- **SEC-03**: `pg_ripple.pagerank_max_seeds` GUC (INT, default 1024, range 1–1048576); `pagerank_run(..., seed_iris TEXT[])` raises PT0411 when the array exceeds the limit.
+- **SEC-04 + CB-03**: `export_pagerank()` now uses parameterized SQL for the `topic` parameter (no more direct interpolation); node IRI output is percent-encoded per RFC 3987. `pg:fuzzy_match()` / `pg:token_set_ratio()` now route through `pg_ripple._fuzzy_match_guard()` / `pg_ripple._token_set_ratio_guard()` guard functions that raise actionable PT0302 (pg_trgm missing) and PT0308 (input too long).
+
+### Changed
+
+- `pg_ripple_http` default rate limit default changed from 0 to 100 req/s (SEC-01). Set `PG_RIPPLE_HTTP_RATE_LIMIT=0` to restore the old disabled behavior.
+
+### Migration notes
+
+No SQL schema changes. The migration script `sql/pg_ripple--0.88.0--0.89.0.sql` is a comment-only file.
+
+---
+
 ## [0.88.0] — 2026-05-XX — Datalog-Native PageRank & Graph Analytics
 
 **Implements v0.88.0 roadmap: iterative PageRank engine via Datalog^agg + subsumptive tabling,

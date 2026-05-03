@@ -1,4 +1,4 @@
-/// Property-based test suite for pg_ripple (v0.46.0 + v0.78.0 + v0.83.0).
+/// Property-based test suite for pg_ripple (v0.46.0 + v0.78.0 + v0.83.0 + v0.89.0).
 ///
 /// Suites:
 ///
@@ -14,6 +14,10 @@
 /// 5. **N-Triples oxigraph comparison** (v0.83.0 PROPTEST-02) — rio_turtle and
 ///    oxigraph parse identical triple counts from randomly generated N-Triples
 ///    documents, validating pg_ripple's parser against a reference implementation.
+/// 6. **Confidence noisy-OR algebra** (v0.89.0 CB-01) — verifies algebraic
+///    identities of the noisy-OR formula used in probabilistic Datalog:
+///    commutativity, associativity, monotonicity, idempotence, identity element,
+///    absorbing element, and output range.
 ///
 /// No database connection is required — all tests run in pure Rust.
 ///
@@ -31,6 +35,8 @@ mod sqlgen_bridge;
 
 #[path = "proptest/bidi_convergence.rs"]
 mod bidi_convergence;
+#[path = "proptest/confidence_algebra.rs"]
+mod confidence_algebra;
 #[path = "proptest/construct_template.rs"]
 mod construct_template;
 #[path = "proptest/dictionary.rs"]

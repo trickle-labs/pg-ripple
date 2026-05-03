@@ -1,4 +1,4 @@
-//! GUC parameters for the PageRank and graph analytics engine (v0.88.0).
+//! GUC parameters for the PageRank and graph analytics engine (v0.88.0 + v0.89.0).
 
 // ─── v0.88.0 PageRank GUCs ────────────────────────────────────────────────────
 
@@ -75,5 +75,23 @@ pub static PAGERANK_SHACL_THRESHOLD: pgrx::GucSetting<f64> = pgrx::GucSetting::<
 /// GUC: minimum confidence for remote SERVICE edges in federation blend mode (v0.88.0 PR-FED-CONF-01).
 pub static FEDERATION_MINIMUM_CONFIDENCE: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.5);
 
+/// GUC: canonical alias for FEDERATION_MINIMUM_CONFIDENCE (API-01, v0.89.0).
+/// Use `pg_ripple.pagerank_federation_confidence_min`.
+/// The old name `pg_ripple.federation_minimum_confidence` is deprecated; remove in v1.0.0.
+pub static PAGERANK_FEDERATION_CONFIDENCE_MIN: pgrx::GucSetting<f64> =
+    pgrx::GucSetting::<f64>::new(0.5);
+
 /// GUC: attenuation factor for Katz centrality (v0.88.0 PR-CENTRALITY-01).
 pub static KATZ_ALPHA: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.01);
+
+/// GUC: canonical alias for KATZ_ALPHA (API-01, v0.89.0).
+/// Use `pg_ripple.pagerank_katz_alpha`.
+/// The old name `pg_ripple.katz_alpha` is deprecated; remove in v1.0.0.
+pub static PAGERANK_KATZ_ALPHA: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.01);
+
+// ─── v0.89.0 PageRank GUCs ────────────────────────────────────────────────────
+
+/// GUC: maximum number of seed IRIs accepted by `pagerank_run(..., seed_iris)`.
+/// Arrays longer than this raise PT0411. Default 1024, range 1–1048576.
+/// (v0.89.0 SEC-03)
+pub static PAGERANK_MAX_SEEDS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(1024);

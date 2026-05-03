@@ -147,7 +147,12 @@ pub static PROB_DATALOG_CYCLIC_STRICT: pgrx::GucSetting<bool> =
     pgrx::GucSetting::<bool>::new(false);
 
 /// GUC: default similarity threshold for `pg:fuzzy_match()` and `pg:confPath()` (v0.87.0).
+/// DEPRECATED since v0.89.0; use `pg_ripple.fuzzy_match_threshold` (API-01).
 pub static DEFAULT_FUZZY_THRESHOLD: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.7);
+
+/// GUC: canonical name for default fuzzy match threshold (API-01, v0.89.0).
+/// Supersedes `pg_ripple.default_fuzzy_threshold` (to be removed in v1.0.0).
+pub static FUZZY_MATCH_THRESHOLD: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.7);
 
 /// GUC: enable automatic confidence propagation from PROV-O `pg:sourceTrust` predicates (v0.87.0).
 pub static PROV_CONFIDENCE: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
