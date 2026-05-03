@@ -3,54 +3,38 @@
 -- Ensures MINUS correctly handles blank-node scoping.
 -- Per SPARQL 1.1 §18.6 (compatible mappings), blank nodes in the MINUS
 -- operand are existentially quantified independently from the outer pattern.
--- They must NOT share scope with blank nodes in the left-hand pattern.
 
--- Setup: insert test triples
-SELECT pg_ripple.insert_triple(
-    '<https://example.org/x>',
-    '<https://example.org/a>',
-    '<https://example.org/val1>'
-) > 0 AS setup_ok_1;
+-- Setup: insert test triples using a dedicated namespace to avoid interference.
+SELECT pg_ripple.load_ntriples(
+    '<https://minus.test/x> <https://minus.test/a> <https://minus.test/val1> .' || E'\n' ||
+    '<https://minus.test/x> <https://minus.test/b> <https://minus.test/val2> .' || E'\n' ||
+    '<https://minus.test/y> <https://minus.test/a> <https://minus.test/val3> .'
+) = 3 AS three_triples_loaded;
 
-SELECT pg_ripple.insert_triple(
-    '<https://example.org/x>',
-    '<https://example.org/b>',
-    '<https://example.org/val2>'
-) > 0 AS setup_ok_2;
-
-SELECT pg_ripple.insert_triple(
-    '<https://example.org/y>',
-    '<https://example.org/a>',
-    '<https://example.org/val3>'
-) > 0 AS setup_ok_3;
-
--- Test 1: MINUS with blank node in both patterns
--- Both patterns use blank nodes but in different positions.
--- Expected: ?x = <ex:x> and ?x = <ex:y> are returned because the blank
--- node in MINUS is independently scoped (not the same variable).
-SELECT sparql_query($$
+-- Test 1: MINUS with blank nodes excludes nodes with the MINUS predicate.
+-- <minus.test/x> has both :a and :b predicates so is excluded by MINUS.
+-- <minus.test/y> has only :a so is included. Expected: 1 row.
+SELECT COUNT(*) = 1 AS minus_blank_scope_count
+FROM pg_ripple.sparql($$
   SELECT ?x WHERE {
-    ?x <https://example.org/a> [] .
-    MINUS { ?x <https://example.org/b> [] . }
+    ?x <https://minus.test/a> [] .
+    MINUS { ?x <https://minus.test/b> [] . }
   }
-$$) AS minus_blank_scope_test;
+$$);
 
--- Test 2: MINUS correctly excludes when same URI binding matches
--- <ex:x> has both <ex:a> and <ex:b> predicates, so it should be excluded.
--- <ex:y> only has <ex:a>, so it should be included.
-SELECT sparql_query($$
+-- Test 2: MINUS with named variables correctly excludes by binding.
+SELECT COUNT(*) = 1 AS minus_named_var_count
+FROM pg_ripple.sparql($$
   SELECT ?x WHERE {
-    ?x <https://example.org/a> ?v .
-    MINUS { ?x <https://example.org/b> ?w . }
+    ?x <https://minus.test/a> ?v .
+    MINUS { ?x <https://minus.test/b> ?w . }
   }
-$$) AS minus_uri_binding_test;
+$$);
 
--- Test 3: Verify blank-node independence — blank nodes in MINUS are fresh
--- existential variables unrelated to outer pattern blank nodes.
--- This returns rows because the MINUS blank nodes do not constrain ?x.
-SELECT (sparql_query($$
-  SELECT (COUNT(?x) AS ?n) WHERE {
-    ?x <https://example.org/a> [] .
-    MINUS { ?x <https://example.org/b> [] . }
+-- Test 3: Without MINUS, both :a nodes are returned.
+SELECT COUNT(*) = 2 AS without_minus_returns_both
+FROM pg_ripple.sparql($$
+  SELECT ?x WHERE {
+    ?x <https://minus.test/a> ?v .
   }
-$$) ->> 'n')::int >= 1 AS blank_node_minus_count_ok;
+$$);
