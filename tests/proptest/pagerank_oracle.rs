@@ -95,16 +95,16 @@ fn pagerank_reference(
 }
 
 /// Strategy: generate a list of directed edges for a graph with `n` nodes.
-fn arb_graph(max_nodes: usize, max_edges: usize) -> impl Strategy<Value = (usize, Vec<(usize, usize)>)> {
+fn arb_graph(
+    max_nodes: usize,
+    max_edges: usize,
+) -> impl Strategy<Value = (usize, Vec<(usize, usize)>)> {
     (5usize..=max_nodes).prop_flat_map(move |n| {
         let min_edges = 10usize;
         let max_e = max_edges.min(n * n);
         let actual_max = max_e.max(min_edges + 1);
-        prop::collection::vec(
-            (0..n, 0..n),
-            min_edges..=actual_max,
-        )
-        .prop_map(move |edges| (n, edges))
+        prop::collection::vec((0..n, 0..n), min_edges..=actual_max)
+            .prop_map(move |edges| (n, edges))
     })
 }
 
