@@ -614,38 +614,91 @@ mod pg_ripple {
         rows.push(("dictionary_size".to_string(), dict_count.to_string()));
 
         // ── v0.87/v0.88 catalog: confidence + PageRank (OBS-05, v0.92.0) ──────
-        let confidence_count: i64 =
+        // Guard each query: tables added in v0.87/v0.88 may not exist when
+        // running against a pre-v0.87 schema (e.g. fresh pg_regress test DB).
+        let has_confidence: bool = pgrx::Spi::get_one::<bool>(
+            "SELECT EXISTS (
+                SELECT 1 FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = '_pg_ripple' AND c.relname = 'confidence'
+            )",
+        )
+        .unwrap_or(None)
+        .unwrap_or(false);
+        let confidence_count: i64 = if has_confidence {
             pgrx::Spi::get_one::<i64>("SELECT count(*)::bigint FROM _pg_ripple.confidence")
                 .unwrap_or(None)
-                .unwrap_or(0);
+                .unwrap_or(0)
+        } else {
+            0
+        };
         rows.push((
             "confidence_row_count".to_string(),
             confidence_count.to_string(),
         ));
 
-        let pagerank_last: String = pgrx::Spi::get_one::<String>(
-            "SELECT MAX(computed_at)::text FROM _pg_ripple.pagerank_scores",
+        let has_pagerank_scores: bool = pgrx::Spi::get_one::<bool>(
+            "SELECT EXISTS (
+                SELECT 1 FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = '_pg_ripple' AND c.relname = 'pagerank_scores'
+            )",
         )
         .unwrap_or(None)
-        .unwrap_or_else(|| "never".to_string());
+        .unwrap_or(false);
+        let pagerank_last: String = if has_pagerank_scores {
+            pgrx::Spi::get_one::<String>(
+                "SELECT MAX(computed_at)::text FROM _pg_ripple.pagerank_scores",
+            )
+            .unwrap_or(None)
+            .unwrap_or_else(|| "never".to_string())
+        } else {
+            "never".to_string()
+        };
         rows.push(("pagerank_last_computed".to_string(), pagerank_last));
 
-        let pagerank_queue: i64 = pgrx::Spi::get_one::<i64>(
-            "SELECT count(*)::bigint FROM _pg_ripple.pagerank_dirty_edges",
+        let has_dirty_edges: bool = pgrx::Spi::get_one::<bool>(
+            "SELECT EXISTS (
+                SELECT 1 FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = '_pg_ripple' AND c.relname = 'pagerank_dirty_edges'
+            )",
         )
         .unwrap_or(None)
-        .unwrap_or(0);
+        .unwrap_or(false);
+        let pagerank_queue: i64 = if has_dirty_edges {
+            pgrx::Spi::get_one::<i64>(
+                "SELECT count(*)::bigint FROM _pg_ripple.pagerank_dirty_edges",
+            )
+            .unwrap_or(None)
+            .unwrap_or(0)
+        } else {
+            0
+        };
         rows.push((
             "pagerank_queue_depth".to_string(),
             pagerank_queue.to_string(),
         ));
 
-        let centrality_metrics: String = pgrx::Spi::get_one::<String>(
-            "SELECT COALESCE(string_agg(DISTINCT metric, ', ' ORDER BY metric), 'none') \
-             FROM _pg_ripple.centrality_scores",
+        let has_centrality: bool = pgrx::Spi::get_one::<bool>(
+            "SELECT EXISTS (
+                SELECT 1 FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = '_pg_ripple' AND c.relname = 'centrality_scores'
+            )",
         )
         .unwrap_or(None)
-        .unwrap_or_else(|| "none".to_string());
+        .unwrap_or(false);
+        let centrality_metrics: String = if has_centrality {
+            pgrx::Spi::get_one::<String>(
+                "SELECT COALESCE(string_agg(DISTINCT metric, ', ' ORDER BY metric), 'none') \
+                 FROM _pg_ripple.centrality_scores",
+            )
+            .unwrap_or(None)
+            .unwrap_or_else(|| "none".to_string())
+        } else {
+            "none".to_string()
+        };
         rows.push(("centrality_metrics".to_string(), centrality_metrics));
 
         TableIterator::new(rows)

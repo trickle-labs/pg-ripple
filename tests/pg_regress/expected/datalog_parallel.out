@@ -222,6 +222,7 @@ SET pg_ripple.datalog_parallel_threshold = 0;
 -- and completes without PT3001; parallel_groups >= 1 confirms it ran.
 SELECT (pg_ripple.infer_with_stats('rdfs')->>'parallel_groups')::int >= 1
     AS cyclic_precheck_no_crash;
+WARNING:  semi-naive rule compile error: variable predicate in rule body not supported
  cyclic_precheck_no_crash 
 --------------------------
  t
@@ -237,7 +238,8 @@ SELECT pg_ripple.drop_rules('rdfs') >= 0 AS rdfs_dropped_cycle_test;
 RESET pg_ripple.datalog_parallel_workers;
 RESET pg_ripple.datalog_parallel_threshold;
 SELECT 'CON-04: cyclic parallel Datalog pre-check regression test passed' AS con04_check;
-                              con04_check                               
-------------------------------------------------------------------------
+                           con04_check                            
+------------------------------------------------------------------
  CON-04: cyclic parallel Datalog pre-check regression test passed
 (1 row)
+

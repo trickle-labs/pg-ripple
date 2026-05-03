@@ -194,6 +194,8 @@ SELECT pg_ripple.remove_endpoint('http://cb-silent.test/sparql');
 -- https://localhost:19999/ — a closed port that produces connection refused / TLS
 -- handshake failure.
 
+-- Allow loopback address for this test only.
+SET pg_ripple.federation_allow_private = true;
 SELECT pg_ripple.register_endpoint('https://localhost:19999/sparql');
 
 -- Load one local triple so the outer pattern returns a row.
@@ -201,7 +203,7 @@ SELECT pg_ripple.insert_triple(
     '<http://test.example/cb09/s>',
     '<http://test.example/cb09/p>',
     '"cb09-value"'
-);
+) IS NOT NULL AS inserted;
 
 -- With SERVICE SILENT, the TLS failure must be swallowed; ?z is UNDEF / absent.
 -- The outer result row for ?x is still returned.
@@ -211,7 +213,7 @@ DECLARE
     result_count integer;
 BEGIN
     SELECT COUNT(*) INTO result_count
-    FROM pg_ripple.sparql($$
+    FROM pg_ripple.sparql($q$
         SELECT ?x WHERE {
             ?x <http://test.example/cb09/p> ?y .
             OPTIONAL {
@@ -220,7 +222,7 @@ BEGIN
                 }
             }
         }
-    $$);
+    $q$);
     -- SILENT must return exactly 1 row (the local ?x binding); ?z is unbound.
     IF result_count = 1 THEN
         RAISE NOTICE 'CB-09 PASS: SERVICE SILENT swallowed TLS failure, returned % row(s)', result_count;
@@ -238,4 +240,5 @@ SELECT pg_ripple.delete_triple(
     '<http://test.example/cb09/s>',
     '<http://test.example/cb09/p>',
     '"cb09-value"'
-);
+) > 0 AS deleted;
+RESET pg_ripple.federation_allow_private;
