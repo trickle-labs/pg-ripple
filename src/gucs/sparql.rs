@@ -91,3 +91,10 @@ pub static ALL_NODES_PREDICATE_LIMIT: pgrx::GucSetting<i32> = pgrx::GucSetting::
 /// ERROR (PT422) rather than evaluating to UNDEF. Default: `off`.
 /// (v0.81.0 FILTER-STRICT-01)
 pub static STRICT_SPARQL_FILTERS: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
+
+// ─── v0.89.0 SPARQL GUCs ─────────────────────────────────────────────────────
+
+/// GUC: maximum input string length for `pg:fuzzy_match()` and `pg:token_set_ratio()`.
+/// Arguments longer than this limit raise PT0308. Default 4096, range 1–65536.
+/// (v0.89.0 SEC-02)
+pub static FUZZY_MAX_INPUT_LENGTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(4096);

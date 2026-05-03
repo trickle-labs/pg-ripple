@@ -271,6 +271,19 @@ pub fn run_pagerank(params: PageRankParams) -> Vec<PageRankRow> {
         pgrx::error!("{code}: {msg}");
     }
 
+    // SEC-03 (v0.89.0): guard the seed_iris array length.
+    if let Some(ref seeds) = params.seed_iris {
+        let max_seeds = crate::PAGERANK_MAX_SEEDS.get();
+        if seeds.len() as i32 > max_seeds {
+            pgrx::error!(
+                "{PT0411}: seed_iris array length {} exceeds pg_ripple.pagerank_max_seeds ({}) — \
+                 reduce the array or raise the GUC",
+                seeds.len(),
+                max_seeds
+            );
+        }
+    }
+
     let damping = params.damping;
     let max_iter = params.max_iterations;
     let conv_delta = params.convergence_delta;
@@ -699,8 +712,11 @@ pub fn export_pagerank(format: &str, top_k: Option<i32>, topic: Option<&str>) ->
         );
     }
 
-    let topic_val = topic.unwrap_or("").replace('\'', "''");
+    // SEC-04 (v0.89.0): use parameterized SQL for topic to avoid IRI injection,
+    // and route all IRI output through safe_iri_output() to percent-encode
+    // dangerous characters per RFC 3987.
     let limit_clause = top_k.map(|k| format!("LIMIT {k}")).unwrap_or_default();
+    let topic_arg = topic.unwrap_or("");
 
     let rows: Vec<(String, f64, bool)> = Spi::connect(|c| {
         c.select(
@@ -708,11 +724,11 @@ pub fn export_pagerank(format: &str, top_k: Option<i32>, topic: Option<&str>) ->
                 "SELECT d.value, ps.score, ps.stale \
                  FROM _pg_ripple.pagerank_scores ps \
                  JOIN _pg_ripple.dictionary d ON d.id = ps.node \
-                 WHERE ps.topic = '{topic_val}' \
+                 WHERE ps.topic = $1 \
                  ORDER BY ps.score DESC {limit_clause}"
             ),
             None,
-            &[],
+            &[pgrx::datum::DatumWithOid::from(topic_arg)],
         )
         .unwrap_or_else(|e| pgrx::error!("export_pagerank: {e}"))
         .map(|row| {
@@ -730,8 +746,9 @@ pub fn export_pagerank(format: &str, top_k: Option<i32>, topic: Option<&str>) ->
                 "@prefix pg: <http://pg-ripple.io/ns#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\n",
             );
             for (iri, score, _) in &rows {
+                let safe = safe_iri_output(iri);
                 out.push_str(&format!(
-                    "{iri} pg:hasPageRank \"{score:.8}\"^^xsd:double .\n"
+                    "{safe} pg:hasPageRank \"{score:.8}\"^^xsd:double .\n"
                 ));
             }
             out
@@ -741,7 +758,8 @@ pub fn export_pagerank(format: &str, top_k: Option<i32>, topic: Option<&str>) ->
             let pr_pred = "<http://pg-ripple.io/ns#hasPageRank>";
             let xsd_double = "^^<http://www.w3.org/2001/XMLSchema#double>";
             for (iri, score, _) in &rows {
-                out.push_str(&format!("{iri} {pr_pred} \"{score:.8}\"{xsd_double} .\n"));
+                let safe = safe_iri_output(iri);
+                out.push_str(&format!("{safe} {pr_pred} \"{score:.8}\"{xsd_double} .\n"));
             }
             out
         }
@@ -749,7 +767,9 @@ pub fn export_pagerank(format: &str, top_k: Option<i32>, topic: Option<&str>) ->
             let mut out = String::from("node_iri,score,stale\n");
             for (iri, score, stale) in &rows {
                 let clean = iri.trim_matches(|c| c == '<' || c == '>');
-                out.push_str(&format!("{clean},{score:.8},{stale}\n"));
+                // SEC-04: percent-encode any characters that would break CSV.
+                let safe_iri = percent_encode_iri(clean);
+                out.push_str(&format!("{safe_iri},{score:.8},{stale}\n"));
             }
             out
         }
@@ -757,14 +777,44 @@ pub fn export_pagerank(format: &str, top_k: Option<i32>, topic: Option<&str>) ->
             let mut items = Vec::new();
             for (iri, score, _) in &rows {
                 let clean = iri.trim_matches(|c| c == '<' || c == '>');
+                // SEC-04: percent-encode for JSON-LD @id.
+                let safe_iri = percent_encode_iri(clean);
                 items.push(format!(
-                    "  {{\"@id\":\"{clean}\",\"http://pg-ripple.io/ns#hasPageRank\":{{\"@value\":{score:.8},\"@type\":\"xsd:double\"}}}}"
+                    "  {{\"@id\":\"{safe_iri}\",\"http://pg-ripple.io/ns#hasPageRank\":{{\"@value\":{score:.8},\"@type\":\"xsd:double\"}}}}"
                 ));
             }
             format!("[\n{}\n]", items.join(",\n"))
         }
         _ => unreachable!(),
     }
+}
+
+/// Wrap a raw IRI value (possibly with `<>` brackets) in safe N-Triples/Turtle form.
+/// Percent-encodes `>`, `<`, `"`, `\`, space, and ASCII control characters per RFC 3987.
+fn safe_iri_output(iri: &str) -> String {
+    let bare = iri.trim_matches(|c| c == '<' || c == '>');
+    format!("<{}>", percent_encode_iri(bare))
+}
+
+/// Percent-encode characters that are unsafe in IRI output (`>`, `<`, `"`, `\`,
+/// space, and bytes < 0x20 or == 0x7F). Other characters are left as-is.
+/// (SEC-04, v0.89.0)
+fn percent_encode_iri(iri: &str) -> String {
+    let mut out = String::with_capacity(iri.len());
+    for ch in iri.chars() {
+        match ch {
+            '<' => out.push_str("%3C"),
+            '>' => out.push_str("%3E"),
+            '"' => out.push_str("%22"),
+            '\\' => out.push_str("%5C"),
+            ' ' => out.push_str("%20"),
+            c if (c as u32) < 0x20 || c == '\x7F' => {
+                out.push_str(&format!("%{:02X}", c as u32));
+            }
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 // ── Centrality computation ────────────────────────────────────────────────────

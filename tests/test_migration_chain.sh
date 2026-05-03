@@ -570,13 +570,116 @@ assert_column "_pg_ripple" "dictionary" "qt_s"
 ok "v0.83.0 checkpoint assertions passed (no schema changes in this release)"
 echo
 
+# ── T14-01 (v0.89.0): Apply migrations v0.83.0 → v0.88.0 ────────────────────
+info "=== T14-01: applying migrations v0.83.0 → v0.88.0 ==="
+for ver in 0.83 0.84 0.85 0.86 0.87; do
+    major=$(echo "${ver}" | cut -d. -f1)
+    minor=$(echo "${ver}" | cut -d. -f2)
+    next_minor=$((minor + 1))
+    next_ver="${major}.${next_minor}.0"
+    cur_ver="${ver}.0"
+    script="${SQL_DIR}/pg_ripple--${cur_ver}--${next_ver}.sql"
+    if [[ -f "${script}" ]]; then
+        run_sql -f "${script}"
+        ok "Applied migration ${cur_ver} → ${next_ver}"
+    else
+        fail "T14-01: missing migration script pg_ripple--${cur_ver}--${next_ver}.sql"
+        exit 1
+    fi
+done
+echo
+
+# ── T14-01 checkpoint: v0.84.0 ────────────────────────────────────────────────
+info "=== T14-01 checkpoint: v0.84.0 ==="
+# v0.84.0 has no DDL schema changes (pure Rust/GUC additions).
+assert_column "_pg_ripple" "predicates" "triple_count"
+assert_column "_pg_ripple" "dictionary" "qt_s"
+ok "v0.84.0 checkpoint assertions passed (no DDL changes in this release)"
+echo
+
+# ── T14-01 checkpoint: v0.85.0 ────────────────────────────────────────────────
+info "=== T14-01 checkpoint: v0.85.0 ==="
+# v0.85.0 has no DDL schema changes (pure Rust/GUC additions).
+assert_column "_pg_ripple" "predicates" "triple_count"
+assert_column "_pg_ripple" "dictionary" "qt_s"
+ok "v0.85.0 checkpoint assertions passed (no DDL changes in this release)"
+echo
+
+# ── T14-01 checkpoint: v0.86.0 ────────────────────────────────────────────────
+info "=== T14-01 checkpoint: v0.86.0 ==="
+# v0.86.0 has no DDL schema changes (pure Rust/GUC additions).
+assert_column "_pg_ripple" "predicates" "triple_count"
+assert_column "_pg_ripple" "dictionary" "qt_s"
+ok "v0.86.0 checkpoint assertions passed (no DDL changes in this release)"
+echo
+
+# ── T14-01 checkpoint: v0.87.0 ────────────────────────────────────────────────
+info "=== T14-01 checkpoint: v0.87.0 ==="
+# v0.87.0 adds: _pg_ripple.confidence, _pg_ripple.shacl_score_log,
+#               confidence_stmt_idx index (uncertain knowledge engine, v0.87.0).
+assert_true "confidence table exists at v0.87.0" \
+    "EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = '_pg_ripple' AND table_name = 'confidence'
+    )"
+assert_column "_pg_ripple" "confidence" "statement_id"
+assert_column "_pg_ripple" "confidence" "confidence"
+assert_true "confidence_stmt_idx exists at v0.87.0" \
+    "EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = '_pg_ripple' AND indexname = 'confidence_stmt_idx'
+    )"
+assert_true "shacl_score_log table exists at v0.87.0" \
+    "EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = '_pg_ripple' AND table_name = 'shacl_score_log'
+    )"
+assert_column "_pg_ripple" "shacl_score_log" "graph_iri"
+assert_column "_pg_ripple" "shacl_score_log" "score"
+ok "v0.87.0 checkpoint assertions passed"
+echo
+
+# ── T14-01 checkpoint: v0.88.0 ────────────────────────────────────────────────
+info "=== T14-01 checkpoint: v0.88.0 ==="
+# v0.88.0 adds: _pg_ripple.pagerank_scores, _pg_ripple.pagerank_dirty_edges,
+#               _pg_ripple.centrality_scores, and BRIN index (PR-VIEW-01, v0.88.0).
+assert_true "pagerank_scores table exists at v0.88.0" \
+    "EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = '_pg_ripple' AND table_name = 'pagerank_scores'
+    )"
+assert_column "_pg_ripple" "pagerank_scores" "node"
+assert_column "_pg_ripple" "pagerank_scores" "score"
+assert_column "_pg_ripple" "pagerank_scores" "stale"
+assert_true "pagerank_scores_topic_score_idx BRIN index exists at v0.88.0" \
+    "EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = '_pg_ripple' AND indexname = 'pagerank_scores_topic_score_idx'
+    )"
+assert_true "pagerank_dirty_edges table exists at v0.88.0" \
+    "EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = '_pg_ripple' AND table_name = 'pagerank_dirty_edges'
+    )"
+assert_column "_pg_ripple" "pagerank_dirty_edges" "source_id"
+assert_column "_pg_ripple" "pagerank_dirty_edges" "delta"
+assert_true "centrality_scores table exists at v0.88.0" \
+    "EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = '_pg_ripple' AND table_name = 'centrality_scores'
+    )"
+assert_column "_pg_ripple" "centrality_scores" "node"
+assert_column "_pg_ripple" "centrality_scores" "metric"
+ok "v0.88.0 checkpoint assertions passed"
+echo
+
 # ── MIGCHAIN-01: migration script count verification ──────────────────────────
 info "=== MIGCHAIN-01: migration script count verification ==="
-# Count migration scripts from v0.62.0 to v0.83.0 (inclusive).
-# There are 21 minor version increments: 0.62→0.63, ..., 0.82→0.83.
-EXPECTED_COUNT=21
+# Count migration scripts from v0.62.0 to v0.88.0 (inclusive).
+# There are 26 minor version increments: 0.62→0.63, ..., 0.87→0.88.
+EXPECTED_COUNT=26
 ACTUAL_COUNT=0
-for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82; do
+for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87; do
     # Extract next version number
     major=$(echo "${ver}" | cut -d. -f1)
     minor=$(echo "${ver}" | cut -d. -f2)
@@ -592,9 +695,31 @@ for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75
     fi
 done
 if [[ "${ACTUAL_COUNT}" -eq "${EXPECTED_COUNT}" ]]; then
-    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.83.0"
+    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.88.0"
 else
     fail "MIGCHAIN-01: expected ${EXPECTED_COUNT} migration scripts, found ${ACTUAL_COUNT}"
+    exit 1
+fi
+echo
+
+# ── MIGCHAIN-SYNC: structural version-sync assertion ─────────────────────────
+# Fail CI automatically when a new migration script ships without a corresponding
+# checkpoint in this test (TEST-01, v0.89.0). Checks that the highest migration
+# script version matches the highest checkpoint applied in this test.
+info "=== MIGCHAIN-SYNC: structural version-sync assertion ==="
+HIGHEST_MIGRATION=$(ls "${SQL_DIR}"/pg_ripple--*.sql 2>/dev/null \
+    | grep -E 'pg_ripple--[0-9]+\.[0-9]+\.[0-9]+--[0-9]+\.[0-9]+\.[0-9]+\.sql' \
+    | sed 's/.*--\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.sql/\1/' \
+    | sort -V | tail -1 || echo "")
+# The highest checkpoint applied in this test (update this when adding new checkpoints):
+HIGHEST_CHECKPOINT="0.88.0"
+if [[ "${HIGHEST_MIGRATION}" == "${HIGHEST_CHECKPOINT}" ]]; then
+    ok "MIGCHAIN-SYNC: highest migration (${HIGHEST_MIGRATION}) matches highest checkpoint (${HIGHEST_CHECKPOINT})"
+elif [[ -z "${HIGHEST_MIGRATION}" ]]; then
+    fail "MIGCHAIN-SYNC: no migration scripts found in ${SQL_DIR}"
+    exit 1
+else
+    fail "MIGCHAIN-SYNC: highest migration script is ${HIGHEST_MIGRATION} but highest checkpoint is ${HIGHEST_CHECKPOINT} — add checkpoint assertions for the new migration in test_migration_chain.sh"
     exit 1
 fi
 echo

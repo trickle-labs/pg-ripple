@@ -27,17 +27,16 @@ use common::{AppState, env_or};
 
 // ─── Compatibility constants (COMPAT-01, v0.71.0) ────────────────────────────
 
-/// The minimum pg_ripple extension version required by this build of pg_ripple_http.
+/// Minimum pg_ripple extension version that this HTTP companion supports.
+/// Updated each release to match the previous extension version, allowing
+/// a one-version trailing window.
 ///
-/// S13-05 (v0.84.0): bumped to 0.84.0 — requires:
-///   - `/health/ready` deep-check endpoint (v0.84.0)
-///   - `PG_RIPPLE_HTTP_STRICT_COMPAT` env var support (v0.84.0)
-///   - All v0.80–v0.83 correctness, security and performance fixes
+/// HTTP-COMPAT-01 (v0.89.0): bumped to 0.88.0 — requires all v0.84–v0.88 features.
 ///
-/// Connections to older extension versions log a prominent warning.  The extension
+/// Connections to older extension versions log a prominent warning. The extension
 /// is still served (degraded mode) so that rolling upgrades do not hard-fail.
 /// Set `PG_RIPPLE_HTTP_STRICT_COMPAT=1` to convert the warning to a fatal startup error.
-const COMPATIBLE_EXTENSION_MIN: &str = "0.87.0";
+const COMPATIBLE_EXTENSION_MIN: &str = "0.88.0";
 
 /// Check that the installed pg_ripple extension version is within the known-compatible
 /// range for this pg_ripple_http build.  Logs a warning if it is not.
@@ -172,7 +171,7 @@ async fn main() {
     };
     let auth_token = std::env::var("PG_RIPPLE_HTTP_AUTH_TOKEN").ok();
     let datalog_write_token = std::env::var("PG_RIPPLE_HTTP_DATALOG_WRITE_TOKEN").ok();
-    let rate_limit: u32 = match env_or("PG_RIPPLE_HTTP_RATE_LIMIT", "0").parse() {
+    let rate_limit: u32 = match env_or("PG_RIPPLE_HTTP_RATE_LIMIT", "100").parse() {
         Ok(r) => r,
         Err(e) => {
             tracing::error!("PG_RIPPLE_HTTP_RATE_LIMIT must be a non-negative integer: {e}");

@@ -1,0 +1,44 @@
+-- Migration 0.88.0 → 0.89.0: Assessment 14 Critical & High Remediation
+--
+-- This release contains no SQL schema changes.  All improvements are
+-- Rust-compiled, GUC additions, security hardening, or documentation changes.
+--
+-- New GUCs registered at extension load time (available immediately after
+-- ALTER EXTENSION pg_ripple UPDATE):
+--
+-- Security hardening (SEC-02, SEC-03):
+--   pg_ripple.fuzzy_max_input_length  int  default 4096  range 1–65536
+--     Maximum input string length for pg:fuzzy_match() and pg:token_set_ratio().
+--     Arguments exceeding this limit raise PT0308.
+--
+--   pg_ripple.pagerank_max_seeds  int  default 1024  range 1–1048576
+--     Maximum number of seed IRIs accepted by pagerank_run(..., seed_iris).
+--     Arrays longer than this raise PT0411.
+--
+-- API canonicalization (API-01, deprecated names removed in v1.0.0):
+--   pg_ripple.pagerank_katz_alpha  float8  default 0.01
+--     Canonical name for katz_alpha. Old name pg_ripple.katz_alpha is deprecated.
+--
+--   pg_ripple.pagerank_federation_confidence_min  float8  default 0.5
+--     Canonical name for federation_minimum_confidence. Old name deprecated.
+--
+--   pg_ripple.fuzzy_match_threshold  float8  default 0.7
+--     Canonical name for default_fuzzy_threshold. Old name deprecated.
+--
+-- Other changes (Rust-compiled, no SQL schema changes):
+--   • DEAD-FILE-01: src/gucs/registration.rs.bak removed from repository.
+--   • TEST-01: migration-chain test extended with v0.84–v0.88 checkpoints
+--     and a structural version-sync assertion.
+--   • HTTP-COMPAT-01: pg_ripple_http COMPATIBLE_EXTENSION_MIN bumped to 0.88.0.
+--   • ROAD-02: just bump-version recipe extended with CHANGELOG stub creation
+--     and a new bump-version-dry dry-run mode.
+--   • CB-01: confidence noisy-OR proptest suite added (tests/proptest/confidence_algebra.rs).
+--   • SEC-01: pg_ripple_http default rate limit changed from 0 (disabled) to 100 req/s.
+--   • SEC-04: export_pagerank() uses parameterized SQL for topic parameter;
+--     IRI output percent-encodes dangerous characters per RFC 3987.
+--   • CB-03: pg:fuzzy_match() and pg:token_set_ratio() now raise actionable PT0302
+--     with install instructions when pg_trgm is not installed, and PT0308 when
+--     input exceeds pg_ripple.fuzzy_max_input_length.
+--
+-- Rollback notes:
+--   No DDL was added; downgrade by running ALTER EXTENSION pg_ripple UPDATE TO '0.88.0'.

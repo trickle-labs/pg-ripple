@@ -456,10 +456,24 @@ pub fn register() {
 
     pgrx::GucRegistry::define_float_guc(
         c"pg_ripple.default_fuzzy_threshold",
-        c"Default similarity threshold for pg:fuzzy_match() and pg:confPath() when no \
-      explicit threshold is provided. Default 0.7. (v0.87.0 FUZZY-SPARQL-01)",
+        c"Default similarity threshold for pg:fuzzy_match() and pg:confPath(). \
+      Default 0.7. DEPRECATED since v0.89.0, use pg_ripple.fuzzy_match_threshold \
+      (to be removed in v1.0.0). (v0.87.0 FUZZY-SPARQL-01)",
         c"",
         &crate::gucs::datalog::DEFAULT_FUZZY_THRESHOLD,
+        0.0,
+        1.0,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_float_guc(
+        c"pg_ripple.fuzzy_match_threshold",
+        c"Default similarity threshold for pg:fuzzy_match() and pg:confPath() when no \
+      explicit threshold is provided. Default 0.7. Canonical name (API-01, v0.89.0); \
+      supersedes default_fuzzy_threshold. (v0.87.0 FUZZY-SPARQL-01)",
+        c"",
+        &crate::gucs::datalog::FUZZY_MATCH_THRESHOLD,
         0.0,
         1.0,
         GucContext::Userset,

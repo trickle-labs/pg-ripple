@@ -243,7 +243,8 @@ pub(crate) fn register() {
     pgrx::GucRegistry::define_float_guc(
         c"pg_ripple.federation_minimum_confidence",
         c"Minimum confidence for remote SERVICE edges in federation blend mode. \
-          Default 0.5. (v0.88.0 PR-FED-CONF-01)",
+          Default 0.5. DEPRECATED since v0.89.0, use pg_ripple.pagerank_federation_confidence_min \
+          (to be removed in v1.0.0). (v0.88.0 PR-FED-CONF-01)",
         c"",
         &crate::gucs::pagerank::FEDERATION_MINIMUM_CONFIDENCE,
         0.0,
@@ -253,13 +254,55 @@ pub(crate) fn register() {
     );
 
     pgrx::GucRegistry::define_float_guc(
+        c"pg_ripple.pagerank_federation_confidence_min",
+        c"Minimum confidence for remote SERVICE edges in federation blend mode. \
+          Default 0.5. Canonical name (API-01, v0.89.0); supersedes federation_minimum_confidence. \
+          (v0.88.0 PR-FED-CONF-01)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_FEDERATION_CONFIDENCE_MIN,
+        0.0,
+        1.0,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_float_guc(
         c"pg_ripple.katz_alpha",
         c"Attenuation factor for Katz centrality computation. \
-          Default 0.01. (v0.88.0 PR-CENTRALITY-01)",
+          Default 0.01. DEPRECATED since v0.89.0, use pg_ripple.pagerank_katz_alpha \
+          (to be removed in v1.0.0). (v0.88.0 PR-CENTRALITY-01)",
         c"",
         &crate::gucs::pagerank::KATZ_ALPHA,
         0.0,
         1.0,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_float_guc(
+        c"pg_ripple.pagerank_katz_alpha",
+        c"Attenuation factor for Katz centrality computation. \
+          Default 0.01. Canonical name (API-01, v0.89.0); supersedes katz_alpha. \
+          (v0.88.0 PR-CENTRALITY-01)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_KATZ_ALPHA,
+        0.0,
+        1.0,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    // ── v0.89.0 PageRank GUCs — Input Guards (SEC-03) ────────────────────────
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.pagerank_max_seeds",
+        c"Maximum number of seed IRIs accepted by pagerank_run(..., seed_iris). \
+          Arrays longer than this raise PT0411. Range 1–1048576; default 1024. \
+          (v0.89.0 SEC-03)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_MAX_SEEDS,
+        1,
+        1048576,
         GucContext::Userset,
         GucFlags::default(),
     );
