@@ -340,7 +340,7 @@ SELECT current_setting('pg_ripple.pagerank_federation_confidence_min')::float8 >
 SELECT current_setting('pg_ripple.default_fuzzy_threshold')::float8 >= 0.0
     AS fuzzy_threshold_deprecated_ok;
  fuzzy_threshold_deprecated_ok 
---------------------------------
+-------------------------------
  t
 (1 row)
 
