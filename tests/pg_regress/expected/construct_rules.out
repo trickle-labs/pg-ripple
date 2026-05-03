@@ -609,8 +609,9 @@ SELECT TRUE AS isolation_cleanup_done;
 -- ── IVM-02 (v0.91.0): CWB confidence propagation ─────────────────────────────
 -- Verify that inferred triples produced by a CONSTRUCT rule carry the source=1
 -- marker and that the confidence propagation path honours prov_confidence.
--- Uses ONLY existing IRIs (cwb.test/Alice, Bob, source, target) to avoid
--- introducing new dictionary entries that would shift VP table sequence numbers.
+-- Uses ONLY existing IRIs (Carol, Dave, source, target) to avoid introducing
+-- new dictionary entries that would shift VP table sequence numbers.
+-- Carol/Dave were inserted then deleted in CWB-02/03 (non-duplicate re-insert).
 SELECT pg_ripple.create_construct_rule(
     'cwb_ivm02_conf',
     'CONSTRUCT { ?s <https://cwb.test/knownBy> ?o }
@@ -622,11 +623,12 @@ SELECT pg_ripple.create_construct_rule(
  t
 (1 row)
 
--- Insert using EXISTING subject/object/graph (already in dictionary)
+-- Insert using EXISTING subject/object/graph (already in dictionary).
+-- Carol/Dave were inserted and later deleted in CWB-02/03, so this is not a duplicate.
 SELECT pg_ripple.insert_triple(
-    '<https://cwb.test/Alice>',
+    '<https://cwb.test/Carol>',
     '<https://cwb.test/knows>',
-    '<https://cwb.test/Bob>',
+    '<https://cwb.test/Dave>',
     '<https://cwb.test/source>'
 ) > 0 AS ivm02_triple_inserted;
  ivm02_triple_inserted 
