@@ -35,9 +35,9 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: pg_ripple_test
-          POSTGRES_USER: pg_ripple
-          POSTGRES_PASSWORD: pg_ripple
+          POSTGRES_DB: ripple_test
+          POSTGRES_USER: ripple
+          POSTGRES_PASSWORD: ripple
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -68,8 +68,8 @@ jobs:
         env:
           PGHOST: localhost
           PGPORT: 5432
-          PGUSER: pg_ripple
-          PGPASSWORD: pg_ripple
+          PGUSER: ripple
+          PGPASSWORD: ripple
         run: |
           PG_CONFIG=$(which pg_config || echo '')
           if [[ -n "$PG_CONFIG" ]]; then
@@ -86,6 +86,6 @@ jobs:
         env:
           PGHOST: localhost
           PGPORT: 5432
-          PGUSER: pg_ripple
-          PGPASSWORD: pg_ripple
+          PGUSER: ripple
+          PGPASSWORD: ripple
         run: bash tests/test_migration_chain.sh
