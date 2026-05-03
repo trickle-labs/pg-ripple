@@ -192,6 +192,16 @@
 | [v0.91.0](roadmap/v0.91.0.md) | **A14 Medium: observability, API, standards, build, docs** — PageRank IVM Prometheus gauges; SHACL score-log retention GUC + background vacuum; SSE endpoint verification; HTTP routing middleware extraction; Arrow Flight COUNT→EXPLAIN swap; `explain_pagerank_json()` JSONB variant; PT error code registry (PT0301–PT0423); SPARQL 1.2 tracking update; RDF-star compliance matrix; ProbLog citation; `lint-version-sync` CI extension; dedicated `migration-chain.yml` workflow; ureq + arrow/parquet upgrade triage; IVM boundary documentation; CWB confidence-propagation test; CDC LSN watermark batching; compatibility matrix v0.87/v0.88 rows; `pagerank.md` completeness audit | ✅ Released | Medium | [Full details](roadmap/v0.91.0-full.md) |
 | [v0.92.0](roadmap/v0.92.0.md) | **A14 Low-severity polish** — PageRank bounds source comment; damping tuning guide; SERVICE SILENT TLS test; `describe_form` alias contract; RSA dependency audit; `pagerank_dirty_edges` RLS; `pagerank_find_duplicates` STABLE; cargo-audit `--deny unmaintained`; `pagerank_partition` auto-tune default; `fuzzy_match` STABLE; Datalog cyclic-dep regression; confidence sub-xact rollback test; benchmark throughput history; `.unwrap()` audit v0.87/v0.88; `diagnostic_report()` v0.87/v0.88 catalog; `SOURCE_DATE_EPOCH` reproducible builds; `owl:sameAs` PageRank dedup doc; CDC `pg_notify` payload bound; SSE backpressure load test; WC-01–WC-05 post-v1.0 aspirational tracking issues filed | ✅ Released | Medium | [Full details](roadmap/v0.92.0-full.md) |
 
+### pg_tide Integration (v0.93.0)
+
+> **Context**: pg-trickle v0.46.0 extracted its full relay, outbox, and inbox subsystem into the
+> new standalone `pg_tide` extension (`trickle-labs/pg-tide`). After v0.46.0, `pg_trickle` provides
+> IVM only. See [plans/PLAN_PG_TIDE.md](plans/PLAN_PG_TIDE.md) for the full impact analysis.
+
+| Version | Theme | Status | Scope | Full details |
+|---------|-------|--------|-------|-------------- |
+| [v0.93.0](roadmap/v0.93.0.md) | **pg_tide integration & documentation modernisation** — Add `has_pg_tide()` runtime detection + `pg_ripple.pg_tide_available()` SQL function (TIDE-1); update BIDI-OUTBOX-01/BIDI-INBOX-01 doc comments to reference `pg_tide` (TIDE-2); add `PGTIDE_HINT` constant for relay error paths (TIDE-3); full rewrite of `docs/src/operations/pg-trickle-relay.md` to `tide.*` API — 20+ call sites updated, new outbox publish trigger pattern, `pg-tide-relay` binary, updated prerequisites and architecture diagram (TIDE-4); update `blog/semantic-hub-trickle-relay.md` hub-and-spoke examples (TIDE-5); add backward-compat note to `plans/pg_trickle_relay_integration.md` (TIDE-6); add inline notes to `roadmap/v0.52.0.md` and `roadmap/v0.77.0-full.md` (TIDE-7); extend compatibility matrix with `pg_tide ≥ 0.1.0` rows (TIDE-8); add comment-only migration script `sql/pg_ripple--0.92.0--0.93.0.sql` | Planned | Small | [Full details](roadmap/v0.93.0.md) |
+
 ### Stable Release & Ecosystem (v1.0.0 – v1.1.0)
 
 | Version | Theme | Status | Scope | Full details |
