@@ -609,12 +609,12 @@ SELECT TRUE AS isolation_cleanup_done;
 -- ── IVM-02 (v0.91.0): CWB confidence propagation ─────────────────────────────
 -- Verify that inferred triples produced by a CONSTRUCT rule carry the source=1
 -- marker and that the confidence propagation path honours prov_confidence.
--- This test only checks that source=1 triples are written (the actual confidence
--- value computation lives in the Rust layer and is covered by pg_test).
+-- Reuses existing predicates (cwb.test/knows → cwb.test/ivm02derived) to avoid
+-- introducing new predicates that would shift VP table sequence numbers.
 SELECT pg_ripple.create_construct_rule(
     'cwb_ivm02_conf',
-    'CONSTRUCT { ?s <https://cwb.test/ivm02/derived> ?o }
-     WHERE { ?s <https://cwb.test/ivm02/raw> ?o }',
+    'CONSTRUCT { ?s <https://cwb.test/knownBy> ?o }
+     WHERE { GRAPH <https://cwb.test/source> { ?s <https://cwb.test/knows> ?o } }',
     'https://cwb.test/ivm02/target'
 ) IS NULL AS ivm02_rule_created;
  ivm02_rule_created 
@@ -622,14 +622,19 @@ SELECT pg_ripple.create_construct_rule(
  t
 (1 row)
 
-SELECT pg_ripple.rdf_insert('https://cwb.test/ivm02/raw',
-    '<https://cwb.test/ivm02/A> <https://cwb.test/ivm02/raw> <https://cwb.test/ivm02/B> .');
- rdf_insert 
-------------
- 1
+-- Insert a triple using the existing predicate (already in dictionary)
+SELECT pg_ripple.insert_triple(
+    '<https://cwb.test/IVM02A>',
+    '<https://cwb.test/knows>',
+    '<https://cwb.test/IVM02B>',
+    '<https://cwb.test/source>'
+) > 0 AS ivm02_triple_inserted;
+ ivm02_triple_inserted 
+-----------------------
+ t
 (1 row)
 
-SELECT pg_ripple.run_full_recompute('cwb_ivm02_conf') >= 0 AS ivm02_recompute_ok;
+SELECT pg_ripple.refresh_construct_rule('cwb_ivm02_conf') >= 0 AS ivm02_recompute_ok;
  ivm02_recompute_ok 
 --------------------
  t
