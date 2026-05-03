@@ -879,4 +879,29 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // CDC-01 (v0.91.0): CDC LSN watermark batching GUCs.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.cdc_watermark_batch_size",
+        c"Number of CDC events to accumulate before flushing the LSN watermark \
+          to reduce per-event write amplification (v0.91.0 CDC-01). Default: 100. Range: 1–10000.",
+        c"",
+        &crate::gucs::storage::CDC_WATERMARK_BATCH_SIZE,
+        1,
+        10_000,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.cdc_watermark_flush_interval_ms",
+        c"Maximum milliseconds between LSN watermark flushes regardless of batch size \
+          (v0.91.0 CDC-01). Ensures progress even during low-volume CDC streams. Default: 50. Range: 1–60000.",
+        c"",
+        &crate::gucs::storage::CDC_WATERMARK_FLUSH_INTERVAL_MS,
+        1,
+        60_000,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
 }

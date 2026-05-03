@@ -170,6 +170,36 @@ mod pg_ripple {
         )
     }
 
+    // ── API-05 (v0.91.0): explain_pagerank_json ───────────────────────────────
+
+    /// Return the top-K incoming contributor chain for a node's PageRank score
+    /// as a JSONB value. Useful for SREs scripting the output or embedding in
+    /// monitoring dashboards.
+    ///
+    /// ```sql
+    /// SELECT pg_ripple.explain_pagerank_json('http://example.org/alice', 5);
+    /// ```
+    #[pg_extern]
+    fn explain_pagerank_json(node_iri: &str, top_k: default!(i32, 5)) -> pgrx::JsonB {
+        let rows = crate::pagerank::explain_pagerank(node_iri, top_k);
+        let contributors: Vec<serde_json::Value> = rows
+            .into_iter()
+            .map(|r| {
+                serde_json::json!({
+                    "depth": r.depth,
+                    "contributor_iri": r.contributor_iri,
+                    "contribution": r.contribution,
+                    "path": r.path
+                })
+            })
+            .collect();
+        let json = serde_json::json!({
+            "node_iri": node_iri,
+            "contributors": contributors
+        });
+        pgrx::JsonB(json)
+    }
+
     // ── PR-EXPORT-01: export_pagerank ─────────────────────────────────────────
 
     /// Export PageRank scores in the requested format.

@@ -314,7 +314,16 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
          pg_ripple_merge_worker_delta_rows_pending {}\n\
          # HELP pg_ripple_http_cors_permissive_requests_total Requests served under CORS wildcard origin (S13-03)\n\
          # TYPE pg_ripple_http_cors_permissive_requests_total counter\n\
-         pg_ripple_http_cors_permissive_requests_total {}\n",
+         pg_ripple_http_cors_permissive_requests_total {}\n\
+         # HELP pg_ripple_pagerank_queue_depth Number of dirty edges queued for incremental PageRank refresh (OBS-01)\n\
+         # TYPE pg_ripple_pagerank_queue_depth gauge\n\
+         pg_ripple_pagerank_queue_depth{{topic=\"\"}} {}\n\
+         # HELP pg_ripple_pagerank_queue_max_delta Largest accumulated score delta in the PageRank dirty-edges queue (OBS-01)\n\
+         # TYPE pg_ripple_pagerank_queue_max_delta gauge\n\
+         pg_ripple_pagerank_queue_max_delta{{topic=\"\"}} {:.6}\n\
+         # HELP pg_ripple_pagerank_queue_oldest_enqueue_seconds Age in seconds of the oldest entry in the PageRank dirty-edges queue (OBS-01)\n\
+         # TYPE pg_ripple_pagerank_queue_oldest_enqueue_seconds gauge\n\
+         pg_ripple_pagerank_queue_oldest_enqueue_seconds{{topic=\"\"}} {}\n",
         m.sparql_query_count(),
         m.datalog_query_count(),
         m.error_count(),
@@ -341,6 +350,9 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
         m.dictionary_cache_hit_ratio(),
         m.merge_worker_delta_rows_pending(),
         m.cors_permissive_requests_total(),
+        m.pagerank_queue_depth(),
+        m.pagerank_queue_max_delta(),
+        m.pagerank_queue_oldest_enqueue_seconds(),
     );
 
     Response::builder()

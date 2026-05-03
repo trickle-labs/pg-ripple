@@ -92,6 +92,14 @@ pub struct Metrics {
     // S13-03 (v0.86.0): CORS permissive-origin request counter.
     /// Requests served under the CORS wildcard-origin (*) policy.
     cors_permissive_requests_total: AtomicU64,
+
+    // OBS-01 (v0.91.0): PageRank IVM queue gauges.
+    /// Snapshot: number of dirty edges queued for incremental PageRank refresh (default topic).
+    pagerank_queue_depth: AtomicU64,
+    /// Snapshot: largest accumulated score delta in the dirty-edges queue, stored as f64 bits.
+    pagerank_queue_max_delta_bits: AtomicU64,
+    /// Snapshot: age in seconds of the oldest entry in the dirty-edges queue.
+    pagerank_queue_oldest_enqueue_seconds: AtomicU64,
 }
 
 impl Default for Metrics {
@@ -131,6 +139,9 @@ impl Metrics {
             dictionary_cache_hit_ratio_ppm: AtomicU64::new(0),
             merge_worker_delta_rows_pending: AtomicU64::new(0),
             cors_permissive_requests_total: AtomicU64::new(0),
+            pagerank_queue_depth: AtomicU64::new(0),
+            pagerank_queue_max_delta_bits: AtomicU64::new(0),
+            pagerank_queue_oldest_enqueue_seconds: AtomicU64::new(0),
         }
     }
 
@@ -351,5 +362,38 @@ impl Metrics {
 
     pub fn cors_permissive_requests_total(&self) -> u64 {
         self.cors_permissive_requests_total.load(Ordering::Relaxed)
+    }
+
+    // OBS-01 (v0.91.0): PageRank IVM queue gauge updaters and accessors.
+
+    /// Update the PageRank IVM queue gauge snapshot.
+    ///
+    /// Called by the metrics scrape handler after querying
+    /// `pg_ripple.pagerank_queue_stats()` from the extension.
+    pub fn update_pagerank_queue_stats(&self, depth: u64, max_delta: f64, oldest_seconds: f64) {
+        self.pagerank_queue_depth.store(depth, Ordering::Relaxed);
+        self.pagerank_queue_max_delta_bits
+            .store(max_delta.to_bits(), Ordering::Relaxed);
+        // Clamp to 0 to avoid NaN/negative storing oddities.
+        let oldest_secs = if oldest_seconds.is_finite() && oldest_seconds >= 0.0 {
+            oldest_seconds as u64
+        } else {
+            0
+        };
+        self.pagerank_queue_oldest_enqueue_seconds
+            .store(oldest_secs, Ordering::Relaxed);
+    }
+
+    pub fn pagerank_queue_depth(&self) -> u64 {
+        self.pagerank_queue_depth.load(Ordering::Relaxed)
+    }
+
+    pub fn pagerank_queue_max_delta(&self) -> f64 {
+        f64::from_bits(self.pagerank_queue_max_delta_bits.load(Ordering::Relaxed))
+    }
+
+    pub fn pagerank_queue_oldest_enqueue_seconds(&self) -> u64 {
+        self.pagerank_queue_oldest_enqueue_seconds
+            .load(Ordering::Relaxed)
     }
 }

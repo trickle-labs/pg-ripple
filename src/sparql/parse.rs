@@ -318,3 +318,38 @@ mod normalise_tests {
         assert!(n.contains("$N"), "should have $N placeholder");
     }
 }
+
+// ─── API-04 (v0.91.0): pg: prefix auto-injection ──────────────────────────────
+
+/// Canonical IRI namespace for pg_ripple SPARQL extension functions.
+///
+/// All `pg:` prefixed functions expand to IRIs under this namespace:
+/// - `pg:confidence` → `http://pg-ripple.org/fn/confidence`
+/// - `pg:pagerank`   → `http://pg-ripple.org/fn/pagerank`
+/// - `pg:similar`    → `http://pg-ripple.org/fn/similar`
+pub const PG_FN_NAMESPACE: &str = "http://pg-ripple.org/fn/";
+
+/// Prepend an implicit `PREFIX pg: <http://pg-ripple.org/fn/>` declaration to
+/// a SPARQL query that uses `pg:` notation without declaring the prefix.
+///
+/// This allows users to write `FILTER(pg:confidence(?s, ?p, ?o) > 0.8)` without
+/// a prefix declaration. Queries that already declare `PREFIX pg:` are unchanged.
+///
+/// The function only modifies the query if `pg:` appears (heuristic: as a word
+/// boundary followed by a letter) and the query does not already contain a
+/// `PREFIX pg:` declaration.
+pub fn inject_pg_prefix_if_needed(query: &str) -> std::borrow::Cow<'_, str> {
+    // Fast path: if the query doesn't contain "pg:" at all, skip.
+    if !query.contains("pg:") {
+        return std::borrow::Cow::Borrowed(query);
+    }
+    // If the query already declares the pg: prefix, leave it unchanged.
+    // Case-insensitive prefix keyword check.
+    let lower = query.to_ascii_lowercase();
+    if lower.contains("prefix pg:") {
+        return std::borrow::Cow::Borrowed(query);
+    }
+    // Prepend the PREFIX declaration.
+    let prefixed = format!("PREFIX pg: <{PG_FN_NAMESPACE}>\n{query}");
+    std::borrow::Cow::Owned(prefixed)
+}

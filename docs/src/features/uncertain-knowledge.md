@@ -200,6 +200,14 @@ guaranteed for any finite probabilistic Datalog program with noisy-OR semantics.
 This result follows directly from **Theorem 2** in De Raedt, Kimmig & Toivonen (2007),
 *ProbLog: A Probabilistic Prolog and its Application in Link Discovery*.
 
+> **Extension note (STD-03, v0.91.0)**: pg_ripple's noisy-OR confidence composition is a
+> pg_ripple-specific extension implementing probabilistic Datalog semantics. It is **not**
+> defined by the W3C RDF or SPARQL specifications. The mathematical foundation is:
+>
+> De Raedt, L., Kimmig, A., & Toivonen, H. (2007). ProbLog: A probabilistic Prolog and its
+> application in link discovery. *Proceedings of IJCAI 2007*, pp. 2468–2473.
+> <https://ijcai.org/proceedings/2007/2>
+
 Convergence speed depends on cycle depth and confidence values; programs with near-1.0
 confidence in cycles may converge slowly. The `prob_datalog_max_iterations` GUC (default 100)
 and `prob_datalog_convergence_delta` GUC (default 1e-6) control termination.

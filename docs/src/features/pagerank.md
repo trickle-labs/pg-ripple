@@ -38,6 +38,26 @@ Runs iterative PageRank and persists results.  Returns one row per node.
 | `decay_rate` | `float8` | `0.0` | Temporal decay exponent (0 = disabled) |
 | `bias` | `float8` | `0.15` | Personalization vector weight |
 
+All parameters are optional and can be passed as **named arguments** (API-03, v0.91.0):
+
+```sql
+-- Named-argument invocation (recommended for clarity)
+SELECT node_iri, score
+FROM pg_ripple.pagerank_run(
+    damping          => 0.85,
+    max_iterations   => 50,
+    topic            => 'citation'
+);
+
+-- Restrict to a specific named graph, reverse direction
+SELECT node_iri, score
+FROM pg_ripple.pagerank_run(
+    graph_uri  => 'http://example.org/graph1',
+    direction  => 'reverse'
+)
+ORDER BY score DESC LIMIT 20;
+```
+
 ### `pg_ripple.centrality_run(metric text, ...)`
 
 Computes an alternative centrality measure and stores results in
@@ -57,6 +77,18 @@ Returns the score explanation tree for a node — which other nodes contributed 
 ```sql
 SELECT depth, contributor_iri, contribution, path
 FROM pg_ripple.explain_pagerank('<http://example.org/Alice>', 5);
+```
+
+### `pg_ripple.explain_pagerank_json(node_iri text, top_k int DEFAULT 5)` *(API-05, v0.91.0)*
+
+Returns the same explanation tree as `explain_pagerank()`, but serialised as a JSONB object.
+Use this when you need to return the explanation from a PL/pgSQL function or REST handler:
+
+```sql
+SELECT pg_ripple.explain_pagerank_json('<http://example.org/Alice>');
+-- Returns JSONB: {"node_iri": "...", "total_score": 0.023, "contributors": [...]}
+
+-- Useful in REST queries via pg_ripple_http /pagerank/explain/:iri?format=json
 ```
 
 ### `pg_ripple.export_pagerank(format text, top_k bigint DEFAULT 10000, topic text DEFAULT '')`

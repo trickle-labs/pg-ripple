@@ -265,3 +265,14 @@ pub static MERGE_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::ne
 /// Prevents runaway recursion on cyclic or very deep graphs.
 /// Default: 16. Min: 1. Max: 256. (v0.85.0 C13-11)
 pub static DESCRIBE_MAX_DEPTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(16);
+
+// ─── v0.91.0 storage GUCs — CDC watermark batching ───────────────────────────
+
+/// GUC: number of CDC events to accumulate before flushing the LSN watermark.
+/// Reduces per-event write amplification. Default: 100. (v0.91.0 CDC-01)
+pub static CDC_WATERMARK_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(100);
+
+/// GUC: maximum milliseconds between LSN watermark flushes regardless of batch size.
+/// Ensures progress is recorded even during low-volume CDC streams. Default: 50. (v0.91.0 CDC-01)
+pub static CDC_WATERMARK_FLUSH_INTERVAL_MS: pgrx::GucSetting<i32> =
+    pgrx::GucSetting::<i32>::new(50);

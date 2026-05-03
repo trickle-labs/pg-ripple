@@ -76,3 +76,39 @@ quoted triple's subject, predicate, and object encoded together).
 - [Plan Cache](plan-cache.md)
 - [Query Optimization](query-optimization.md)
 - [Feature Status Taxonomy](feature-status-taxonomy.md)
+
+---
+
+## SPARQL Extension Function IRI Namespace (API-04, v0.91.0)
+
+All pg_ripple SPARQL extension functions are defined under the canonical namespace:
+
+```
+http://pg-ripple.org/fn/
+```
+
+The shorthand `pg:` prefix maps to this namespace in all SPARQL queries
+executed through pg_ripple. The prefix is **auto-declared** — queries do not need
+to explicitly declare `PREFIX pg: <http://pg-ripple.org/fn/>`, though doing so
+is harmless and is the recommended style for queries intended to run against
+multiple SPARQL endpoints.
+
+### Available extension functions
+
+| Short form | Full IRI | Since | Description |
+|---|---|---|---|
+| `pg:confidence(?s, ?p, ?o)` | `http://pg-ripple.org/fn/confidence` | v0.87.0 | Highest confidence score across models for a triple |
+| `pg:pagerank(?node)` | `http://pg-ripple.org/fn/pagerank` | v0.88.0 | PageRank score for a node (default topic) |
+| `pg:pagerank(?node, ?topic)` | `http://pg-ripple.org/fn/pagerank` | v0.88.0 | PageRank score for a node in a named topic |
+| `pg:similar(?a, ?b)` | `http://pg-ripple.org/fn/similar` | v0.27.0 | Cosine similarity between embedding vectors |
+| `pg:fuzzy_match(?a, ?b)` | `http://pg-ripple.org/fn/fuzzy_match` | v0.87.0 | Trigram similarity (requires pg_trgm) |
+| `pg:confPath(?pred, ?minConf)` | `http://pg-ripple.org/fn/confPath` | v0.87.0 | Property path with confidence threshold filter |
+
+### Federation note
+
+Federation partners that wish to invoke pg_ripple extension functions remotely must
+use the **full IRI form**, as remote endpoints do not auto-declare the `pg:` prefix:
+
+```sparql
+FILTER(<http://pg-ripple.org/fn/confidence>(?s, ?p, ?o) > 0.8)
+```

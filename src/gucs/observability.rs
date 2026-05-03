@@ -42,3 +42,11 @@ pub static TRACING_TRACEPARENT: pgrx::GucSetting<Option<std::ffi::CString>> =
 /// A background worker sweep prunes rows older than this many days once per hour.
 /// Setting to 0 disables automatic pruning (manual archival required).
 pub static AUDIT_RETENTION_DAYS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(90);
+
+// ─── v0.91.0 observability GUCs ──────────────────────────────────────────────
+
+/// GUC: retention period in days for `_pg_ripple.shacl_score_log` rows (v0.91.0 OBS-02).
+///
+/// Background maintenance deletes rows older than this many days from the SHACL soft-scoring
+/// log table to prevent unbounded growth. Setting to 0 disables automatic pruning.
+pub static SHACL_SCORE_LOG_RETENTION_DAYS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(30);

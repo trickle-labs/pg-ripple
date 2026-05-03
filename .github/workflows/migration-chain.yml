@@ -1,0 +1,91 @@
+name: Migration Chain
+
+# BUILD-02 (v0.91.0): Dedicated migration chain workflow.
+#
+# Runs the full SQL migration chain test on every PR and push to main.
+# Ensures that ALTER EXTENSION pg_ripple UPDATE works end-to-end from the
+# earliest shipped version to the current default_version.
+#
+# Uses the same PGDG + pgrx setup as the "migration" job in ci.yml.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sql/**.sql'
+      - 'pg_ripple.control'
+      - 'tests/test_migration_chain.sh'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sql/**.sql'
+      - 'pg_ripple.control'
+      - 'tests/test_migration_chain.sh'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  PGRX_VERSION: "0.18.0"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  migration-chain:
+    name: Migration chain — full upgrade path (BUILD-02, v0.91.0)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Cache cargo-pgrx binary
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.cargo/bin/cargo-pgrx
+          key: ${{ runner.os }}-cargo-pgrx-${{ env.PGRX_VERSION }}
+
+      - name: Install PostgreSQL 18 from PGDG
+        run: |
+          sudo apt-get install -y --no-install-recommends curl ca-certificates lsb-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc >/dev/null
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev libclang-dev clang lld \
+            postgresql-18 postgresql-server-dev-18
+          sudo chown -R "$USER" \
+            /usr/share/postgresql/18/extension \
+            /usr/lib/postgresql/18/lib
+
+      - name: Install cargo-pgrx
+        run: |
+          if ! cargo pgrx --version 2>/dev/null | grep -q "${{ env.PGRX_VERSION }}"; then
+            cargo install cargo-pgrx --version "=${{ env.PGRX_VERSION }}" --locked
+          fi
+
+      - name: Initialise pgrx (PostgreSQL 18)
+        run: cargo pgrx init --pg18 /usr/lib/postgresql/18/bin/pg_config
+
+      - name: Start pgrx PostgreSQL 18
+        run: cargo pgrx start pg18 --postgresql-conf "allow_system_table_mods=on"
+
+      - name: Run migration chain test
+        run: bash tests/test_migration_chain.sh
+
+      - name: Stop pgrx PostgreSQL 18
+        if: always()
+        run: cargo pgrx stop pg18

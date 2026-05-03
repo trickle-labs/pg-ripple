@@ -87,4 +87,17 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.91.0 GUCs — SHACL score log retention (OBS-02) ────────────────────
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.shacl_score_log_retention_days",
+        c"Retention period in days for _pg_ripple.shacl_score_log rows (v0.91.0 OBS-02). \
+          Background maintenance deletes rows older than this limit. 0 disables pruning.",
+        c"",
+        &crate::gucs::observability::SHACL_SCORE_LOG_RETENTION_DAYS,
+        0,
+        3650,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
 }

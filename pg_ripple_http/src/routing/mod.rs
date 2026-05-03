@@ -16,6 +16,8 @@ use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use utoipa::OpenApi;
 
+pub mod middleware;
+
 use crate::arrow_encode::flight_do_get;
 use crate::common::{AppState, check_auth};
 // CQ-05 (v0.90.0): datalog handlers moved into the routing sub-module.
