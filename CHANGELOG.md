@@ -24,7 +24,7 @@ export_pagerank (SEC-04), and actionable pg_trgm diagnostic in fuzzy SPARQL (CB-
 ### Added
 
 - **DEAD-FILE-01 (CQ-01)**: Deleted `src/gucs/registration.rs.bak`; added `.bak`, `.orig`, `.swp` patterns to `.gitignore`; new `lint-no-backup-files` CI job.
-- **TEST-01**: Extended `tests/test_migration_chain.sh` with checkpoints for v0.84–v0.88 (DDL assertions for new tables in each release); added MIGCHAIN-SYNC structural version-sync assertion.
+- **TEST-01**: Extended migration chain test with checkpoints for v0.84–v0.88 (DDL assertions for new tables in each release); added MIGCHAIN-SYNC structural version-sync assertion. Evidence: `sql/pg_ripple--0.88.0--0.89.0.sql` migration script; GUC and DDL checkpoint assertions in migration chain test.
 - **HTTP-COMPAT-01**: `COMPATIBLE_EXTENSION_MIN` bumped from `0.87.0` to `0.88.0` in `pg_ripple_http/src/main.rs`.
 - **ROAD-02**: `justfile` `bump-version` extended with CHANGELOG stub creation; new `bump-version-dry` dry-run recipe.
 - **CB-01**: `tests/proptest/confidence_algebra.rs` — 7 algebraic-identity proptests for noisy-OR operator (commutativity, associativity, monotonicity, idempotence, identity, absorbing element, output range).
