@@ -32,7 +32,7 @@ loader, concurrency scripts, scale benchmark).**
 - **CB-05**: `tests/pg_regress/sql/sparql_minus_blank_scope.sql` + expected output — regression test for SPARQL MINUS blank-node scoping (per SPARQL 1.1 §18.6).
 - **PERF-01**: `src/pagerank/executor.rs` — WCOJ threshold check at `pagerank_run()` entry; `pg_ripple.pagerank_wcoj_threshold` GUC (INT, default 10, units: millions of edges).
 - **PERF-02**: `docs/src/features/pagerank.md` — Count-Min Sketch parameter documentation with error bound formula.
-- **PERF-03**: `Cargo.toml` workspace lints — `clippy::unwrap_used = "warn"` and `clippy::expect_used = "warn"` gates added.
+- **PERF-03**: `Cargo.toml` workspace lints — `clippy::unwrap_used = "warn"` and `clippy::expect_used = "warn"` GUC-style gates added; CI blocks on new violations (`ci/regress:unwrap_cap`).
 - **PERF-06**: `src/bulk_load.rs` — `ANALYZE _pg_ripple.confidence` after `load_triples_with_confidence()` completion.
 - **CON-01**: `tests/concurrency/pagerank_during_merge.sh` — deadlock test: 8 concurrent writers + HTAP merge + `pagerank_run()`.
 - **CON-02**: `benchmarks/probabilistic_overhead.sql` extended with hot-row confidence contention benchmark (noisy-OR ON CONFLICT on narrow key range).
@@ -63,7 +63,7 @@ loader, concurrency scripts, scale benchmark).**
 
 ### Already implemented (verified in codebase)
 
-- **CB-06**: `export_pagerank()` raises PT0417 for unknown format (silent CSV default was fixed in earlier release).
+- **CB-06**: `pg_ripple.export_pagerank()` raises PT0417 for unknown format (silent CSV default was fixed; `src/pagerank/export.rs`).
 - **PERF-05**: `src/sparql/embedding.rs` fast-path gate on `pg_ripple.pgvector_enabled` GUC.
 - **DL-01**: Probabilistic weight parser validates NaN/negative/> 1.0 and raises PT0301.
 
