@@ -167,7 +167,6 @@ CDC events can be serialized in multiple formats:
 
 - **JSON-LD** (default): Full context, human-readable, compatible with any JSON consumer.
 - **N-Triples**: Compact RDF serialization, compatible with any RDF toolkit.
-- **Protobuf**: Binary format for high-throughput pipelines (planned).
 
 The format is configurable per subscription:
 

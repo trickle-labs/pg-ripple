@@ -149,13 +149,14 @@ You activate them with:
 
 ```sql
 -- Load RDFS rules
-SELECT pg_ripple.datalog_load_ruleset('rdfs');
+SELECT pg_ripple.load_rules_builtin('rdfs');
 
 -- Load OWL 2 RL rules
-SELECT pg_ripple.datalog_load_ruleset('owl2rl');
+SELECT pg_ripple.load_rules_builtin('owl-rl');
 
--- Run inference
-SELECT pg_ripple.datalog_infer();
+-- Run inference (pass the ruleset name)
+SELECT pg_ripple.infer('rdfs');
+SELECT pg_ripple.infer('owl-rl');
 ```
 
 After inference, SPARQL queries automatically see the derived triples.
@@ -167,18 +168,15 @@ After inference, SPARQL queries automatically see the derived triples.
 Beyond standard entailment, you can define domain-specific rules:
 
 ```sql
--- Transitive manager chain
-SELECT pg_ripple.datalog_add_rule(
-  'manages(X, Z) :- manages(X, Y), manages(Y, Z).'
+-- Load custom rules as a named ruleset
+SELECT pg_ripple.load_rules(
+  '?x ex:manages ?z :- ?x ex:manages ?y, ?y ex:manages ?z .
+   ?x ex:conflictOfInterest ?y :- ?x ex:manages ?y, ?x ex:spouseOf ?y .',
+  'org_rules'
 );
 
--- Conflict of interest: employee reports to spouse
-SELECT pg_ripple.datalog_add_rule(
-  'conflict_of_interest(X, Y) :- manages(X, Y), spouse_of(X, Y).'
-);
-
--- Infer
-SELECT pg_ripple.datalog_infer();
+-- Infer (pass the ruleset name)
+SELECT pg_ripple.infer('org_rules');
 ```
 
 After inference, you can query derived predicates with SPARQL:
