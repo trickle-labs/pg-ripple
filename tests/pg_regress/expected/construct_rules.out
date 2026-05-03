@@ -609,27 +609,32 @@ SELECT TRUE AS isolation_cleanup_done;
 -- ── IVM-02 (v0.91.0): CWB confidence propagation ─────────────────────────────
 -- Verify that inferred triples produced by a CONSTRUCT rule carry the source=1
 -- marker and that the confidence propagation path honours prov_confidence.
--- This test only checks that source=1 triples are written (the actual confidence
--- value computation lives in the Rust layer and is covered by pg_test).
+-- Uses only pre-existing IRIs so no new dictionary entries are created and the
+-- VP sequence numbers seen by downstream tests (e.g. datalog_cwb_interaction)
+-- remain stable.
 SELECT pg_ripple.create_construct_rule(
     'cwb_ivm02_conf',
-    'CONSTRUCT { ?s <https://cwb.test/ivm02/derived> ?o }
-     WHERE { ?s <https://cwb.test/ivm02/raw> ?o }',
-    'https://cwb.test/ivm02/target'
+    'CONSTRUCT { ?s <https://cwb.test/knownBy> ?o }
+     WHERE { GRAPH <https://cwb.test/source> { ?s <https://cwb.test/knows> ?o } }',
+    'https://cwb.test/target'
 ) IS NULL AS ivm02_rule_created;
  ivm02_rule_created 
 --------------------
  t
 (1 row)
 
-SELECT pg_ripple.rdf_insert('https://cwb.test/ivm02/raw',
-    '<https://cwb.test/ivm02/A> <https://cwb.test/ivm02/raw> <https://cwb.test/ivm02/B> .');
- rdf_insert 
-------------
- 1
+-- Load source triple into the named graph that the rule watches.
+-- Carol/Dave were previously inserted and deleted in CWB-02/CWB-03.
+SELECT pg_ripple.load_ntriples_into_graph(
+    '<https://cwb.test/Carol> <https://cwb.test/knows> <https://cwb.test/Dave> .',
+    'https://cwb.test/source'
+) = 1 AS ivm02_source_loaded;
+ ivm02_source_loaded 
+---------------------
+ t
 (1 row)
 
-SELECT pg_ripple.run_full_recompute('cwb_ivm02_conf') >= 0 AS ivm02_recompute_ok;
+SELECT pg_ripple.refresh_construct_rule('cwb_ivm02_conf') >= 1 AS ivm02_recompute_ok;
  ivm02_recompute_ok 
 --------------------
  t
