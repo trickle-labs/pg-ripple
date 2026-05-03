@@ -5,6 +5,8 @@ name: Migration Chain
 # Runs the full SQL migration chain test on every PR and push to main.
 # Ensures that ALTER EXTENSION pg_ripple UPDATE works end-to-end from the
 # earliest shipped version to the current default_version.
+#
+# Uses the same PGDG + pgrx setup as the "migration" job in ci.yml.
 
 on:
   push:
@@ -31,61 +33,31 @@ jobs:
     name: Migration chain — full upgrade path (BUILD-02, v0.91.0)
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_DB: ripple_test
-          POSTGRES_USER: ripple
-          POSTGRES_PASSWORD: ripple
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Checkout
+        uses:         uses:         uses:         uses:         uses:         uses:         uses:         uses:               uses:       ust        uses:         uses:         uses:         uses: tabl        uses:         uses:         uses:         uses:         usesd5c        uses:         uses:         uses:         uses:         uses: : |
+        uses:         uses:         uses:         uses:              uses:         uses:         uses:         uses:          ('**/Car    ock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4
+      - name: Cache cargo-pgrx binary
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-registry-
+          path: ~/.cargo/bin/cargo-pg          path: ~/.cargo/bin/cargo-pgrgo          path: ~/.VER   N           path: ~/.cstall P          path: ~/.carg            path: ~/.cargo/bin/cargo-pg  tall     -n          path: ~nd          path: ~/.cargo/bin/cargo-pg          path: ~/.cargo/bin/sh          path: ~/.carggdg
+          cu          cu         po          cu          cu         po          cu          cu         po          cu          cu         po          cu          cu         po          cu          cu         po          cu          cu         po          cu          cu         po          cu          cu         po          cu          cu /apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev libclang-dev clang lld \
+            postgresql-18 postgresql-server-dev-18
+          sudo chown -R "$USER" \
+            /usr/share/postgresql/18/extension \
+            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql            /usr/lib/postgresql       t --pg18 /usr/lib/postgresql/18/bin/pg_config
 
-      - name: Install pgrx
-        run: cargo install cargo-pgrx --version ${{ env.PGRX_VERSION }} --locked
-
-      - name: Initialize pgrx for system Postgres
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: ripple
-          PGPASSWORD: ripple
-        run: |
-          PG_CONFIG=$(which pg_config || echo '')
-          if [[ -n "$PG_CONFIG" ]]; then
-            cargo pgrx init --pg18 "$PG_CONFIG"
-          else
-            echo "::warning::pg_config not found — skipping pgrx init, running header-only migration check"
-            exit 0
-          fi
-
-      - name: Build extension
-        run: cargo build --features pg18
+      - name: Start pgrx PostgreSQL 18
+        run: cargo pgrx start pg18 --postgresql-conf "allow_system_table_mods=on"
 
       - name: Run migration chain test
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: ripple
-          PGPASSWORD: ripple
         run: bash tests/test_migration_chain.sh
+
+      - name: Stop pgrx PostgreSQL 18
+        if: always()
+        run: cargo pgrx stop pg18

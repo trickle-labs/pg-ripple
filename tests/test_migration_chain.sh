@@ -700,7 +700,8 @@ ok "v0.90.0 checkpoint assertions passed"
 echo
 
 # Apply v0.90.0 → v0.91.0 migration script
-apply_migration "pg_ripple--0.90.0--0.91.0.sql"
+run_sql -f "${SQL_DIR}/pg_ripple--0.90.0--0.91.0.sql"
+ok "Applied migration 0.90.0 → 0.91.0"
 
 # ── T14-02 checkpoint: v0.91.0 ────────────────────────────────────────────────
 info "=== T14-02 checkpoint: v0.91.0 ==="
