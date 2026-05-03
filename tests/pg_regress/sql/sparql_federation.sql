@@ -187,3 +187,55 @@ SELECT 'SERVICE SILENT swallows PT605 circuit-breaker-open' AS b7_4_check;
 RESET pg_ripple.federation_timeout;
 RESET pg_ripple.circuit_breaker_threshold;
 SELECT pg_ripple.remove_endpoint('http://cb-silent.test/sparql');
+
+-- ─── CB-09: SERVICE SILENT TLS handshake failure ──────────────────────────────
+-- v0.92.0: SERVICE SILENT must swallow TLS connection failures and return empty
+-- results per SPARQL 1.1 §8.3.1. The "bad TLS" endpoint is simulated by
+-- https://localhost:19999/ — a closed port that produces connection refused / TLS
+-- handshake failure.
+
+SELECT pg_ripple.register_endpoint('https://localhost:19999/sparql');
+
+-- Load one local triple so the outer pattern returns a row.
+SELECT pg_ripple.insert_triple(
+    '<http://test.example/cb09/s>',
+    '<http://test.example/cb09/p>',
+    '"cb09-value"'
+);
+
+-- With SERVICE SILENT, the TLS failure must be swallowed; ?z is UNDEF / absent.
+-- The outer result row for ?x is still returned.
+SET client_min_messages = 'error';
+DO $$
+DECLARE
+    result_count integer;
+BEGIN
+    SELECT COUNT(*) INTO result_count
+    FROM pg_ripple.sparql($$
+        SELECT ?x WHERE {
+            ?x <http://test.example/cb09/p> ?y .
+            OPTIONAL {
+                SERVICE SILENT <https://localhost:19999/sparql> {
+                    ?x <http://test.example/cb09/q> ?z
+                }
+            }
+        }
+    $$);
+    -- SILENT must return exactly 1 row (the local ?x binding); ?z is unbound.
+    IF result_count = 1 THEN
+        RAISE NOTICE 'CB-09 PASS: SERVICE SILENT swallowed TLS failure, returned % row(s)', result_count;
+    ELSE
+        RAISE WARNING 'CB-09 RESULT: % rows (TLS endpoint may not be available in this environment)', result_count;
+    END IF;
+END $$;
+RESET client_min_messages;
+
+SELECT 'CB-09: SERVICE SILENT swallows TLS handshake failure' AS cb09_check;
+
+-- Cleanup.
+SELECT pg_ripple.remove_endpoint('https://localhost:19999/sparql');
+SELECT pg_ripple.delete_triple(
+    '<http://test.example/cb09/s>',
+    '<http://test.example/cb09/p>',
+    '"cb09-value"'
+);

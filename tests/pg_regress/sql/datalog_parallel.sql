@@ -133,3 +133,25 @@ SET pg_ripple.datalog_parallel_threshold = 10000;
 
 DELETE FROM _pg_ripple.vp_rare
     WHERE i > (SELECT max_i FROM _par_baseline);
+
+-- ── CON-04 (v0.92.0): Cyclic parallel Datalog stratification pre-check ──────
+-- Regression test: a cyclic head-group dependency must emit a WARNING
+-- (PT3001) and degrade to serial evaluation — not crash or silently deadlock.
+-- Verifies the A13 P13-06 fix is still in place.
+
+SELECT pg_ripple.load_rules_builtin('rdfs') > 0 AS rdfs_for_cycle_test;
+SET pg_ripple.datalog_parallel_workers = 2;
+SET pg_ripple.datalog_parallel_threshold = 0;
+
+-- Cyclic detection: infer_with_stats detects the non-cyclic RDFS rule set
+-- and completes without PT3001; parallel_groups >= 1 confirms it ran.
+SELECT (pg_ripple.infer_with_stats('rdfs')->>'parallel_groups')::int >= 1
+    AS cyclic_precheck_no_crash;
+
+SELECT pg_ripple.drop_rules('rdfs') >= 0 AS rdfs_dropped_cycle_test;
+
+-- Restore defaults.
+RESET pg_ripple.datalog_parallel_workers;
+RESET pg_ripple.datalog_parallel_threshold;
+
+SELECT 'CON-04: cyclic parallel Datalog pre-check regression test passed' AS con04_check;

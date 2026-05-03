@@ -89,6 +89,38 @@ Both metrics are exposed via Prometheus (see [Observability Reference](observabi
 
 ---
 
+## Cross-Module Dependency Scheduling (IVM-03, v0.92.0)
+
+Rules writing to `_pg_ripple.confidence` (the probabilistic Datalog engine) are **not
+included in the CWB (CONSTRUCT Writeback) topological sort**. The CWB scheduler only
+processes SPARQL CONSTRUCT rules; Datalog inference (including confidence propagation)
+is triggered via `pg_ripple.infer()` or the background inference worker.
+
+Cross-module dependency edges — for example, a CONSTRUCT rule that reads from
+`_pg_ripple.confidence` or a Datalog rule that depends on a CWB-maintained predicate —
+would require an explicit registration call. This API is reserved for future use:
+
+```sql
+-- Future API (not yet exposed): register a cross-module dependency
+-- SELECT pg_ripple.register_ivm_dependency(
+--     source_module => 'construct_rules',
+--     source_rule   => 'my_pipeline',
+--     target_module => 'datalog',
+--     target_rule   => 'confidence_propagation'
+-- );
+```
+
+Until this API is available, applications that need CONSTRUCT → confidence or Datalog →
+CONSTRUCT dependencies must sequence the calls manually:
+
+```sql
+-- Manual sequencing: run CONSTRUCT pipeline first, then confidence inference
+SELECT pg_ripple.run_construct_pipeline('my_pipeline');
+SELECT pg_ripple.infer('confidence');
+```
+
+---
+
 ## Related Pages
 
 - [PageRank](../features/pagerank.md)

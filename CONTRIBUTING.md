@@ -83,6 +83,49 @@ All four steps must pass before pushing.
 
 ---
 
+## Module structure: `src/uncertain/` and `src/pagerank/` (BUILD-05, v0.92.0)
+
+The v0.87.0 and v0.88.0 releases introduced two major module directories:
+
+### `src/uncertain_knowledge_api/`
+Probabilistic Datalog and fuzzy SPARQL functions:
+- `mod.rs` — main pg_extern functions (confidence loader, shacl_score, fuzzy guards)
+- `confidence_table.rs` — `_pg_ripple.confidence` table management
+- `fuzzy.rs` — fuzzy SPARQL implementation helpers
+- `prov.rs` — PROV-O confidence derivation from source trust metadata
+- `shacl.rs` — soft SHACL scoring helpers
+
+### `src/pagerank/`
+Datalog-native PageRank engine:
+- `mod.rs` — module root + re-exports
+- `executor.rs` — `run_pagerank()`, convergence loop, WCOJ path selection
+- `ivm.rs` — dirty-edge queue, K-hop propagation, staleness management (PR-STALE-BOUNDS-01)
+- `sketch.rs` — Count-Min Sketch top-K
+- `centrality.rs` — betweenness, closeness, eigenvector, Katz measures
+- `export.rs` — Turtle/JSON-LD/CSV/N-Triples export, IRI serialisation
+- `explain.rs` — `explain_pagerank()`, score-explanation trees
+
+Both modules use `#[allow(dead_code)]` at the module or item level because
+their public symbols are exposed via `pg_extern` macros in `pagerank_api.rs`
+and `uncertain_knowledge_api/mod.rs`. The compiler cannot resolve these indirect
+references through the pgrx macro expansion. All `#[allow(dead_code)]` usages
+must carry a `// Q14-08: <reason>` comment explaining why the suppression is needed.
+
+### Magic comment conventions
+
+pg_ripple uses three standard magic comments:
+
+| Comment | When to use |
+|---|---|
+| `// SAFETY: <reason>` | Required before every `unsafe` block |
+| `// CLIPPY-OK: <reason>` | When a clippy suggestion is intentionally not followed |
+| `// Q13-05: <reason>` | For `#[allow(dead_code)]` on items exposed indirectly via pgrx macros |
+| `// Q14-08: <reason>` | For `#[allow(dead_code)]` added in v0.87/v0.88 modules |
+
+These conventions are enforced by code review but not by CI lint (yet).
+
+---
+
 ## Migration script discipline
 
 Every release version must include a migration SQL script at:

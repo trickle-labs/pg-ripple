@@ -126,3 +126,22 @@ The CHANGELOG.md should be written so that someone without deep knowledge of Rus
 | 0.x.y | Pre-1.0 development milestones — features may change |
 | 1.0.0 | Production release — stable API, standards compliance |
 | 1.x.y | Post-1.0 enhancements (federation, Cypher/GQL, etc.) |
+
+---
+
+## Security Advisory Calendar
+
+### RSA timing side-channel advisories (SEC-06, v0.92.0)
+
+Two RUSTSEC advisories for the `rsa` crate are tracked in `audit.toml`:
+- `RUSTSEC-2024-0436` (Marvin attack on RSA decryption)
+- `RUSTSEC-2023-0071` (PKCS#1 v1.5 timing side-channel)
+
+Both expire **2026-12-01**. Before v1.0.0:
+1. Run `cargo tree -i rsa` to verify the `rsa` crate is still only a transitive dep.
+2. If `reqwest` is configured with `rustls-tls-native-roots` (no native-TLS), the RSA
+   crate may not be reachable. If unreachable, remove the advisory ignores from `audit.toml`.
+3. If still present as a transitive dep, renew the expiry dates in `audit.toml` after
+   confirming no pg_ripple code path exercises RSA decryption with untrusted input.
+
+> **Action required before v1.0.0**: Re-audit RSA advisory status and update `audit.toml`.

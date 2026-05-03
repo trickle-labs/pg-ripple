@@ -18,6 +18,9 @@
 //! - `pg_ripple.log_shacl_score(graph_iri)` — log the score to the history table
 
 // v0.90.0 CQ-04: pre-emptive split sub-modules
+// Q14-08: these sub-modules are split for future refactoring but their public
+// symbols are re-exported via pg_extern macros. The compiler cannot see through
+// pgrx macro expansion so dead_code is suppressed intentionally (Q13-05 pattern).
 #[allow(dead_code)]
 pub mod confidence_table;
 #[allow(dead_code)]
@@ -233,7 +236,15 @@ mod pg_ripple {
     /// `pg_ripple.fuzzy_max_input_length` characters.
     ///
     /// Called from generated SPARQL→SQL; not intended for direct use.
-    #[pg_extern(schema = "pg_ripple", name = "_fuzzy_match_guard")]
+    // PERF-08 (v0.92.0): STABLE (not IMMUTABLE) because the guard checks
+    // pg_trgm extension presence (catalog read). STABLE allows the planner
+    // to cache results within a query and hoist calls out of inner loops.
+    #[pg_extern(
+        stable,
+        parallel_safe,
+        schema = "pg_ripple",
+        name = "_fuzzy_match_guard"
+    )]
     fn fuzzy_match_guard(a: &str, b: &str) -> f64 {
         fuzzy_guard_checks(a, b);
         pgrx::Spi::get_one_with_args::<f64>(
@@ -254,7 +265,15 @@ mod pg_ripple {
     /// `pg_ripple.fuzzy_max_input_length` characters.
     ///
     /// Called from generated SPARQL→SQL; not intended for direct use.
-    #[pg_extern(schema = "pg_ripple", name = "_token_set_ratio_guard")]
+    // PERF-08 (v0.92.0): STABLE (not IMMUTABLE) because the guard checks
+    // pg_trgm extension presence (catalog read). STABLE allows the planner
+    // to cache results within a query and hoist calls out of inner loops.
+    #[pg_extern(
+        stable,
+        parallel_safe,
+        schema = "pg_ripple",
+        name = "_token_set_ratio_guard"
+    )]
     fn token_set_ratio_guard(a: &str, b: &str) -> f64 {
         fuzzy_guard_checks(a, b);
         pgrx::Spi::get_one_with_args::<f64>(

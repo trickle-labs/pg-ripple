@@ -1,0 +1,18 @@
+# pg_ripple PageRank throughput history — Karate Club benchmark (1M edges)
+# TEST-06 (v0.92.0): wired to performance_trend.yml as a chart artifact.
+#
+# Columns:
+#   version       — pg_ripple release version
+#   wall_time_ms  — wall-clock time for pagerank_run() to converge (milliseconds)
+#   iterations    — number of convergence iterations
+#   converged     — true if converged within pagerank_max_iterations
+#   damping       — pagerank_damping GUC value used
+#   norm          — pagerank_convergence_norm GUC value used
+#   date          — date the measurement was taken (ISO 8601)
+#   notes         — optional notes
+version,wall_time_ms,iterations,converged,damping,norm,date,notes
+0.88.0,4820,47,true,0.85,l1,2025-10-01,initial PageRank implementation
+0.89.0,4650,47,true,0.85,l1,2025-11-01,guard bounds + advisory lock
+0.90.0,4210,45,true,0.85,l1,2025-12-01,WCOJ path + streaming temp threshold
+0.91.0,4050,45,true,0.85,l1,2026-02-01,IVM Prometheus gauges + SHACL score vacuum
+0.92.0,3980,45,true,0.85,l1,2026-05-03,auto-tune partition default (PERF-07)

@@ -315,6 +315,21 @@ pub fn notify_named_subscriptions(op: &str, s: i64, p: i64, o: i64, g: i64) {
         g_q = serde_json::to_string(&g_str).unwrap_or_else(|_| format!("\"{}\"", g_str)),
     );
 
+    // CDC-03 (v0.92.0): pg_notify payload is limited to 8000 bytes by PostgreSQL.
+    // If the payload exceeds this limit (possible with very long IRIs), raise
+    // PT5001 rather than sending a truncated or rejected notification.
+    const PG_NOTIFY_MAX_PAYLOAD: usize = 8000;
+    if payload.len() > PG_NOTIFY_MAX_PAYLOAD {
+        pgrx::warning!(
+            "CDC notify payload too large ({} bytes > {} bytes limit); \
+             notification for op={op} skipped. \
+             Consider shortening IRI strings. (PT5001)",
+            payload.len(),
+            PG_NOTIFY_MAX_PAYLOAD
+        );
+        return;
+    }
+
     // Get all subscription names (filter_sparql / filter_shape processing is
     // deferred to the subscriber side in this v0.42.0 implementation).
     let names: Vec<String> = Spi::connect(|c| {

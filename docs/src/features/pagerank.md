@@ -178,6 +178,25 @@ $$\alpha^{30} = 0.85^{30} \approx 0.0076$$
 The maximum error per dirty node is **< 1% of the per-iteration delta** — acceptable
 for most use cases. For high-precision applications, use `pagerank_run()` directly.
 
+### Tuning Damping for Your Graph (v0.92.0)
+
+The default damping factor `pg_ripple.pagerank_damping = 0.85` was calibrated for
+citation graphs and the original web (Brin & Page 1998). For other graph types:
+
+- **Sparse social graphs** (Twitter-style follows): 0.50–0.75 recommended. High
+  damping over-amplifies hub nodes in sparse graphs.
+- **Citation graphs** (papers citing papers): 0.85 (default) is well-suited.
+- **Knowledge graphs** (diverse predicate types): 0.85 is a safe default; consider
+  per-predicate-filtered runs with lower damping for dense predicate subsets.
+- **Temporal graphs** with decay (`decay_rate > 0`): lower damping (0.70–0.80)
+  reduces the influence of long-range links that may be heavily time-discounted.
+
+```sql
+-- Tune for sparse social graph
+SET pg_ripple.pagerank_damping = 0.65;
+SELECT node_iri, score FROM pg_ripple.pagerank_run();
+```
+
 ### Automatic Full Recompute
 
 When the fraction of `stale = true` rows in `pagerank_scores` for a given topic
@@ -243,6 +262,25 @@ Scores are persisted in `_pg_ripple.pagerank_scores`:
 
 The IVM dirty-edge queue (`_pg_ripple.pagerank_dirty_edges`) tracks which edges changed
 since the last full run, enabling k-hop incremental refresh (PR-TRICKLE-01).
+
+## `owl:sameAs` Deduplication (v0.92.0)
+
+When `owl:sameAs` canonicalization is active (v0.23.0), pg_ripple merges entity clusters
+into a canonical representative before computing PageRank. This deduplication ensures that
+edges to equivalent entities are not double-counted, which would otherwise inflate the
+PageRank score of heavily `sameAs`-clustered nodes.
+
+See [owl:sameAs Entity Resolution](../features/datalog.md) for canonicalization details.
+
+## Portability Note (STD-04, v0.92.0)
+
+`pg:pagerank()`, `pg:centrality()`, and `pg:topN_approx()` are **pg_ripple-specific
+extension functions**. They are not defined by the W3C SPARQL 1.1 specification and
+are not portable to other SPARQL endpoints (Apache Jena, Virtuoso, Stardog, etc.).
+
+In federated queries, use the full IRI form and ensure the pg_ripple-specific endpoint
+is the SERVICE target. Federated queries that include `pg:pagerank()` in a SERVICE block
+targeting a non-pg_ripple endpoint will fail with `SPARQL function not found`.
 
 ## Feature Status
 

@@ -187,12 +187,27 @@ fn tokenize_goal(input: &str) -> Result<Vec<String>, String> {
 
 /// Run goal-directed inference using simplified magic sets.
 ///
-/// Runs semi-naive inference for the named rule set, applying binding
+/// Run semi-naive inference for the named rule set, applying binding
 /// constraints from the goal pattern to limit derivation to facts relevant
 /// to the goal.  Returns `(matching_count, total_derived, iterations)`.
 ///
 /// When `pg_ripple.magic_sets = false`, runs full inference and filters
 /// the results post-hoc (functionally correct but slower).
+///
+/// # Magic sets pre-condition (DL-04, v0.92.0)
+///
+/// The magic sets transformation requires that adornments are derivable from
+/// the query bindings.  Specifically:
+/// - The goal predicate (`goal.p`) must be bound to an encoded predicate ID.
+///   If `goal.p` is `None` (free variable), magic sets cannot propagate
+///   binding constraints and the function falls back to full inference.
+/// - If the goal predicate is not derivable by any rule (i.e., `relevant_rules`
+///   is empty), we fall back to counting existing EDB triples directly.
+///
+/// Callers can check `magic_sets_enabled` and the bound/free status of `goal.p`
+/// to predict which path will be taken.  If an all-free goal is passed with
+/// magic sets enabled, a `pgrx::warning!` is not emitted (silent fallback is
+/// intentional; the fallback is equivalent in result but slower).
 ///
 /// # Error handling
 /// Returns `Err(PT501)` when the goal pattern causes a circular binding

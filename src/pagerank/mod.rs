@@ -20,6 +20,10 @@
 //! - `export`     — Turtle/JSON-LD/CSV/N-Triples export, IRI serialisation
 //! - `explain`    — `explain_pagerank()`, score-explanation trees
 
+// Q14-08 (v0.92.0): The pagerank module has sub-modules whose public symbols are
+// exposed via pg_extern macros in pagerank_api.rs. The compiler cannot resolve
+// those indirect references, so dead_code is suppressed at the module level.
+// This follows the Q13-05 convention documented in CONTRIBUTING.md.
 #![allow(dead_code)]
 
 pub mod centrality;

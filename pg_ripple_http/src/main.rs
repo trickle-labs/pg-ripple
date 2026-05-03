@@ -36,7 +36,7 @@ use common::{AppState, env_or};
 /// Connections to older extension versions log a prominent warning. The extension
 /// is still served (degraded mode) so that rolling upgrades do not hard-fail.
 /// Set `PG_RIPPLE_HTTP_STRICT_COMPAT=1` to convert the warning to a fatal startup error.
-const COMPATIBLE_EXTENSION_MIN: &str = "0.90.0";
+const COMPATIBLE_EXTENSION_MIN: &str = "0.91.0";
 
 /// Check that the installed pg_ripple extension version is within the known-compatible
 /// range for this pg_ripple_http build.  Logs a warning if it is not.
@@ -360,7 +360,9 @@ async fn main() {
         }
     };
 
-    // O13-05 (v0.86.0): graceful shutdown on SIGTERM with a 30-second drain window.
+    // O13-05 (v0.86.0): graceful shutdown on SIGTERM with a configurable drain window.
+    // HTTP-05 (v0.92.0): PG_RIPPLE_HTTP_SHUTDOWN_TIMEOUT_SECS configures the drain
+    // timeout (default 30 seconds). Set to 0 to disable draining and exit immediately.
     // axum::serve().with_graceful_shutdown() waits for in-flight requests to complete
     // before the process exits; SIGINT (Ctrl-C) also triggers the same shutdown path.
     if let Err(e) = axum::serve(
@@ -377,10 +379,17 @@ async fn main() {
 
 /// Wait for SIGTERM or SIGINT, then return to trigger graceful shutdown.
 ///
-/// O13-05 (v0.86.0): allows in-flight requests up to 30 seconds to complete
+/// O13-05 (v0.86.0): allows in-flight requests up to the configured timeout to complete
 /// after a SIGTERM is received before the process exits.
+/// HTTP-05 (v0.92.0): timeout is configurable via `PG_RIPPLE_HTTP_SHUTDOWN_TIMEOUT_SECS`
+/// (default 30). Set to 0 to exit immediately without draining in-flight requests.
 async fn shutdown_signal() {
     use tokio::signal;
+
+    let shutdown_timeout_secs: u64 = std::env::var("PG_RIPPLE_HTTP_SHUTDOWN_TIMEOUT_SECS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(30);
 
     let ctrl_c = async {
         signal::ctrl_c()
@@ -401,13 +410,19 @@ async fn shutdown_signal() {
 
     tokio::select! {
         () = ctrl_c => {
-            tracing::info!("received Ctrl+C, initiating graceful shutdown (30-second drain)");
+            tracing::info!(
+                "received Ctrl+C, initiating graceful shutdown ({shutdown_timeout_secs}s drain)"
+            );
         }
         () = terminate => {
-            tracing::info!("received SIGTERM, initiating graceful shutdown (30-second drain)");
+            tracing::info!(
+                "received SIGTERM, initiating graceful shutdown ({shutdown_timeout_secs}s drain)"
+            );
         }
     }
 
-    // Allow up to 30 seconds for in-flight requests to drain.
-    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+    // Allow up to configured timeout for in-flight requests to drain.
+    if shutdown_timeout_secs > 0 {
+        tokio::time::sleep(std::time::Duration::from_secs(shutdown_timeout_secs)).await;
+    }
 }

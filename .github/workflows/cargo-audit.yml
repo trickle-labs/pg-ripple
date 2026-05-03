@@ -41,7 +41,12 @@ jobs:
         run: cargo install cargo-audit --locked
 
       - name: Run cargo audit
-        run: cargo audit --deny warnings
+        # SEC-09 (v0.92.0): --deny unmaintained added. All RUSTSEC ignores in
+        # audit.toml must have valid expiry dates; if an expiry has passed CI fails.
+        # The --deny warnings flag is kept for unsound + yanked; unmaintained adds
+        # a third deny category. Existing ignores in audit.toml cover known
+        # unmaintained deps (serde_cbor, paste) with explicit expiry dates.
+        run: cargo audit --deny warnings --deny unmaintained
 
       - name: Create issue on failure
         if: failure()

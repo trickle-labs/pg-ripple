@@ -302,14 +302,19 @@ SET pg_ripple.describe_form = 'scbd';
 SELECT * FROM pg_ripple.sparql('DESCRIBE <https://example.org/Alice>');
 ```
 
-### `symmetric` — Alias for `scbd`
+### `symmetric` — Permanent Alias for `scbd` (CB-10, v0.92.0)
 
-`symmetric` is a normalised alias for `scbd` for readability:
+`symmetric` is a **permanent alias** for `scbd` for readability:
 
 ```sql
 SET pg_ripple.describe_form = 'symmetric';
 SELECT * FROM pg_ripple.sparql('DESCRIBE <https://example.org/Alice>');
 ```
+
+> **Alias contract**: The alias `symmetric` = `scbd` is guaranteed stable for the
+> pg_ripple 1.x API line. It will not be removed without a deprecation cycle and will
+> only diverge from `scbd` semantics if the W3C SCBD and "symmetric extension" definitions
+> separate in a future RDF standard. This guarantee was formally documented in v0.92.0.
 
 ### Choosing a Form
 

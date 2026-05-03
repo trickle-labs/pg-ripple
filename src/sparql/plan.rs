@@ -209,8 +209,10 @@ pub(crate) fn apply_construct_template(
 /// Full sparopt integration is deferred.  This function applies the one pass
 /// that *is* integrated — the `check_query_complexity` gate and `translate_select`
 /// algebra walk — and returns the original spargebra algebra as the reference point.
-/// The `algebra_optimised` output differs from `algebra` in that complexity checks
+/// The `algebra_optimized` output differs from `algebra` in that complexity checks
 /// are explicitly run first, making this a validated-algebra view.
+/// (OBS-04, v0.92.0: standardised to en_US spelling `algebra_optimized`; en_GB
+/// `algebra_optimised` remains accepted as an input format alias.)
 pub(crate) fn optimise_query_algebra(query: &spargebra::Query) -> &spargebra::Query {
     // Complexity gate — will pgrx::error! if the query is too complex.
     if let spargebra::Query::Select { pattern, .. } = query {

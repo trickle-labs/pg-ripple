@@ -49,7 +49,10 @@ pub static PAGERANK_CONFIDENCE_WEIGHTED: pgrx::GucSetting<bool> =
 pub static PAGERANK_CONFIDENCE_DEFAULT: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(1.0);
 
 /// GUC: enable graph-partitioned parallel PageRank computation (v0.88.0 PR-PARTITION-01).
-pub static PAGERANK_PARTITION: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
+/// PERF-07 (v0.92.0): default changed from false to true. When enabled, the number of
+/// partitions is auto-tuned to min(num_cpus, count(named_graphs)) at pagerank_run() entry.
+/// Set to false to disable partitioning (single-partition mode for debugging).
+pub static PAGERANK_PARTITION: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(true);
 
 /// GUC: minimum score below which dirty nodes skip immediate re-propagation (v0.88.0 PR-SELECTIVE-01).
 pub static PAGERANK_SELECTIVE_THRESHOLD: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.0);

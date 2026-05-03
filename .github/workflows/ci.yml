@@ -194,6 +194,11 @@ jobs:
       - name: Run pg_regress suite
         run: cargo pgrx regress pg18 --postgresql-conf "allow_system_table_mods=on"
 
+      - name: Validate examples (DOC-04, v0.92.0)
+        # Static validation: check all .sql examples reference pg_ripple API surface.
+        # Does NOT require a live database connection.
+        run: bash examples/test_all.sh
+
       - name: Upload regression results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7

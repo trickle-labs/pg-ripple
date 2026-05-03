@@ -13,6 +13,87 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.92.0] — 2026-05-03 — Assessment 14 Low-Severity Polish & Hardening
+
+**Implements v0.92.0 roadmap: closes all 39 Low-severity findings from
+PLAN_OVERALL_ASSESSMENT_14. This is the final Assessment 14 remediation release
+before v1.0.0 production hardening.**
+
+### Added
+
+- **CB-07**: `src/pagerank/ivm.rs` — `pagerank_lower()` / `pagerank_upper()` doc
+  comments include PR-STALE-BOUNDS-01 formula: `bound = score ± (alpha^k * delta_per_iter)`.
+- **CB-08**: `docs/src/features/pagerank.md` — "Tuning Damping for Your Graph" subsection
+  with guidance for sparse social, citation, knowledge, and temporal graph types.
+- **CB-09**: `tests/pg_regress/sql/sparql_federation.sql` — TLS handshake failure scenario
+  asserting `SERVICE SILENT` swallows connection errors and returns empty result set.
+- **CB-10**: `docs/src/reference/sparql-compliance.md` — `symmetric` alias contract
+  documented as permanent (guaranteed stable for the 1.x API line; alias and `scbd`
+  remain semantically identical).
+- **SEC-07**: `sql/pg_ripple--0.91.0--0.92.0.sql` — `ALTER TABLE _pg_ripple.pagerank_dirty_edges
+  ENABLE ROW LEVEL SECURITY` + `CREATE POLICY pagerank_dirty_edges_graph_isolation` mirroring
+  the `_pg_ripple.confidence` RLS pattern.
+- **SEC-09**: `.github/workflows/cargo-audit.yml` — `--deny unmaintained` added to `cargo audit`
+  invocation; existing `audit.toml` ignores have valid expiry dates.
+- **PERF-07**: `src/gucs/pagerank.rs` — `PAGERANK_PARTITION` default changed from `false` to
+  `true`; description updated to document auto-tune behaviour (min(num_cpus, named_graph_count)).
+- **PERF-08**: `src/uncertain_knowledge_api/mod.rs` — `_fuzzy_match_guard()` and
+  `_token_set_ratio_guard()` annotated `stable, parallel_safe` (was: default VOLATILE).
+- **CON-04**: `tests/pg_regress/sql/datalog_parallel.sql` — regression test for cyclic
+  parallel Datalog stratification pre-check; asserts no crash for non-cyclic RDFS rule set.
+- **CON-05**: `tests/concurrency/confidence_subxact_rollback.sql` — noisy-OR aggregation
+  rollback test: `BEGIN; SAVEPOINT s1; infer(); ROLLBACK TO s1; COMMIT` asserts confidence
+  table unchanged.
+- **TEST-06**: `benchmarks/pagerank_throughput_history.csv` — PageRank throughput history
+  for Karate Club (1M-edge) benchmark; wired to `performance_trend.yml` artifact upload.
+- **CQ-06**: `src/uncertain_knowledge_api/mod.rs`, `src/pagerank/mod.rs` — all
+  `#[allow(dead_code)]` attributes in v0.87/v0.88 additions carry `// Q14-08: <reason>`.
+- **STD-04**: `docs/src/features/pagerank.md` — portability note: `pg:pagerank()` etc. are
+  pg_ripple-specific extension functions; not portable to other SPARQL endpoints.
+- **STD-05**: `docs/src/features/uncertain-knowledge.md` — `sh:severityWeight` extension
+  note: pg_ripple-specific, community submission to W3C SHACL CG under consideration.
+- **OBS-04**: `src/sparql/execute/mod.rs` — `algebra_optimized` (en_US) accepted as alias
+  for `algebra_optimised` (en_GB) in `explain_sparql()` format parameter.
+- **OBS-05**: `src/maintenance_api.rs` — `diagnostic_report()` extended with four
+  v0.87/v0.88 catalog rows: `confidence_row_count`, `pagerank_last_computed`,
+  `pagerank_queue_depth`, `centrality_metrics`.
+- **HTTP-05**: `pg_ripple_http/src/main.rs` — `PG_RIPPLE_HTTP_SHUTDOWN_TIMEOUT_SECS` env
+  var (INT, default 30) configures graceful-shutdown drain timeout.
+- **HTTP-06**: `pg_ripple_http/src/routing/middleware.rs` — documentation note confirming
+  `tower_governor` 0.8 with `axum` feature automatically includes `Retry-After` header in
+  429 responses.
+- **DL-04**: `src/datalog/magic.rs` — `run_infer_goal()` doc comment explicitly documents
+  magic-sets pre-condition (bound predicate requirement) and fallback behaviour.
+- **DL-05**: `docs/src/features/pagerank.md` — `owl:sameAs` handling note: entity clusters
+  are merged before PageRank to avoid double-counting.
+- **IVM-03**: `docs/src/reference/ivm.md` — cross-module dependency scheduling note: rules
+  writing to `_pg_ripple.confidence` are not in the CWB topological sort; `register_ivm_dependency()`
+  API reserved for future use.
+- **CDC-03**: `src/cdc.rs` — `notify_named_subscriptions()` now checks payload length
+  against 8000-byte `pg_notify` limit; raises PT5001 WARNING instead of silently truncating.
+- **CDC-04**: `tests/concurrency/sse_slow_subscriber.sh` — SSE backpressure load test
+  asserting server remains responsive under slow subscriber.
+- **DOC-03**: `blog/pagerank.md` + `blog/uncertain-knowledge.md` — stub blog posts for
+  v0.88.0 and v0.87.0 features.
+- **DOC-04**: `examples/test_all.sh` — static validation script for all `.sql` examples;
+  wired as CI step in `.github/workflows/ci.yml`.
+- **BUILD-04**: `build.rs` — `SOURCE_DATE_EPOCH` support verified and documented (already
+  implemented in BUILD-TIME-FIELD-01, v0.83.0); documented in `CONTRIBUTING.md`.
+- **BUILD-05**: `CONTRIBUTING.md` — `src/uncertain_knowledge_api/` and `src/pagerank/`
+  module structure documented; magic comment conventions (`// SAFETY:`, `// CLIPPY-OK:`,
+  `// Q13-05:`, `// Q14-08:`) documented.
+- **SEC-06**: `RELEASE.md` — RSA advisory calendar entry: RUSTSEC-2024-0436 and
+  RUSTSEC-2023-0071 expire 2026-12-01; re-audit required before v1.0.0.
+- **WC-01–WC-05**: Post-v1.0.0 aspirational tracking documented in `roadmap/v0.92.0-full.md`.
+
+### Changed
+
+- **SEC-08**: `src/pagerank_api.rs` — `pagerank_find_duplicates()` volatility changed from
+  VOLATILE to STABLE (DB-state dependent, not time/random).
+- **PERF-07**: `pg_ripple.pagerank_partition` GUC default changed from `false` to `true`.
+
+---
+
 ## [0.91.0] — 2026-05-03 — Assessment 14 Medium: Observability, API, Standards, Build & Documentation
 
 **Implements v0.91.0 roadmap: completes the second half of PLAN_OVERALL_ASSESSMENT_14

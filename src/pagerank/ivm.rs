@@ -128,6 +128,12 @@ pub fn is_stale(node_iri: &str) -> bool {
 }
 
 /// Get score lower bound for a node.
+///
+/// PR-STALE-BOUNDS-01: bound = score ± (alpha^k * delta_per_iter)
+/// where alpha = pg_ripple.pagerank_damping (default 0.85)
+///       k     = pg_ripple.pagerank_khop_limit (default 30)
+///       delta_per_iter = largest per-node score change in the last full run
+/// At k=30, alpha^30 ≈ 0.0076 — the bound is < 1% of the per-iteration delta.
 pub fn pagerank_lower(node_iri: &str) -> f64 {
     let trimmed = node_iri
         .trim()
@@ -148,6 +154,12 @@ pub fn pagerank_lower(node_iri: &str) -> f64 {
 }
 
 /// Get score upper bound for a node.
+///
+/// PR-STALE-BOUNDS-01: bound = score ± (alpha^k * delta_per_iter)
+/// where alpha = pg_ripple.pagerank_damping (default 0.85)
+///       k     = pg_ripple.pagerank_khop_limit (default 30)
+///       delta_per_iter = largest per-node score change in the last full run
+/// At k=30, alpha^30 ≈ 0.0076 — the bound is < 1% of the per-iteration delta.
 pub fn pagerank_upper(node_iri: &str) -> f64 {
     let trimmed = node_iri
         .trim()

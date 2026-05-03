@@ -244,7 +244,12 @@ mod pg_ripple {
     /// ```sql
     /// SELECT * FROM pg_ripple.pagerank_find_duplicates();
     /// ```
-    #[pg_extern]
+    // SEC-08 (v0.92.0): STABLE — result depends only on _pg_ripple.centrality_scores
+    // DB state, not on time or random. Allows the planner to hoist this out of joins
+    // and prune by graph_id for multi-tenant deployments.
+    // CLIPPY-OK: STABLE is the correct volatility; the function reads DB state but
+    // produces the same result for the same DB state within a transaction.
+    #[pg_extern(stable)]
     fn pagerank_find_duplicates(
         metric: default!(&str, "'betweenness'"),
         centrality_threshold: default!(f64, 0.1),

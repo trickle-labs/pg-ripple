@@ -65,3 +65,31 @@ COMMIT;
 -- After RELEASE + COMMIT, the confidence should persist
 SELECT count(*) >= 1 AS committed_confidence_persists
 FROM _pg_ripple.confidence;
+
+-- CON-05 (v0.92.0): noisy-OR aggregation rows are rolled back with sub-xact.
+-- Verifies that running inference inside a SAVEPOINT and rolling back
+-- leaves the confidence table unchanged (no ghost rows).
+
+-- Capture count before inference sub-transaction.
+SELECT count(*) AS before_infer_count FROM _pg_ripple.confidence;
+
+BEGIN;
+  SAVEPOINT s1;
+
+  -- Load a rule set and run semi-naive inference inside the savepoint.
+  -- This may insert rows into _pg_ripple.confidence.
+  SELECT pg_ripple.load_rules_builtin('rdfs') AS rdfs_rules_for_con05;
+  SELECT pg_ripple.infer('rdfs') AS infer_inside_savepoint;
+
+  -- Roll back the savepoint — confidence insertions must be reverted.
+  ROLLBACK TO SAVEPOINT s1;
+
+  -- Count after rollback should equal the count before the savepoint.
+  SELECT count(*) AS after_rollback_count FROM _pg_ripple.confidence;
+
+COMMIT;
+
+-- Verify: after-rollback count equals before-infer count.
+SELECT
+  (SELECT count(*) FROM _pg_ripple.confidence) AS final_count,
+  'CON-05: confidence rows rolled back with sub-transaction' AS con05_check;

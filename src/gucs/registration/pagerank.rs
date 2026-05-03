@@ -166,8 +166,9 @@ pub(crate) fn register() {
 
     pgrx::GucRegistry::define_bool_guc(
         c"pg_ripple.pagerank_partition",
-        c"Enable graph-partitioned parallel PageRank computation. Default off. \
-          (v0.88.0 PR-PARTITION-01)",
+        c"Enable graph-partitioned parallel PageRank. When on (default), partition count \
+          is auto-tuned to min(num_cpus, named_graph_count) at pagerank_run() entry. \
+          Set off to disable partitioning. (v0.88.0 PR-PARTITION-01, PERF-07 v0.92.0)",
         c"",
         &crate::gucs::pagerank::PAGERANK_PARTITION,
         GucContext::Userset,

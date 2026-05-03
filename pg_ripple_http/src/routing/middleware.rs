@@ -20,6 +20,11 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 /// `build_router()` in `routing/mod.rs` passes the already-constructed CORS layer
 /// here so that the permissive-CORS warning can be logged once at startup in
 /// `main()` before `apply_middleware()` is called.
+///
+/// HTTP-06 (v0.92.0): when rate-limiting fires, tower_governor 0.8 with the `axum`
+/// feature automatically includes a `Retry-After` header in the 429 response
+/// (computed from the wait_time in the GovernorError). No custom response
+/// transformer is needed; the header is provided by GovernorError::IntoResponse.
 pub fn apply_rate_limit(app: Router, rate_limit: u32) -> Router {
     if rate_limit == 0 {
         return app;
