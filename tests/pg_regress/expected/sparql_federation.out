@@ -337,4 +337,3 @@ SELECT pg_ripple.delete_triple(
 (1 row)
 
 RESET pg_ripple.federation_allow_private;
-
