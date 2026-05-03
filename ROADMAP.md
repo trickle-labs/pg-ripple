@@ -202,12 +202,22 @@
 |---------|-------|--------|-------|-------------- |
 | [v0.93.0](roadmap/v0.93.0.md) | **pg_tide integration & documentation modernisation** — Add `has_pg_tide()` runtime detection + `pg_ripple.pg_tide_available()` SQL function (TIDE-1); update BIDI-OUTBOX-01/BIDI-INBOX-01 doc comments to reference `pg_tide` (TIDE-2); add `PGTIDE_HINT` constant for relay error paths (TIDE-3); full rewrite of `docs/src/operations/pg-trickle-relay.md` to `tide.*` API — 20+ call sites updated, new outbox publish trigger pattern, `pg-tide-relay` binary, updated prerequisites and architecture diagram (TIDE-4); update `blog/semantic-hub-trickle-relay.md` hub-and-spoke examples (TIDE-5); add backward-compat note to `plans/pg_trickle_relay_integration.md` (TIDE-6); add inline notes to `roadmap/v0.52.0.md` and `roadmap/v0.77.0-full.md` (TIDE-7); extend compatibility matrix with `pg_tide ≥ 0.1.0` rows (TIDE-8); add comment-only migration script `sql/pg_ripple--0.92.0--0.93.0.sql` | Planned | Small | [Full details](roadmap/v0.93.0.md) |
 
-### Stable Release & Ecosystem (v1.0.0 – v1.1.0)
+### Assessment 15 Remediation (v0.94.0 – v0.97.0)
 
 | Version | Theme | Status | Scope | Full details |
 |---------|-------|--------|-------|-------------- |
-| [v1.0.0](roadmap/v1.0.0-full.md) | Production hardening: 72-hour continuous load test, third-party security audit, API stability guarantee, documentation final audit and freeze, public BSBM/WatDiv benchmark results published | Planned | Medium | [Full details](roadmap/v1.0.0-full.md) |
+| [v0.94.0](roadmap/v0.94.0.md) | **A15 High remediation** — implement `just bump-version X.Y.Z` + bump `COMPATIBLE_EXTENSION_MIN` to v0.92.0 (H15-01); add `SET search_path = pg_catalog, _pg_ripple, public` to `_pg_ripple.ddl_guard_vp_tables()` + CI `check_security_definer_search_path.sh` lint (H15-02); bounded bidirectional relay channel with `pg_ripple.bidi_relay_max_inflight` GUC, drop-oldest overflow policy, and `pg_ripple_bidi_relay_dropped_total` Prometheus counter (H15-03/L15-13); migrate `src/bulk_load.rs` to `COPY ... FROM STDIN BINARY` for dictionary-encoded triple stream gated on `pg_ripple.bulk_load_use_copy` GUC; extract shared `copy_into_vp()` helper used by bulk loader, R2RML, and CDC paths (H15-05/M15-20) | Planned | Large | [Full details](roadmap/v0.94.0-full.md) |
+| [v0.95.0](roadmap/v0.95.0.md) | **A15 Medium: correctness, security, storage** — replace both `unreachable!()` in `pagerank/export.rs` and `pagerank/centrality.rs` with `pgrx::error!` + CI zero-unreachable-in-production lint (M15-01); resolve-once DNS rebinding fix in `federation/policy.rs` — validate every resolved IP against the SSRF blocklist, connect to resolved IP with pinned `Host:` header (M15-02); `sql_drop` event trigger for `DROP EXTENSION` replication-slot cleanup (M15-03); `redacted_error()` for SSE initialisation error paths in `stream.rs` (M15-04); scheduled `VACUUM ANALYZE _pg_ripple.dictionary` after bulk encode above threshold GUC, plus `autovacuum_scale_factor` `reloptions` on the dictionary table (M15-07); explicit regression tests for `OPTIONAL` + property paths inside `GRAPH {}` with `vp_rare` predicates (M15-08); NaN/Inf/out-of-range rejection in `load_triples_with_confidence()` and `INSERT ON CONFLICT` confidence paths — raise PT0302/PT0303 (M15-09); fold `_pg_ripple.schema_generation` counter into plan cache key, bump on every VP promotion and `ensure_vp_table()` call (M15-10); integrate `ADD`/`COPY`/`MOVE` SPARQL Update operations through the main UPDATE pipeline with CDC and SHACL queue integration tests (M15-12) | Planned | Large | [Full details](roadmap/v0.95.0-full.md) |
+| [v0.96.0](roadmap/v0.96.0.md) | **A15 Medium: performance, code quality, test coverage** — HTAP tombstone-skip optimisation: maintain `tombstone_count` in `_pg_ripple.predicates` and rebuild view to elide the `LEFT JOIN` when count = 0 (M15-05); star-pattern self-join collapse in `sparql/optimizer.rs` — detect `(?s p1 ?o1 . ?s p2 ?o2 . …)` star shapes, emit single subject-seeded CTE, gate on `pg_ripple.star_join_collapse` GUC (M15-06); separate `pg_ripple.federation_connect_timeout_secs` GUC for TCP/TLS connect vs query-body timeout (M15-11); complete `mod.rs` sub-splits for the five 1,489–1,625 line files (`sparql/expr`, `datalog/compiler`, `storage/ops`, `export`, `sparql/execute`) targeting every `mod.rs` < 800 lines (M15-13); sub-split `datalog_handlers.rs` into `routing/datalog/{rules,inference,query,admin}.rs` (M15-14); `#![warn(missing_docs)]` in `src/lib.rs` + public API doc pass (M15-15); `pagerank_with_writes.sh` concurrent-load test: 4 pgbench writers + 1 reader + 1 PageRank background (M15-17); `shacl_report_scored` column-order regression test (M15-18); four missing Prometheus metrics: `pg_ripple_merge_cycle_duration_seconds`, `pg_ripple_datalog_stratum_duration_seconds`, `pg_ripple_shacl_validation_queue_depth`, `pg_ripple_cdc_replication_slot_lag_bytes` (M15-19); verify cyclic-group pre-check source in parallel Datalog (M15-21); Arrow Flight `EXPLAIN (FORMAT JSON)` row-estimate path replacing the `COUNT(*)` pre-check (M15-22) | Planned | Large | [Full details](roadmap/v0.96.0-full.md) |
+| [v0.97.0](roadmap/v0.97.0.md) | **A15 Low-severity polish & supply-chain** — fix CHANGELOG v0.90.0 date placeholder (L15-01); add Arrow Flight, PageRank, and bidi relay example files (L15-02); wire `examples/test_all.sh --live` in CI against `cargo pgrx start pg18` (L15-03); enforce `clippy::missing_safety_doc` + `undocumented_unsafe_blocks` for 1:1 unsafe/SAFETY ratio (L15-04); `#[allow(...)]` justification audit with `// Q15-xx:` convention (L15-05); `gen_random_uuid()` availability check at `_PG_init` with WARNING if pgcrypto absent (L15-06); serde_cbor consumer upgrade: `cargo tree -i serde_cbor` + bump the consumer if a newer version drops the transitive dep (M15-16); RDF-star `<<>>` position support matrix in `docs/src/reference/sparql-compliance.md` (L15-08); `cargo doc --no-deps` missing-documentation gate in CI (L15-09); auto-compute `HIGHEST_CHECKPOINT` in `test_migration_chain.sh` from `ls sql/pg_ripple--*--*.sql | sort -V | tail -1` eliminating the hand-maintained constant (L15-10); document `statement_id_seq` exhaustion behaviour in `docs/src/operations/scaling.md` (L15-11); `owl_sameas_cycle.sql` regression test asserting graceful handling of `(a sameAs b, b sameAs a)` cycles (L15-12); conformance-suite pass-rate badges (Jena, WatDiv, OWL 2 RL) in `README.md` updated by CI workflow (L15-14) | Planned | Small | [Full details](roadmap/v0.97.0-full.md) |
+
+### Stable Release & Ecosystem (v1.0.0 – v1.2.0)
+
+| Version | Theme | Status | Scope | Full details |
+|---------|-------|--------|-------|-------------- |
+| [v1.0.0](roadmap/v1.0.0-full.md) | **Production hardening** (ROAD-15-01): 72-hour continuous load test (`bench-bsbm-100m` + WatDiv), third-party security audit (TrailOfBits/Cure53), API stability matrix for every `#[pg_extern]` and GUC generated from `cargo doc` JSON, documentation final audit and freeze, public BSBM/WatDiv benchmark results published | Planned | Medium | [Full details](roadmap/v1.0.0-full.md) |
 | [v1.1.0](roadmap/v1.1.0.md) | Post-1.0 ecosystem: Cypher/GQL read-only transpiler (`MATCH … RETURN`) + write operations (`CREATE`/`SET`/`DELETE`), Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink, materialized SPARQL views, dbt adapter, SPARQL endpoint FDW, pgai in-database embedding generation, logical replication for pg_ripple knowledge graphs | Planned | Large | [Full details](roadmap/v1.1.0-full.md) |
+| [v1.2.0](roadmap/v1.2.0.md) | **Custom IndexAM for triple patterns** (WC-01): a native PostgreSQL index access method understanding `(s, p, o, g)` quad patterns, enabling parallel index-only scans for SPARQL BGPs and 2–5× faster large-graph scans; **declarative VP table partitioning** (WC-03): `PARTITION BY LIST (g)` for large multi-tenant deployments with per-tenant partition pruning | Planned | Very Large | [Full details](roadmap/v1.2.0-full.md) |
 
 ## How these versions fit together
 
@@ -325,9 +335,32 @@ v0.89–v0.92    ─── Assessment 14 remediation: delete stale .bak file + C
                │   PT0301–PT0423 error registry; SPARQL 1.2 + RDF-star matrices;
                │   migration-chain CI workflow; ureq/arrow upgrades; Low-severity polish
        │
-v1.0.0         ─── Stable release: 72-hour continuous load test, third-party security audit, documentation freeze, public benchmarks
+v0.93          ─── pg_tide integration: has_pg_tide() detection, BIDI doc modernisation,
+               │   pg-trickle-relay.md rewrite to tide.* API, compatibility matrix update
        │
-v1.1           ─── Post-stable: Cypher/GQL transpiler (read-only + write ops), Jupyter kernel, LangChain/LlamaIndex tools, Kafka CDC sink, materialized SPARQL views, dbt adapter, SPARQL endpoint FDW, pgai embedding, logical replication
+v0.94–v0.97    ─── Assessment 15 remediation: COMPATIBLE_EXTENSION_MIN automation +
+               │   just bump-version; SECURITY DEFINER SET search_path + CI lint;
+               │   bidi relay bounded channel + bidi_relay_max_inflight GUC;
+               │   bulk loader COPY FROM STDIN BINARY + shared copy_into_vp() helper;
+               │   DNS rebinding fix; DROP EXTENSION slot cleanup; SSE error redaction;
+               │   dictionary VACUUM scheduling; vp_rare GRAPH {} regression tests;
+               │   confidence NaN/Inf validation; plan cache schema_generation key;
+               │   SPARQL Update ADD/COPY/MOVE pipeline integration; zero-unreachable lint;
+               │   tombstone-skip HTAP optimisation; star-pattern self-join collapse;
+               │   federation connect/query timeout separation; large mod.rs sub-splits;
+               │   datalog_handlers sub-split; missing_docs CI gate; 4 new Prometheus
+               │   metrics; concurrent PageRank+writes load test; Arrow Flight EXPLAIN
+               │   row-estimate; Low-severity polish + supply-chain hygiene
+       │
+v1.0.0         ─── Stable release: 72-hour continuous load test, third-party security
+               │   audit, API stability matrix, documentation freeze, public benchmarks
+       │
+v1.1           ─── Post-stable: Cypher/GQL transpiler (read-only + write ops), Jupyter
+               │   kernel, LangChain/LlamaIndex tools, Kafka CDC sink, materialized SPARQL
+               │   views, dbt adapter, SPARQL endpoint FDW, pgai embedding, logical replication
+       │
+v1.2           ─── Custom IndexAM for triple patterns (WC-01); declarative VP table
+               │   partitioning by named graph (WC-03)
 ```
 
 v0.1.0 through v0.5.1 build the complete core storage and query engine.
@@ -494,11 +527,40 @@ CI workflow, and compatibility matrix rows for v0.87/v0.88; v0.92.0 polishes all
 SILENT TLS test, RLS on `pagerank_dirty_edges`, `fuzzy_match` IMMUTABLE annotation,
 `pagerank_partition` auto-tune, `SOURCE_DATE_EPOCH` reproducible builds, and
 WC-01–WC-05 post-v1.0.0 aspirational tracking issues filed for the v1.1.0–v1.2.0 arc.
+v0.93.0 integrates the new `pg_tide` standalone extension (extracted from pg-trickle
+v0.46.0), updating all relay/outbox/inbox call sites, rewriting the relay operations
+doc to the `tide.*` API, and extending the compatibility matrix with `pg_tide ≥ 0.1.0`
+rows. v0.94.0 through v0.97.0 address all 41 findings from PLAN_OVERALL_ASSESSMENT_15:
+v0.94.0 closes the five High findings — the perennially recurring
+`COMPATIBLE_EXTENSION_MIN` lag is finally eliminated structurally with a `just
+bump-version X.Y.Z` recipe that atomically updates all seven version tokens; the lone
+SECURITY DEFINER function gains the `SET search_path` clause required before the
+third-party audit; the bidirectional relay gains a bounded channel with an explicit
+drop-oldest overflow policy; and the bulk loader migrates to `COPY ... FROM STDIN
+BINARY` with a shared `copy_into_vp()` helper used by all three high-volume insert
+paths (bulk loader, R2RML, CDC); v0.95.0 sweeps Medium correctness and security
+findings — DNS rebinding in the SSRF federation check, `DROP EXTENSION` replication-slot
+cleanup, SSE error leakage, dictionary VACUUM scheduling, NaN/Inf confidence input
+validation, plan cache schema-generation key, and `ADD`/`COPY`/`MOVE` SPARQL Update
+pipeline integration; v0.96.0 addresses Medium performance, code-quality, and test-
+coverage findings — HTAP tombstone-skip optimisation, star-pattern self-join collapse,
+federation timeout separation, five large `mod.rs` sub-splits, `datalog_handlers.rs`
+sub-split, missing-docs CI gate, four new Prometheus metrics, concurrent PageRank+writes
+load test, and Arrow Flight EXPLAIN-based row estimate; v0.97.0 polishes all Low items
+— CHANGELOG date fix, missing examples, `unsafe`/SAFETY 1:1 enforcement, `#[allow(...)]`
+justification convention, `gen_random_uuid` availability check at `_PG_init`, serde_cbor
+consumer upgrade, RDF-star position matrix, `cargo doc` CI gate, auto-computed migration
+chain checkpoint, sequence exhaustion docs, `owl:sameAs` cycle regression test, and
+conformance-suite pass-rate badges.
 v1.0.0 is the stable release: a 72-hour continuous load test, a
-third-party security audit, documentation final audit and freeze, an API stability
-guarantee, and public BSBM/WatDiv benchmark results. v1.1.0 delivers
-post-stable improvements: Cypher/GQL transpiler (read-only and write operations),
-Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink,
+third-party security audit, an API stability matrix for every `#[pg_extern]` and GUC,
+documentation final audit and freeze, and public BSBM/WatDiv benchmark results.
+v1.1.0 delivers post-stable improvements: Cypher/GQL transpiler (read-only and write
+operations), Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink,
 materialized SPARQL views, a dbt adapter, a SPARQL endpoint FDW, pgai in-database
-embedding generation, and logical replication for pg_ripple knowledge graphs.
+embedding generation, and logical replication for pg_ripple knowledge graphs. v1.2.0
+delivers the Custom IndexAM for triple patterns (WC-01) — a native PostgreSQL index
+access method that understands `(s, p, o, g)` quad patterns for parallel index-only
+BGP scans — and declarative VP table partitioning by named graph (WC-03) for large
+multi-tenant deployments.
 
