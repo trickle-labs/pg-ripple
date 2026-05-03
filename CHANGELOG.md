@@ -30,7 +30,7 @@ bidi relay throughput benchmark wiring, and two new GUCs for CDC watermark contr
 - **OBS-02**: `src/gucs/observability.rs` + `src/gucs/registration/observability.rs` — `pg_ripple.shacl_score_log_retention_days` GUC (INT, default 30, range 0–3650, Suset). `src/uncertain_knowledge_api/mod.rs` — `vacuum_shacl_score_log()` `pg_extern` function purges rows older than the retention window.
 - **OBS-03**: `docs/src/reference/observability.md` — PostgreSQL Structured Logging section explaining `pgrx::log!` → `log_destination=jsonlog` mapping; no double-serialisation risk.
 - **HTTP-02**: `tests/integration/sse_stream.sh` — SSE stream regression test for `/sparql/stream` endpoint (validates `Content-Type: text/event-stream` and `data:` event emission).
-- **HTTP-03**: `pg_ripple_http/src/routing/middleware.rs` (new file) — Extracted `apply_rate_limit()` and `build_cors_layer()` middleware helpers. `pg_ripple_http/src/routing/mod.rs` — `pub mod middleware;` declaration added.
+- **HTTP-03**: `pg_ripple_http/src/routing/middleware.rs` (new file) — Extracted `apply_rate_limit()` and `build_cors_layer()` middleware helpers. `pg_ripple_http/src/routing/mod.rs` — `pub mod middleware;` module declaration.
 - **HTTP-04**: `pg_ripple_http/src/arrow_encode.rs` — Replaced COUNT(*) row-count pre-check with `EXPLAIN (FORMAT JSON, ANALYZE FALSE)` plan row estimation. `extract_plan_rows_from_explain()` helper with COUNT(*) fallback.
 - **API-04**: `src/sparql/parse.rs` — `PG_FN_NAMESPACE` constant + `inject_pg_prefix_if_needed()` auto-declares `PREFIX pg: <http://pg-ripple.org/fn/>` when a query uses `pg:` without an explicit prefix. Wired into `sparql()` and `sparql_ask()` in `src/sparql/mod.rs`. `docs/src/reference/sparql.md` — SPARQL Extension Function IRI Namespace section with function reference table and federation note.
 - **API-05**: `src/pagerank_api.rs` — `explain_pagerank_json(node_iri, top_k)` `pg_extern` function returning JSONB explanation tree.
@@ -57,7 +57,7 @@ bidi relay throughput benchmark wiring, and two new GUCs for CDC watermark contr
 
 ### Dependency Triage (DEP-01, DEP-02)
 
-- **ureq 3.x** (DEP-01): ureq remains at 2.x in this release. The 3.x API is a breaking
+- **ureq 3.x** (DEP-01): ureq remains at 2.x in v0.91.0. The 3.x API is a breaking
   change requiring significant refactoring of the federation HTTP client. Triage decision:
   defer to post-v1.0.0 hardening cycle. Tracking: <https://github.com/algesten/ureq/blob/main/CHANGELOG.md>.
 - **arrow / parquet** (DEP-02): `cargo update --dry-run` shows compatible minor bumps
