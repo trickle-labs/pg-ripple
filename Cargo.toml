@@ -3,7 +3,7 @@ members = [".", "pg_ripple_http"]
 
 [package]
 name = "pg_ripple"
-version = "0.89.0"
+version = "0.90.0"
 edition = "2024"
 description = "High-performance RDF triple store with native SPARQL query execution for PostgreSQL 18"
 license = "Apache-2.0"
@@ -56,3 +56,10 @@ panic = "unwind"
 panic = "unwind"
 opt-level = 3
 lto = "thin"
+
+# ── PERF-03 (v0.90.0): workspace lint gate for unwrap/expect ─────────────────
+# Warn on new .unwrap() and .expect() calls. Legitimate uses are suppressed
+# per-callsite with #[allow(clippy::unwrap_used)] // CLIPPY-OK: <reason>
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"

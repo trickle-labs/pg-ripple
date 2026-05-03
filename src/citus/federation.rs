@@ -1,0 +1,1 @@
+//! Citus sub-module: federation (v0.90.0 CQ-02 pre-empt//! Citus sub-module: federation (v0.90.0 CQ-02 pre-eru//! Citus sub-module: federation (v0.90.0 CQ-02 pre-empt//EO//! Citus sub-module: federation (v0.90.0 CQ-0-02 pre-emptive split stub).

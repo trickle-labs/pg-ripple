@@ -1,6 +1,7 @@
 //! Export — serialize stored triples to N-Triples, N-Quads, Turtle, JSON-LD,
 //! and GraphRAG Parquet (v0.26.0).
 //!
+//!
 //! Queries all VP tables (dedicated + vp_rare) for the requested graph(s),
 //! decodes the integer IDs in bulk via `dictionary::format_ntriples`, and
 //! assembles an N-Triples, N-Quads, Turtle, or JSON-LD document.
@@ -9,6 +10,18 @@
 //! Turtle-star / N-Triples-star export for RDF-star quoted triples.
 //!
 //! v0.26.0: GraphRAG BYOG Parquet export functions.
+
+// v0.90.0 CQ-02: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod common;
+#[allow(dead_code)]
+pub mod csv;
+#[allow(dead_code)]
+pub mod jsonld;
+#[allow(dead_code)]
+pub mod ntriples;
+#[allow(dead_code)]
+pub mod turtle;
 
 use crate::{dictionary, storage};
 use std::collections::BTreeMap;

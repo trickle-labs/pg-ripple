@@ -306,4 +306,78 @@ pub(crate) fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.90.0 PageRank GUCs ─────────────────────────────────────────────────
+
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.pagerank_convergence_norm",
+        c"Convergence norm for PageRank iteration: 'l1' (default, matches NetworkX), \
+          'l2' (matches igraph), or 'linf' (most conservative). (v0.90.0 CB-02)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_CONVERGENCE_NORM,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_float_guc(
+        c"pg_ripple.pagerank_full_recompute_threshold",
+        c"Fraction of stale pagerank_scores rows that triggers a full recompute. \
+          Default 0.01 (1%). (v0.90.0 CB-04)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_FULL_RECOMPUTE_THRESHOLD,
+        0.0,
+        1.0,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.pagerank_wcoj_threshold",
+        c"Edge-count threshold in millions above which the WCOJ executor is used for the \
+          per-iteration neighbour scan. Active when wcoj_enabled = on. \
+          Default 10 (= 10M edges). (v0.90.0 PERF-01)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_WCOJ_THRESHOLD,
+        1,
+        i32::MAX,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.pagerank_sketch_width",
+        c"Count-Min Sketch width (counters per row) for sketch-based top-K. \
+          Default 2000. Memory: width × depth × 8 bytes. (v0.90.0 PERF-02)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_SKETCH_WIDTH,
+        100,
+        1000000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.pagerank_sketch_depth",
+        c"Count-Min Sketch depth (hash functions / rows). Default 5. \
+          Error probability delta = e^{-depth}. (v0.90.0 PERF-02)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_SKETCH_DEPTH,
+        1,
+        100,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.pagerank_temp_threshold",
+        c"Edge-count threshold in millions below which pagerank_run() streams directly from VP \
+          tables without writing to a temp table. 0 = auto from work_mem. Default 0. \
+          (v0.90.0 PERF-04)",
+        c"",
+        &crate::gucs::pagerank::PAGERANK_TEMP_THRESHOLD,
+        0,
+        i32::MAX,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

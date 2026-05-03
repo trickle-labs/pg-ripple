@@ -1,5 +1,6 @@
 //! Citus horizontal sharding integration (v0.58.0, Feature L-5.4).
 //!
+//!
 //! # Architecture
 //!
 //! When `pg_ripple.citus_sharding_enabled = on`, VP tables are distributed
@@ -23,6 +24,16 @@
 //! # Error codes
 //!
 //! - PT536 — Citus extension is not installed.
+
+// v0.90.0 CQ-02: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod aggregate;
+#[allow(dead_code)]
+pub mod federation;
+#[allow(dead_code)]
+pub mod rls;
+#[allow(dead_code)]
+pub mod sharding;
 
 use pgrx::prelude::*;
 

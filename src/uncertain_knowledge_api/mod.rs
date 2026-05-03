@@ -1,4 +1,4 @@
-//! pg_ripple SQL API — Uncertain Knowledge Engine (v0.87.0)
+//! pg_ripple SQL API — Uncertain Knowledge Engine (v0.87.0 / v0.90.0 module split CQ-04)
 //!
 //! Exposes the following SQL functions:
 //! - `pg_ripple.load_triples_with_confidence(data, confidence, format, graph_uri)` — bulk load with confidence
@@ -6,6 +6,26 @@
 //! - `pg_ripple.shacl_score(graph_iri)` — weighted SHACL quality score
 //! - `pg_ripple.shacl_report_scored(graph_iri)` — per-violation scored report
 //! - `pg_ripple.log_shacl_score(graph_iri)` — log the score to the history table
+//!
+//! ## Sub-module layout (v0.90.0 CQ-04)
+//! - `confidence_table` — bulk loader and vacuum helpers
+//! - `fuzzy` — `pg:fuzzy_match()` / `pg:token_set_ratio()` guard functions
+//! - `shacl` — SHACL scoring and reporting
+//! - `prov` — PROV-O provenance-derived confidence (stub)
+
+//! - `pg_ripple.shacl_score(graph_iri)` — weighted SHACL quality score
+//! - `pg_ripple.shacl_report_scored(graph_iri)` — per-violation scored report
+//! - `pg_ripple.log_shacl_score(graph_iri)` — log the score to the history table
+
+// v0.90.0 CQ-04: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod confidence_table;
+#[allow(dead_code)]
+pub mod fuzzy;
+#[allow(dead_code)]
+pub mod prov;
+#[allow(dead_code)]
+pub mod shacl;
 
 #[pgrx::pg_schema]
 mod pg_ripple {

@@ -186,3 +186,38 @@ Orphaned confidence rows (whose `statement_id` no longer exists in any VP table)
 
 1. **Automatically** during each HTAP merge cycle.
 2. **On demand**: `SELECT pg_ripple.vacuum_confidence();`
+
+---
+
+## Convergence Guarantees for Cyclic Probabilistic Rules (v0.90.0)
+
+When `pg_ripple.prob_datalog_cyclic = on`, pg_ripple iterates the noisy-OR composition
+to fixpoint. The noisy-OR operator is **monotone** on [0, 1] (adding more evidence can only
+increase confidence, never decrease it), which guarantees that the semi-naive iteration
+sequence is non-decreasing and bounded above by 1.0. Therefore, fixpoint convergence is
+guaranteed for any finite probabilistic Datalog program with noisy-OR semantics.
+
+This result follows directly from **Theorem 2** in De Raedt, Kimmig & Toivonen (2007),
+*ProbLog: A Probabilistic Prolog and its Application in Link Discovery*.
+
+Convergence speed depends on cycle depth and confidence values; programs with near-1.0
+confidence in cycles may converge slowly. The `prob_datalog_max_iterations` GUC (default 100)
+and `prob_datalog_convergence_delta` GUC (default 1e-6) control termination.
+
+```sql
+-- Tune convergence for deep cyclic programs
+SET pg_ripple.prob_datalog_max_iterations = 500;
+SET pg_ripple.prob_datalog_convergence_delta = 1e-8;
+```
+
+### Formal Guarantee
+
+Let $c_i^{(k)}$ denote the confidence of fact $i$ after $k$ iterations.
+Under noisy-OR semantics:
+
+$$c_i^{(k+1)} = 1 - \prod_{j \in \text{parents}(i)} (1 - w_{ij} \cdot c_j^{(k)})$$
+
+Since noisy-OR is monotone and the sequence $\{c_i^{(k)}\}$ is non-decreasing and bounded
+above by 1.0, by the Knaster–Tarski fixed-point theorem the iteration converges to the
+**least fixed point** of the probability propagation operator.
+

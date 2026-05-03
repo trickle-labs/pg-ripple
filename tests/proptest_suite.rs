@@ -1,4 +1,4 @@
-/// Property-based test suite for pg_ripple (v0.46.0 + v0.78.0 + v0.83.0 + v0.89.0).
+/// Property-based test suite for pg_ripple (v0.46.0 + v0.78.0 + v0.83.0 + v0.89.0 + v0.90.0).
 ///
 /// Suites:
 ///
@@ -18,6 +18,10 @@
 ///    identities of the noisy-OR formula used in probabilistic Datalog:
 ///    commutativity, associativity, monotonicity, idempotence, identity element,
 ///    absorbing element, and output range.
+/// 7. **PageRank oracle** (v0.90.0 TEST-02) — builds random directed graphs
+///    (Erdős–Rényi model), verifies pure-Rust reference PageRank satisfies:
+///    sum invariant (scores ≈ 1.0), positivity, fixed-point stability,
+///    damping monotonicity, and sink handling (isolated nodes).
 ///
 /// No database connection is required — all tests run in pure Rust.
 ///
@@ -45,5 +49,7 @@ mod dictionary;
 mod jsonld_framing;
 #[path = "proptest/ntriples_oxigraph.rs"]
 mod ntriples_oxigraph;
+#[path = "proptest/pagerank_oracle.rs"]
+mod pagerank_oracle;
 #[path = "proptest/sparql_roundtrip.rs"]
 mod sparql_roundtrip;

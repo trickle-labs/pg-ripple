@@ -26,6 +26,16 @@
 //!   return a raw SQL integer or float expression; the caller marks the bound
 //!   variable as `raw_numeric`.
 
+// v0.90.0 CQ-02: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod aggregates;
+#[allow(dead_code)]
+pub mod cast;
+#[allow(dead_code)]
+pub mod filters;
+#[allow(dead_code)]
+pub mod functions;
+
 use std::collections::HashMap;
 
 use spargebra::algebra::{Expression, Function};

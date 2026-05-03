@@ -1,5 +1,6 @@
 //! Incremental SPARQL Views, Datalog Views, and Extended VP (ExtVP) — v0.11.0.
 //!
+//!
 //! All three features are soft-dependent on the pg_trickle extension.
 //! Functions that require pg_trickle call [`crate::has_pg_trickle`] at call
 //! time and raise a descriptive error when it is absent.
@@ -28,6 +29,14 @@
 //! - `pg_ripple.create_ask_view(name, sparql, schedule)` — ASK stream table
 //! - `pg_ripple.drop_ask_view(name)` — drop an ASK view
 //! - `pg_ripple.list_ask_views()` — list ASK views
+
+// v0.90.0 CQ-02: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod construct;
+#[allow(dead_code)]
+pub mod describe;
+#[allow(dead_code)]
+pub mod sparql;
 
 use pgrx::datum::DatumWithOid;
 use pgrx::prelude::*;

@@ -1,6 +1,17 @@
 //! Storage operations -- extracted from storage/mod.rs (MOD-01, v0.72.0).
+//! v0.90.0 CQ-02: pre-emptive split sub-modules
 //!
 //! Insert, delete, query, graph management, prefix registry, SID API, dedup.
+
+// v0.90.0 CQ-02: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod delete;
+#[allow(dead_code)]
+pub mod insert;
+#[allow(dead_code)]
+pub mod merge;
+#[allow(dead_code)]
+pub mod scan;
 
 use super::dictionary_io::{encode_rdf_term, strip_angle_brackets};
 use super::vp_rare_io::{get_dedicated_vp_table, insert_into_vp_rare, scan_vp_rare, scan_vp_table};

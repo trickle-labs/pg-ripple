@@ -26,6 +26,16 @@
 //!   `JOIN … ON` clause of the atom that first binds all the guard's variables,
 //!   enabling the PostgreSQL planner to apply index scans early.
 
+// v0.90.0 CQ-02: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod builtins;
+#[allow(dead_code)]
+pub mod prob;
+#[allow(dead_code)]
+pub mod shacl_rules;
+#[allow(dead_code)]
+pub mod sql;
+
 use crate::datalog::{
     AggFunc, AggregateLiteral, ArithOp, Atom, BodyLiteral, CompareOp, Rule, StringBuiltin, Term,
 };

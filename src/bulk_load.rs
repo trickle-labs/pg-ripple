@@ -1141,6 +1141,12 @@ pub fn load_triples_with_confidence(
         if let Err(e) = pgrx::Spi::run_with_args(&conf_sql, &[]) {
             pgrx::warning!("confidence insert error in load_triples_with_confidence: {e}");
         }
+
+        // PERF-06 (v0.90.0): run ANALYZE so the planner has fresh statistics
+        // on the confidence table for subsequent confidence-join queries.
+        if let Err(e) = pgrx::Spi::run("ANALYZE _pg_ripple.confidence") {
+            pgrx::warning!("load_triples_with_confidence: ANALYZE failed: {e}");
+        }
     }
 
     count

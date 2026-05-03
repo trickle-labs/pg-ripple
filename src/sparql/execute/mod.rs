@@ -3,6 +3,18 @@
 //! All functions in this module call PostgreSQL SPI to run generated SQL and
 //! map results back to RDF terms via the dictionary.
 
+// v0.90.0 CQ-02: pre-emptive split sub-modules
+#[allow(dead_code)]
+pub mod construct;
+#[allow(dead_code)]
+pub mod describe;
+#[allow(dead_code)]
+pub mod exec_core;
+#[allow(dead_code)]
+pub mod explain;
+#[allow(dead_code)]
+pub mod update;
+
 use std::collections::HashMap;
 
 use pgrx::prelude::*;

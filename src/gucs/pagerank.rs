@@ -95,3 +95,36 @@ pub static PAGERANK_KATZ_ALPHA: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>:
 /// Arrays longer than this raise PT0411. Default 1024, range 1–1048576.
 /// (v0.89.0 SEC-03)
 pub static PAGERANK_MAX_SEEDS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(1024);
+
+// ─── v0.90.0 PageRank GUCs ────────────────────────────────────────────────────
+
+/// GUC: convergence norm for PageRank iteration: 'l1' | 'l2' | 'linf'.
+/// 'l1' (default) matches NetworkX; 'l2' matches igraph; 'linf' is most conservative.
+/// (v0.90.0 CB-02)
+pub static PAGERANK_CONVERGENCE_NORM: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+/// GUC: fraction of stale `pagerank_scores` rows that triggers a full recompute.
+/// When the dirty fraction exceeds this threshold the IVM worker runs a full
+/// `pagerank_run()` for that topic. Default 0.01 (1%). (v0.90.0 CB-04)
+pub static PAGERANK_FULL_RECOMPUTE_THRESHOLD: pgrx::GucSetting<f64> =
+    pgrx::GucSetting::<f64>::new(0.01);
+
+/// GUC: edge-count threshold (millions of edges) above which the WCOJ executor is used
+/// for the per-iteration neighbour scan (replaces the standard hash-join path).
+/// Only active when `pg_ripple.wcoj_enabled = on`. Default 10 (= 10M edges).
+/// (v0.90.0 PERF-01)
+pub static PAGERANK_WCOJ_THRESHOLD: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(10);
+
+/// GUC: Count-Min Sketch width (number of counters per row) for sketch-based top-K.
+/// Memory per sketch: width × depth × 8 bytes. Default 2000. (v0.90.0 PERF-02)
+pub static PAGERANK_SKETCH_WIDTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(2000);
+
+/// GUC: Count-Min Sketch depth (number of hash functions / rows). Default 5.
+/// Error probability δ = e^{-depth}; at depth=5, δ ≈ 0.0067. (v0.90.0 PERF-02)
+pub static PAGERANK_SKETCH_DEPTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(5);
+
+/// GUC: edge-count threshold (millions) below which `pagerank_run()` streams directly
+/// from VP tables without writing to a temp table (0 = auto from work_mem).
+/// Default 0 (auto). (v0.90.0 PERF-04)
+pub static PAGERANK_TEMP_THRESHOLD: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(0);
