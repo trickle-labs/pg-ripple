@@ -51,7 +51,7 @@ FROM pg_ripple.sparql($$
   }
 $$);
  without_minus_returns_both 
------------------------------
+----------------------------
  t
 (1 row)
 

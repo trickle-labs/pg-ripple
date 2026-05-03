@@ -30,14 +30,11 @@ pub mod ivm;
 pub mod sketch;
 
 // Re-export the full public API so callers can use `crate::pagerank::foo()`.
-pub use centrality::{centrality_run, find_pagerank_duplicates, lookup_centrality};
-pub use executor::{ensure_pagerank_catalog, run_pagerank, validate_params};
+pub use centrality::{centrality_run, find_pagerank_duplicates};
+pub use executor::run_pagerank;
 pub use explain::explain_pagerank;
 pub use export::export_pagerank;
-pub use ivm::{
-    is_stale, lookup_pagerank, pagerank_lower, pagerank_queue_stats, pagerank_upper,
-    vacuum_pagerank_dirty,
-};
+pub use ivm::{pagerank_queue_stats, vacuum_pagerank_dirty};
 
 // ── Error codes ───────────────────────────────────────────────────────────────
 
