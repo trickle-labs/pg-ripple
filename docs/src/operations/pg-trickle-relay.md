@@ -122,8 +122,9 @@ both ends:
 ```sql
 SELECT tide.relay_set_inbox(
     'sensor-readings',
-    '{"inbox": "sensor_inbox",
-      "source": {"type":"kafka","brokers":"${env:KAFKA_BROKERS}","topic":"iot.sensors"}}'
+    'sensor_inbox',
+    '{"brokers": "${env:KAFKA_BROKERS}", "topic": "iot.sensors"}'::jsonb,
+    p_source := 'kafka'
 );
 ```
 
@@ -405,8 +406,8 @@ FOR EACH ROW EXECUTE FUNCTION reformat_alert_payload();
 -- triggers call tide.outbox_publish() instead of inserting into a bridge table.
 SELECT tide.outbox_create(
     'enriched-events',
-    retention_hours    => 24,
-    inline_threshold   => 0
+    p_retention_hours  := 24,
+    p_inline_threshold := 0
 );
 
 -- Install a publish trigger so the relay picks up enriched_events rows.
@@ -435,9 +436,9 @@ topic — the same broker the raw sensor readings came from:
 -- Publish enriched alerts to iot.alerts on the same Kafka broker
 SELECT tide.relay_set_outbox(
     'alerts-to-kafka',
-    '{"outbox": "enriched-events",
-      "group":  "kafka-publisher",
-      "sink":   {"type":"kafka","brokers":"${env:KAFKA_BROKERS}","topic":"iot.alerts"}}'
+    'enriched-events',
+    'kafka',
+    '{"brokers": "${env:KAFKA_BROKERS}", "topic": "iot.alerts"}'::jsonb
 );
 ```
 
@@ -448,19 +449,17 @@ pg_ripple side — just register extra `relay_set_outbox` pipelines:
 -- Also push to NATS for real-time dashboard consumers (optional)
 SELECT tide.relay_set_outbox(
     'alerts-to-nats',
-    '{"outbox": "enriched-events",
-      "group":  "nats-publisher",
-      "sink":   {"type":"nats","url":"nats://nats:4222",
-                 "subject_template":"iot.alerts.{event_type}"}}'
+    'enriched-events',
+    'nats',
+    '{"url": "nats://nats:4222", "subject_template": "iot.alerts.{event_type}"}'::jsonb
 );
 
 -- Or to a partner API via webhook (optional)
 SELECT tide.relay_set_outbox(
     'alerts-to-partner',
-    '{"outbox": "enriched-events",
-      "group":  "partner-publisher",
-      "sink":   {"type":"http","url":"https://partner.example.com/events",
-                 "method":"POST"}}'
+    'enriched-events',
+    'webhook',
+    '{"url": "https://partner.example.com/events", "method": "POST"}'::jsonb
 );
 ```
 

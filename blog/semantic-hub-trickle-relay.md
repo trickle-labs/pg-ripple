@@ -57,8 +57,9 @@ pg-tide's relay process (`pg-tide-relay`) runs outside PostgreSQL as a lightweig
 -- Kafka topic → pg_tide inbox
 SELECT tide.relay_set_inbox(
   'order-events',
-  '{"inbox": "order_inbox",
-    "source": {"type":"kafka","brokers":"kafka:9092","topic":"orders.events"}}'
+  'order_inbox',
+  '{"brokers": "kafka:9092", "topic": "orders.events"}'::jsonb,
+  p_source := 'kafka'
 );
 ```
 
@@ -181,25 +182,24 @@ pg-tide's outbox + relay distributes the enriched events:
 -- Create a pg_tide outbox so the relay can poll it.
 SELECT tide.outbox_create(
   'enriched-events',
-  retention_hours  => 24,
-  inline_threshold => 0
+  p_retention_hours  := 24,
+  p_inline_threshold := 0
 );
 
 -- Enriched data → Kafka
 SELECT tide.relay_set_outbox(
   'enriched-to-kafka',
-  '{"outbox": "enriched-events",
-    "group":  "enriched-publisher",
-    "sink":   {"type":"kafka","brokers":"kafka:9092","topic":"enriched.orders"}}'
+  'enriched-events',
+  'kafka',
+  '{"brokers": "kafka:9092", "topic": "enriched.orders"}'::jsonb
 );
 
 -- Alerts → NATS
 SELECT tide.relay_set_outbox(
   'alerts-to-nats',
-  '{"outbox": "enriched-events",
-    "group":  "alert-publisher",
-    "sink":   {"type":"nats","url":"nats://localhost:4222",
-               "subject_template":"alerts.{event_type}"}}'
+  'enriched-events',
+  'nats',
+  '{"url": "nats://localhost:4222", "subject_template": "alerts.{event_type}"}'::jsonb
 );
 ```
 
