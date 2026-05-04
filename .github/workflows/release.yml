@@ -403,6 +403,26 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
 
+      # docker/metadata-action generates semantic version tags (X.Y.Z, X.Y, latest)
+      # and consistent OCI labels.  The annotation-index.* outputs are written onto
+      # the multi-arch manifest index so GHCR can link the package to the public
+      # repository, unlocking free storage/bandwidth for open-source projects.
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
+        with:
+          images: ghcr.io/grove/pg-ripple
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          labels: |
+            org.opencontainers.image.title=pg_ripple
+            org.opencontainers.image.description=PostgreSQL 18 RDF triple store with native SPARQL, SHACL, Datalog, and HTAP
+            org.opencontainers.image.vendor=grove
+            org.opencontainers.image.licenses=Apache-2.0
+            org.opencontainers.image.documentation=https://github.com/grove/pg-ripple/blob/main/README.md
+
       - name: Build and push
         id: docker_push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
@@ -411,9 +431,15 @@ jobs:
           push: true
           build-args: |
             PGRX_VERSION=${{ env.PGRX_VERSION }}
-          tags: |
-            ghcr.io/grove/pg-ripple:${{ steps.version.outputs.version }}
-            ghcr.io/grove/pg-ripple:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # annotation-index links the GHCR manifest index to the public repo,
+          # enabling free storage/bandwidth for open-source packages.
+          outputs: >-
+            type=image,
+            annotation-index.org.opencontainers.image.source=https://github.com/grove/pg-ripple,
+            annotation-index.org.opencontainers.image.description=PostgreSQL 18 RDF triple store with native SPARQL SHACL Datalog and HTAP,
+            annotation-index.org.opencontainers.image.licenses=Apache-2.0
           # Cache layers between releases to speed up builds
           cache-from: type=gha
           cache-to:   type=gha,mode=max
