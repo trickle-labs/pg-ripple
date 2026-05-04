@@ -24,7 +24,7 @@ fn validate_flight_ticket(
     now_secs: u64,
     allow_unsigned: bool,
 ) -> Result<i64, String> {
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     use sha2::Sha256;
     type HmacSha256 = Hmac<Sha256>;
 
