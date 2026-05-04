@@ -1,0 +1,152 @@
+name: Setup pgrx build environment
+description: >
+  Install Rust (stable), cargo-pgrx 0.18.0, and PostgreSQL 18 build support.
+  Works on Linux (x64 + arm64), macOS (arm64), and Windows (x64).
+  On Linux/macOS, uses the system PostgreSQL packages.
+  On Windows, pgrx downloads and compiles PostgreSQL from source.
+
+runs:
+  using: composite
+  steps:
+    # ── Windows workaround ────────────────────────────────────────────────
+    # Spurious BASH_FUNC_* env vars injected by some runner steps cause
+    # dtolnay/rust-toolchain to abort with "bash function injection" errors.
+    - name: Remove spurious BASH_FUNC_ env vars (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $removed = @()
+        Get-ChildItem -Path Env: | Where-Object { $_.Name -like 'BASH_FUNC_*' } | ForEach-Object {
+          [Environment]::SetEnvironmentVariable($_.Name, $null, [EnvironmentVariableTarget]::Process)
+          $removed += $_.Name
+        }
+        if ($removed.Count -gt 0) {
+          Write-Host "Removed BASH_FUNC_ env vars: $($removed -join ', ')"
+        } else {
+          Write-Host "No BASH_FUNC_ env vars found"
+        }
+
+    # ── Rust toolchain ────────────────────────────────────────────────────
+    - name: Install Rust (stable)
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+        components: clippy, rustfmt
+
+    # ── Caching ───────────────────────────────────────────────────────────
+    - name: Cache Cargo registry
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+        key: v1-cargo-registry-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          v1-cargo-registry-${{ runner.os }}-${{ runner.arch }}-
+          v1-cargo-registry-${{ runner.os }}-
+
+    - name: Cache Cargo build artifacts
+      uses: actions/cache@v5
+      with:
+        path: target
+        # v3: no restore-keys fallback — stale cross-platform/version caches
+        # cause multi-hour hangs due to target/ reaching 30 GB+.
+        key: v3-cargo-build-pgrx0.18-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo-pgrx binary
+      id: cache-cargo-pgrx
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.cargo/bin/cargo-pgrx
+          ~/.cargo/bin/cargo-pgrx.exe
+          ~/.cargo/.crates2.json
+          ~/.cargo/.crates.toml
+        key: v3-cargo-pgrx-bin-0.18.0-${{ runner.os }}-${{ runner.arch }}
+        restore-keys: |
+          v3-cargo-pgrx-bin-0.18.0-${{ runner.os }}-${{ runner.arch }}-
+          v3-cargo-pgrx-bin-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Cache pgrx home (~/.pgrx)
+      id: cache-pgrx-home
+      uses: actions/cache@v5
+      with:
+        path: ~/.pgrx
+        key: pgrx-home-pg18-pgrx0.18.0-${{ runner.os }}-${{ runner.arch }}
+        restore-keys: |
+          pgrx-home-pg18-pgrx0.18.0-${{ runner.os }}-
+          pgrx-home-pg18-${{ runner.os }}-
+
+    # ── PostgreSQL 18 (Linux) ─────────────────────────────────────────────
+    # Install PostgreSQL 18 from PGDG plus the Rust build-time dependencies
+    # that pgrx/bindgen require (libclang-dev) and that pg_ripple needs (libssl-dev).
+    - name: Install PostgreSQL 18 (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        # Remove Microsoft APT sources that intermittently return 403 on
+        # GitHub-hosted ubuntu-latest runners, causing apt-get update to fail.
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                   /etc/apt/sources.list.d/azure-cli.list
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq curl ca-certificates gnupg lsb-release >/dev/null
+
+        sudo install -d /usr/share/postgresql-common/pgdg
+        sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+          --fail -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+          https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+          | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq \
+          build-essential pkg-config \
+          libssl-dev libclang-dev clang lld \
+          postgresql-18 \
+          postgresql-server-dev-18 >/dev/null
+
+        echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+    # ── PostgreSQL 18 (macOS) ─────────────────────────────────────────────
+    - name: Install PostgreSQL 18 (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install --quiet postgresql@18 || true
+        PG_PREFIX="$(brew --prefix postgresql@18)"
+        echo "${PG_PREFIX}/bin" >> "$GITHUB_PATH"
+
+    # Windows: no system pg_config needed — pgrx init uses 'download' mode
+    # which compiles PostgreSQL from source inside ~/.pgrx (cached above).
+
+    # ── cargo-pgrx ────────────────────────────────────────────────────────
+    - name: Install cargo-pgrx 0.18.0
+      shell: bash
+      run: |
+        if cargo pgrx --version 2>/dev/null | grep -q "0.18.0"; then
+          echo "cargo-pgrx 0.18.0 already installed"
+        else
+          cargo install --locked cargo-pgrx --version 0.18.0
+        fi
+        cargo pgrx --version
+
+    # ── pgrx init ─────────────────────────────────────────────────────────
+    - name: Initialize pgrx for PostgreSQL 18
+      if: steps.cache-pgrx-home.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          cargo pgrx init --pg18 download
+        else
+          PG_CONFIG_PATH="$(which pg_config)"
+          echo "Using pg_config: ${PG_CONFIG_PATH}"
+          "${PG_CONFIG_PATH}" --version
+          cargo pgrx init --pg18 "${PG_CONFIG_PATH}"
+        fi
+
+    - name: Add pgrx-managed PostgreSQL binaries to PATH
+      shell: bash
+      run: |
+        PGRX_PREFIX="$(cargo pgrx info path pg18)"
+        echo "${PGRX_PREFIX}/bin" >> "$GITHUB_PATH"
