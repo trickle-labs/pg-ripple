@@ -337,7 +337,7 @@ jobs:
           gh release upload "${TAG}" sbom.json --clobber
 
       - name: Download all platform release artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: artifacts/
           pattern: release-*
@@ -409,7 +409,7 @@ jobs:
       # repository, unlocking free storage/bandwidth for open-source projects.
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf  # v6.0.0
         with:
           images: ghcr.io/grove/pg-ripple
           tags: |

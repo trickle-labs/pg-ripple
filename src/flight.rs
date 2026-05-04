@@ -26,7 +26,7 @@
 //! The `pg_ripple_http` service validates the HMAC, expiry, and audience
 //! before serving any data.
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 
 type HmacSha256 = Hmac<Sha256>;
