@@ -1,0 +1,57 @@
+-- Migration 0.92.0 → 0.93.0: pg_tide Integration & Documentation Modernisation
+--
+-- New features in this release (v0.93.0):
+--
+--   TIDE-1: has_pg_tide() internal helper + pg_ripple.pg_tide_available() SQL function
+--           for client-side detection of the pg_tide extension.
+--           pg_tide (trickle-labs/pg-tide ≥ 0.1.0) is the relay, outbox, and inbox
+--           subsystem extracted from pg_trickle v0.46.0. After v0.46.0, pg_trickle
+--           provides IVM only; all relay features require pg_tide.
+--
+--   TIDE-2: Updated BIDI-OUTBOX-01 / BIDI-INBOX-01 doc comments in src/bidi/mod.rs
+--           to reference the pg_tide API (tide.outbox_create, tide.outbox_publish,
+--           tide.inbox_create, tide.inbox_status) instead of the old pg_trickle relay API.
+--
+--   TIDE-3: Added PGTIDE_HINT constant for relay error paths. All relay-dependent
+--           functions that raise an error when pg_tide is absent now include a descriptive
+--           install hint pointing to https://github.com/trickle-labs/pg-tide.
+--
+--   TIDE-4: Full rewrite of docs/src/operations/pg-trickle-relay.md:
+--           - Renamed to pg-tide relay (pg-tide-relay binary, tide.* API)
+--           - Updated prerequisites: pg_tide ≥ 0.4.0 required for relay;
+--             pg_trickle ≥ 0.46.0 for IVM only
+--           - All 20+ API call sites updated (pgtrickle.* → tide.*)
+--           - New outbox publish trigger pattern (tide.outbox_publish)
+--           - Updated docker-compose.yml sketch with pg-tide-relay image
+--           - pg_tide repository link added to Related pages
+--
+--   TIDE-5: Updated blog/semantic-hub-trickle-relay.md:
+--           - Renamed integration pattern from pg_trickle relay to pg-tide
+--           - Clarified pg_trickle is IVM-only since v0.46.0
+--           - All hub-and-spoke examples updated to tide.* API
+--
+--   TIDE-6: Added backward-compat migration note to plans/pg_trickle_relay_integration.md
+--           documenting the full API migration path from pg_trickle ≤ 0.45.0 to pg_tide.
+--
+--   TIDE-7: Added inline notes to roadmap/v0.52.0.md and roadmap/v0.77.0-full.md:
+--           - v0.52.0.md: footnote that relay examples require pg_trickle < 0.46.0 or pg_tide
+--           - v0.77.0-full.md: tide.relay_set_outbox() example replacing pgtrickle.set_relay_outbox()
+--
+--   TIDE-8: Extended docs/src/operations/compatibility.md:
+--           - Added pg_tide ≥ 0.1.0 compatibility rows for pg_ripple ≥ 0.93.0
+--           - Documented recommended stack: pg_tide + pg_trickle ≥ 0.46.0 + pg_ripple ≥ 0.93.0
+--           - Added pg_trickle ≤ 0.45.0 end-of-life (relay feature removal) note
+--           - Added pg_ripple_http 0.93.x row to compatibility table
+--
+--   TIDE-DOCKER-01: Updated Dockerfile:
+--           - PG_TRICKLE_VERSION bumped to 0.46.0 (IVM-only release)
+--           - PG_TIDE_VERSION bumped to 0.4.0
+--           - Fixed corrupted COPY --from sections for pg_trickle / pg_tide runtime stage
+--           - Image description label updated to include pg_tide
+--           - Header comment updated to document pg_tide in the extension list
+--
+-- Schema changes: NONE.
+--
+-- The pg_ripple.pg_tide_available() function is compiled from Rust source and
+-- installed automatically when the extension shared library is loaded. No SQL
+-- schema changes are required for this migration.

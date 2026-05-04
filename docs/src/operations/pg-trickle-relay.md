@@ -1,8 +1,12 @@
-# pg-trickle Relay: Hub-and-Spoke Integration
+# pg-tide Relay: Hub-and-Spoke Integration
 
-> **Available since**: v0.52.0
+> **Available since**: v0.52.0 (originally pg-trickle relay, migrated to pg-tide in v0.93.0)
 >
-> **Requires**: pg-trickle 0.25.0+ (relay CLI); pg_ripple 0.52.0+
+> **Requires**: pg-tide ≥ 0.4.0 (relay CLI and outbox/inbox); pg_trickle ≥ 0.46.0 (IVM only); pg_ripple ≥ 0.93.0
+>
+> **Note**: pg-trickle v0.46.0 extracted the relay, outbox, and inbox subsystem into the
+> standalone `pg_tide` extension (`trickle-labs/pg-tide`). After v0.46.0, pg_trickle provides
+> IVM only. All relay functionality described here requires pg_tide ≥ 0.4.0.
 
 ## What this integration does
 
@@ -13,7 +17,7 @@ data shapes. Downstream teams want a clean, unified, enriched view of this data
 pushed to their own systems in real time, without any of them having to understand
 the messy source schemas.
 
-This is the hub-and-spoke pattern. **pg-trickle** acts as the transport network:
+This is the hub-and-spoke pattern. **pg-tide** acts as the transport network:
 its relay CLI pulls data in from any source (Kafka, NATS, webhooks) and pushes
 enriched data out to any sink. **pg_ripple** acts as the intelligent hub in the
 middle: it turns the incoming JSON into a knowledge graph, runs inference rules to
@@ -48,39 +52,51 @@ without ever leaving the database process.
   │ (CRM)    │            │  │ linking  │  │federation│  │             │(enriched)│
   └──────────┘            │  └──────────┘  └──────────┘  │             └──────────┘
                           │                                │
-                          │  pg-trickle stream tables      │
+                          │  pg-tide stream tables         │
                           │  (inbox → transform → outbox)  │
                           └────────────────────────────────┘
 ```
 
 The data flow through the hub has five stages:
 
-1. **Ingest** — pg-trickle relay reverse mode delivers raw JSON events into inbox tables.
+1. **Ingest** — pg-tide relay reverse mode delivers raw JSON events into inbox tables.
 2. **Transform** — a trigger converts the JSON into RDF triples and loads them into the triplestore.
 3. **Enrich** — Datalog inference rules derive new facts (alerts, entity links, risk scores).
 4. **Validate** — SHACL shapes enforce data quality before anything leaves the hub.
-5. **Distribute** — pg-trickle relay forward mode pushes enriched, validated JSON events to any number of sinks.
+5. **Distribute** — pg-tide relay forward mode pushes enriched, validated JSON events to any number of sinks.
 
 ---
 
 ## Prerequisites
 
-You need both extensions installed in the same database. The order does not matter
-— pg_ripple detects pg-trickle lazily at runtime, so there is no boot-order
-dependency:
+You need three extensions installed in the same database. Install order matters —
+pg_tide must be created before pg_trickle (which calls `tide.outbox_create()` via
+`pgtrickle.attach_outbox()`), and both before pg_ripple:
 
 ```sql
-CREATE EXTENSION pg_trickle;
-CREATE EXTENSION pg_ripple;
+CREATE EXTENSION pg_tide;      -- relay, outbox, inbox (trickle-labs/pg-tide ≥ 0.4.0)
+CREATE EXTENSION pg_trickle;   -- IVM only (grove/pg-trickle ≥ 0.46.0)
+CREATE EXTENSION pg_ripple;    -- RDF triple store (≥ 0.93.0)
 ```
 
-If pg-trickle is not installed, pg_ripple simply degrades gracefully: CDC
-subscription functions return a warning and continue rather than raising an error,
-so you can develop and test without a full pg-trickle setup.
+If pg_tide is not installed, relay-dependent features are unavailable. pg_ripple
+degrades gracefully: SPARQL views and IVM continue to work (they require pg_trickle,
+not pg_tide), but outbox/inbox operations raise a descriptive error:
+
+```
+ERROR: pg_tide extension is not installed;
+       install pg_tide ≥0.1.0 from https://github.com/trickle-labs/pg-tide
+       then run: CREATE EXTENSION pg_tide
+```
+
+If pg_trickle is not installed, SPARQL/Datalog/CONSTRUCT views are unavailable:
 
 ```
 WARNING: pg_trickle is not installed; CDC subscriptions are unavailable
 ```
+
+Call `pg_ripple.pg_tide_available()` and `pg_ripple.pg_trickle_available()` at
+runtime to check availability before calling relay or view functions.
 
 ---
 
@@ -98,16 +114,16 @@ point.
 
 The relay process runs outside PostgreSQL and continuously polls configured
 sources. You tell it what to poll and where to write the results using
-`pgtrickle.set_relay_inbox()`. Here we subscribe to the `iot.sensors` Kafka
+`tide.relay_set_inbox()`. Here we subscribe to the `iot.sensors` Kafka
 topic and direct its events into a table called `sensor_inbox`. Enriched alerts
 will flow back out on the `iot.alerts` topic on the same broker — same system,
 both ends:
 
 ```sql
-SELECT pgtrickle.set_relay_inbox(
+SELECT tide.relay_set_inbox(
     'sensor-readings',
-    inbox  => 'sensor_inbox',
-    source => '{"type":"kafka","brokers":"${env:KAFKA_BROKERS}","topic":"iot.sensors"}'
+    '{"inbox": "sensor_inbox",
+      "source": {"type":"kafka","brokers":"${env:KAFKA_BROKERS}","topic":"iot.sensors"}}'
 );
 ```
 
@@ -384,8 +400,32 @@ CREATE TRIGGER reformat_alert
 BEFORE INSERT ON enriched_events
 FOR EACH ROW EXECUTE FUNCTION reformat_alert_payload();
 
--- Tell pg-trickle to treat this table as an outbox so the relay can poll it.
-SELECT pgtrickle.enable_outbox('enriched_events');
+-- Create a pg_tide outbox so the relay can poll it.
+-- pg_tide manages all outbox messages in tide.tide_outbox_messages;
+-- triggers call tide.outbox_publish() instead of inserting into a bridge table.
+SELECT tide.outbox_create(
+    'enriched-events',
+    retention_hours    => 24,
+    inline_threshold   => 0
+);
+
+-- Install a publish trigger so the relay picks up enriched_events rows.
+CREATE OR REPLACE FUNCTION bridge_alert_to_tide_outbox()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    PERFORM tide.outbox_publish(
+        'enriched-events',
+        jsonb_build_object(
+            'subject',   pg_ripple.decode_id(NEW.s),
+            'predicate', pg_ripple.decode_id(TG_ARGV[0]::bigint),
+            'object',    pg_ripple.decode_id(NEW.o),
+            'graph',     pg_ripple.decode_id(NEW.g)
+        ),
+        '{}'::jsonb   -- headers
+    );
+    RETURN NEW;
+END;
+$$;
 ```
 
 Now configure the relay to forward those events back to Kafka on the `iot.alerts`
@@ -393,35 +433,34 @@ topic — the same broker the raw sensor readings came from:
 
 ```sql
 -- Publish enriched alerts to iot.alerts on the same Kafka broker
-SELECT pgtrickle.set_relay_outbox(
+SELECT tide.relay_set_outbox(
     'alerts-to-kafka',
-    outbox => 'enriched_events',
-    group  => 'kafka-publisher',
-    sink   => '{"type":"kafka","brokers":"${env:KAFKA_BROKERS}",
-                "topic":"iot.alerts"}'
+    '{"outbox": "enriched-events",
+      "group":  "kafka-publisher",
+      "sink":   {"type":"kafka","brokers":"${env:KAFKA_BROKERS}","topic":"iot.alerts"}}'
 );
 ```
 
 The same outbox can fan out to additional sinks without any changes to the
-pg_ripple side — just register extra `set_relay_outbox` pipelines:
+pg_ripple side — just register extra `relay_set_outbox` pipelines:
 
 ```sql
 -- Also push to NATS for real-time dashboard consumers (optional)
-SELECT pgtrickle.set_relay_outbox(
+SELECT tide.relay_set_outbox(
     'alerts-to-nats',
-    outbox => 'enriched_events',
-    group  => 'nats-publisher',
-    sink   => '{"type":"nats","url":"nats://nats:4222",
-                "subject_template":"iot.alerts.{event_type}"}'
+    '{"outbox": "enriched-events",
+      "group":  "nats-publisher",
+      "sink":   {"type":"nats","url":"nats://nats:4222",
+                 "subject_template":"iot.alerts.{event_type}"}}'
 );
 
 -- Or to a partner API via webhook (optional)
-SELECT pgtrickle.set_relay_outbox(
+SELECT tide.relay_set_outbox(
     'alerts-to-partner',
-    outbox => 'enriched_events',
-    group  => 'partner-publisher',
-    sink   => '{"type":"http","url":"https://partner.example.com/events",
-                "method":"POST"}'
+    '{"outbox": "enriched-events",
+      "group":  "partner-publisher",
+      "sink":   {"type":"http","url":"https://partner.example.com/events",
+                 "method":"POST"}}'
 );
 ```
 
@@ -851,11 +890,11 @@ entirely configurable.
 
 ## Deployment
 
-Both extensions run in the same PostgreSQL instance. The relay binary is a
-separate, stateless process. A single relay instance handles **both directions**
-— inbound pipelines (external source → inbox table) and outbound pipelines
-(outbox table → external sink) run in the same process. You do not need separate
-relay binaries for each direction.
+All three extensions run in the same PostgreSQL instance. The `pg-tide-relay`
+binary is a separate, stateless process. A single relay instance handles **both
+directions** — inbound pipelines (external source → inbox table) and outbound
+pipelines (outbox table → external sink) run in the same process. You do not need
+separate relay binaries for each direction.
 
 For high availability, run two or three relay instances pointing at the same
 PostgreSQL database. PostgreSQL advisory locks elect exactly one owner per
@@ -864,9 +903,8 @@ discovery interval.
 
 The relay only needs one environment variable to start: the database URL.
 All pipeline configuration is registered in the database via SQL
-(`pgtrickle.set_relay_outbox()` / `pgtrickle.set_relay_inbox()`), and the relay
-reads it on startup and hot-reloads it when you make changes — no restart
-required.
+(`tide.relay_set_outbox()` / `tide.relay_set_inbox()`), and the relay reads it on
+startup and hot-reloads it when you make changes — no restart required.
 
 Sensitive values like broker addresses can use `${env:VAR}` placeholders inside
 the JSONB config. The relay expands them from its own process environment at
@@ -876,16 +914,16 @@ runtime, so credentials never need to be stored in the database.
 # docker-compose.yml sketch
 services:
   postgres:
-    image: postgres:18
-    # Both pg_ripple and pg-trickle extensions installed
+    image: ghcr.io/grove/pg-ripple:latest
+    # pg_ripple, pg_trickle, pg_tide, PostGIS, and pgvector all pre-installed
 
   relay:
-    image: ghcr.io/grove/pgtrickle-relay:0.29.0
+    image: ghcr.io/trickle-labs/pg-tide-relay:0.4.0
     environment:
-      PGTRICKLE_RELAY_POSTGRES_URL: postgres://relay:pw@postgres/hub
+      PG_TIDE_RELAY_POSTGRES_URL: postgres://relay:pw@postgres/hub
       # All pipeline config (topics, subjects, poll intervals) lives in the DB.
       # Broker addresses can use ${env:VAR} refs — set them here as env vars.
-      # Register pipelines with pgtrickle.set_relay_outbox() / set_relay_inbox().
+      # Register pipelines with tide.relay_set_outbox() / tide.relay_set_inbox().
       KAFKA_BROKERS: kafka:9092   # expanded by ${env:KAFKA_BROKERS} in pipeline config
       NATS_URL: nats://nats:4222  # similarly available via ${env:NATS_URL}
     ports:
@@ -921,8 +959,8 @@ When a single inbound event triggers many inferred triples — for example, an
 `owl:sameAs` merge that touches hundreds of related facts — the outbox can
 accumulate rows faster than the relay drains them. Three controls help:
 
-- Use **pg-trickle's retention drain** to cap outbox size and drop the oldest
-  rows once a maximum depth is reached.
+- Use **pg_tide's retention drain** (`tide.outbox_create(retention_hours => N)`) to cap
+  outbox size and drop the oldest rows once a maximum depth is reached.
 - Use the relay's `/health` endpoint as a Kubernetes readiness probe. When the
   relay falls behind, it signals not-ready, letting the cluster apply
   back-pressure to inbound sources.
@@ -959,7 +997,7 @@ This walkthrough uses a CRM ⇄ ERP scenario as the concrete example.
   CRM (source of truth       ERP (source of truth
    for email/phone)           for tax ID/status)
        │                           │
-       │  pg-trickle relay         │  pg-trickle relay
+       │  pg-tide relay            │  pg-tide relay
        ▼                           ▼
   <urn:source:crm>           <urn:source:erp>
        │                           │
@@ -976,7 +1014,7 @@ This walkthrough uses a CRM ⇄ ERP scenario as the concrete example.
     ┌─────────────┴─────────────┐
     ▼                           ▼
   CRM outbox               ERP outbox
-  (pg-trickle)             (pg-trickle)
+  (pg-tide)                (pg-tide)
 ```
 
 ### Step 1: Register mappings with default graph IRIs
@@ -1130,3 +1168,5 @@ The full JSON Schema is at `docs/src/operations/event-schema-v1.json`.
 - [Reasoning and Inference (Datalog)](../features/reasoning-and-inference.md)
 - [Validating Data Quality (SHACL)](../features/validating-data-quality.md)
 - [Exporting and Sharing](../features/exporting-and-sharing.md)
+- [pg_tide Repository](https://github.com/trickle-labs/pg-tide)
+- [Compatibility Matrix](compatibility.md)

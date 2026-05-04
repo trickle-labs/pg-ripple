@@ -13,6 +13,55 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.93.0] — 2026-05-04 — pg_tide Integration & Documentation Modernisation
+
+**Implements v0.93.0 roadmap: integrates pg_tide as the recommended relay transport
+layer and modernises all documentation to reflect the new pg-trickle v0.46.0
+architecture (relay, outbox, inbox extracted to pg_tide).**
+
+### Added
+
+- **TIDE-1**: `src/lib.rs` — `has_pg_tide()` runtime detection helper; `_PG_init`
+  INFO message about pg_tide relay support; `pg_ripple.pg_tide_available()` SQL
+  function (via `src/views_api.rs`) for client-side detection.
+- **TIDE-3**: `src/views/mod.rs` — `PGTIDE_HINT` constant for relay error paths:
+  `"pg_tide extension is not installed; install pg_tide ≥0.1.0 from https://github.com/trickle-labs/pg-tide"`.
+- **SQL**: `sql/pg_ripple--0.92.0--0.93.0.sql` — comment-only migration script
+  documenting all TIDE-1 through TIDE-DOCKER-01 changes. No schema changes.
+
+### Changed
+
+- **TIDE-2**: `src/bidi/mod.rs` — BIDI-OUTBOX-01 and BIDI-INBOX-01 doc comments
+  updated to reference pg_tide API (`tide.outbox_create`, `tide.outbox_publish`,
+  `tide.inbox_create`, `tide.inbox_status`).
+- **TIDE-4**: `docs/src/operations/pg-trickle-relay.md` — full rewrite to pg-tide API:
+  - 20+ API call sites updated (pgtrickle.\* → tide.\*)
+  - Prerequisites updated: pg_tide ≥0.4.0 + pg_trickle ≥0.46.0 required
+  - New outbox publish trigger pattern (`tide.outbox_publish`)
+  - Architecture diagram updated to reference pg_tide
+  - `pg-tide-relay` binary replaces `pgtrickle-relay` in docker-compose example
+  - Related pages extended with pg_tide repository link
+- **TIDE-5**: `blog/semantic-hub-trickle-relay.md` — renamed integration to
+  pg-tide; hub-and-spoke examples updated to `tide.*` API; clarified
+  pg_trickle is IVM-only since v0.46.0.
+- **TIDE-6**: `plans/pg_trickle_relay_integration.md` — prominent backward-compat
+  migration note added documenting full API migration path from pg_trickle ≤ 0.45.0
+  to pg_tide ≥ 0.1.0.
+- **TIDE-7**: `roadmap/v0.52.0.md`, `roadmap/v0.77.0-full.md` — inline footnotes
+  noting relay examples require pg_trickle < 0.46.0 or pg_tide ≥ 0.1.0; updated
+  `tide.relay_set_outbox()` example in v0.77.0-full.md.
+- **TIDE-8**: `docs/src/operations/compatibility.md` — new "pg_tide / pg_trickle
+  Extension Compatibility" section with version compatibility tables; pg_ripple_http
+  0.93.x row added to the main compatibility table.
+- **TIDE-DOCKER-01**: `Dockerfile` — `PG_TRICKLE_VERSION` bumped to `0.46.0`;
+  `PG_TIDE_VERSION` bumped to `0.4.0`; corrupted COPY sections fixed; image
+  description label updated; header comment updated.
+- **Version bumps**: `Cargo.toml` and `pg_ripple_http/Cargo.toml` bumped to 0.93.0;
+  `pg_ripple.control` updated to `default_version = '0.93.0'`;
+  `COMPATIBLE_EXTENSION_MIN` bumped to `"0.92.0"` in `pg_ripple_http/src/main.rs`.
+
+---
+
 ## [0.92.0] — 2026-05-03 — Assessment 14 Low-Severity Polish & Hardening
 
 **Implements v0.92.0 roadmap: closes all 39 Low-severity findings from

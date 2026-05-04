@@ -3,6 +3,20 @@
 > **Status**: Exploration (2026-04-23)
 > **Related**: [pg-trickle relay plan](https://github.com/grove/pg-trickle/blob/main/plans/relay/PLAN_RELAY_CLI.md) · [pg-ripple ROADMAP](../ROADMAP.md)
 
+> **⚠ Migration Note (v0.93.0)**: This document describes the relay integration as implemented in
+> pg_ripple ≤ v0.92.0 using pg-trickle ≤ v0.45.0. Starting from pg-trickle v0.46.0, the relay,
+> outbox, and inbox subsystem was extracted into the standalone `pg_tide` extension
+> (`trickle-labs/pg-tide`). After v0.46.0, pg_trickle provides **IVM only**.
+>
+> **Migration path for existing pg_trickle relay users:**
+> - Install pg_tide ≥ 0.4.0: `CREATE EXTENSION pg_tide;`
+> - Replace `pgtrickle.set_relay_inbox(...)` with `tide.relay_set_inbox(...)`
+> - Replace `pgtrickle.set_relay_outbox(...)` with `tide.relay_set_outbox(...)`
+> - Replace `pgtrickle.enable_outbox(table)` with `tide.outbox_create(name, ...)` + `tide.outbox_publish()` trigger
+> - Replace `pgtrickle-relay` binary with `pg-tide-relay`
+> - See [PLAN_PG_TIDE.md](PLAN_PG_TIDE.md) for the full API migration table and impact analysis.
+> - See [pg-trickle-relay.md](../docs/src/operations/pg-trickle-relay.md) for updated examples.
+
 ## Vision
 
 Use pg-ripple as a **semantic hub** sitting between operational data sources and

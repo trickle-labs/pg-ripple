@@ -1,8 +1,13 @@
 [← Back to Blog Index](README.md)
 
-# The Semantic Hub: pg_ripple × pg_trickle Relay
+# The Semantic Hub: pg_ripple × pg-tide Relay
 
 ## Using a knowledge graph as the integration layer between event sources and consumers
+
+> **Note (v0.93.0)**: pg-trickle v0.46.0 extracted the relay, outbox, and inbox subsystem into
+> the standalone `pg_tide` extension (`trickle-labs/pg-tide`). After v0.46.0, pg_trickle provides
+> IVM only. This post has been updated to reflect the new architecture. Use pg_tide ≥ 0.4.0 for
+> all relay examples shown here.
 
 ---
 
@@ -10,7 +15,7 @@ You have Kafka topics with order events. NATS subjects with sensor readings. Web
 
 Somewhere downstream, consumers need a unified view: the same customer across all sources, enriched with inferred relationships, validated against quality rules, and delivered to Kafka, NATS, or webhooks in a schema they understand.
 
-This is the integration hub pattern. Most teams build it with Kafka Connect, schema registries, stream processors, and a lot of YAML. pg_ripple and pg_trickle build it inside PostgreSQL.
+This is the integration hub pattern. Most teams build it with Kafka Connect, schema registries, stream processors, and a lot of YAML. pg_ripple and pg-tide build it inside PostgreSQL.
 
 ---
 
@@ -21,7 +26,7 @@ This is the integration hub pattern. Most teams build it with Kafka Connect, sch
   ───────                    ────────────                    ────────
 
   Kafka ──┐                                               ┌── NATS
-           │  pg-trickle    ┌─────────────┐  pg-trickle  │
+           │  pg-tide      ┌─────────────┐  pg-tide   │
   NATS  ──┼── relay ──────▶│  pg_ripple   │──── relay ──┼── Kafka
            │  (reverse)     │             │  (forward)   │
   HTTP  ──┘                 │  Inference  │               └── Webhooks
@@ -31,9 +36,14 @@ This is the integration hub pattern. Most teams build it with Kafka Connect, sch
                             └─────────────┘
 ```
 
-Both extensions live in the same PostgreSQL 18 instance. pg_trickle handles the transport — its relay CLI speaks Kafka, NATS, SQS, Redis Streams, and HTTP. pg_ripple handles the semantics — vocabulary alignment, entity resolution, Datalog inference, SHACL validation, and SPARQL query.
+Both extensions live in the same PostgreSQL 18 instance. pg-tide handles the transport — its
+`pg-tide-relay` CLI speaks Kafka, NATS, SQS, Redis Streams, and HTTP. pg_ripple handles the
+semantics — vocabulary alignment, entity resolution, Datalog inference, SHACL validation, and
+SPARQL query. pg_trickle (IVM only since v0.46.0) provides incremental materialized view maintenance.
 
-They share the same transaction context. A Kafka message that arrives via pg_trickle's reverse relay, gets transformed to RDF, triggers Datalog inference, passes SHACL validation, and lands in pg_trickle's outbox for forward relay — all of that can happen within a single PostgreSQL transaction.
+All three share the same transaction context. A Kafka message that arrives via pg-tide's reverse
+relay, gets transformed to RDF, triggers Datalog inference, passes SHACL validation, and lands in
+pg-tide's outbox for forward relay — all of that can happen within a single PostgreSQL transaction.
 
 ---
 
@@ -41,14 +51,14 @@ They share the same transaction context. A Kafka message that arrives via pg_tri
 
 ### Step 1: Relay Delivers Events to an Inbox
 
-pg_trickle's relay process runs outside PostgreSQL as a lightweight binary. In reverse mode, it consumes from external sources and writes to inbox tables:
+pg-tide's relay process (`pg-tide-relay`) runs outside PostgreSQL as a lightweight binary. In reverse mode, it consumes from external sources and writes to inbox tables:
 
 ```sql
--- Kafka topic → pg_trickle inbox
-SELECT pgtrickle.set_relay_inbox(
+-- Kafka topic → pg_tide inbox
+SELECT tide.relay_set_inbox(
   'order-events',
-  inbox  => 'order_inbox',
-  source => '{"type":"kafka","brokers":"kafka:9092","topic":"orders.events"}'
+  '{"inbox": "order_inbox",
+    "source": {"type":"kafka","brokers":"kafka:9092","topic":"orders.events"}}'
 );
 ```
 
@@ -165,26 +175,31 @@ SELECT pg_ripple.cdc_enable_bridge(
 
 ### Step 6: Relay Delivers to Consumers
 
-pg_trickle's outbox + relay distributes the enriched events:
+pg-tide's outbox + relay distributes the enriched events:
 
 ```sql
-SELECT pgtrickle.enable_outbox('enriched_events');
+-- Create a pg_tide outbox so the relay can poll it.
+SELECT tide.outbox_create(
+  'enriched-events',
+  retention_hours  => 24,
+  inline_threshold => 0
+);
 
 -- Enriched data → Kafka
-SELECT pgtrickle.set_relay_outbox(
+SELECT tide.relay_set_outbox(
   'enriched-to-kafka',
-  outbox => 'enriched_events',
-  group  => 'enriched-publisher',
-  sink   => '{"type":"kafka","brokers":"kafka:9092","topic":"enriched.orders"}'
+  '{"outbox": "enriched-events",
+    "group":  "enriched-publisher",
+    "sink":   {"type":"kafka","brokers":"kafka:9092","topic":"enriched.orders"}}'
 );
 
 -- Alerts → NATS
-SELECT pgtrickle.set_relay_outbox(
+SELECT tide.relay_set_outbox(
   'alerts-to-nats',
-  outbox => 'enriched_events',
-  group  => 'alert-publisher',
-  sink   => '{"type":"nats","url":"nats://localhost:4222",
-              "subject_template":"alerts.{event_type}"}'
+  '{"outbox": "enriched-events",
+    "group":  "alert-publisher",
+    "sink":   {"type":"nats","url":"nats://localhost:4222",
+               "subject_template":"alerts.{event_type}"}}'
 );
 ```
 
@@ -194,7 +209,7 @@ SELECT pgtrickle.set_relay_outbox(
 
 ### Zero-Copy Data Flow
 
-Both extensions operate on the same PostgreSQL tables. There's no serialization/deserialization between pg_trickle and pg_ripple — the inbox trigger writes triples directly to VP tables. The CDC bridge writes events directly to the outbox table. No intermediate queue, no network hop, no format conversion.
+Both extensions operate on the same PostgreSQL tables. There's no serialization/deserialization between pg-tide and pg_ripple — the inbox trigger writes triples directly to VP tables. The CDC bridge writes events directly to the outbox table. No intermediate queue, no network hop, no format conversion.
 
 ### Transactional Consistency
 
@@ -214,9 +229,9 @@ The killer feature: when Kafka, NATS, and webhook sources all refer to the same 
 
 The standard integration stack:
 
-| Component | Purpose | Equivalent in pg_ripple + pg_trickle |
-|-----------|---------|-------------------------------------|
-| Kafka Connect | Source/sink connectors | pg_trickle relay (reverse/forward) |
+| Component | Purpose | Equivalent in pg_ripple + pg-tide |
+|-----------|---------|-----------------------------------|
+| Kafka Connect | Source/sink connectors | pg-tide relay (reverse/forward) |
 | Schema Registry | Schema validation | SHACL shapes |
 | ksqlDB | Stream processing | Datalog rules + SPARQL |
 | Debezium | CDC from databases | pg_ripple CDC subscriptions |
@@ -230,7 +245,7 @@ The pg_ripple stack replaces 5 separate systems with 2 PostgreSQL extensions and
 
 - **Throughput above 100K events/second sustained.** At that volume, a dedicated stream processor (Flink, Kafka Streams) is more appropriate. pg_ripple handles 10–50K events/second comfortably; beyond that, the single-writer PostgreSQL model becomes the bottleneck.
 
-- **No semantic enrichment needed.** If you're just routing events from source to sink with simple transformations, pg_trickle alone (without pg_ripple) is simpler. The knowledge graph adds value when you need inference, entity resolution, or vocabulary alignment.
+- **No semantic enrichment needed.** If you're just routing events from source to sink with simple transformations, pg-tide alone (without pg_ripple) is simpler. The knowledge graph adds value when you need inference, entity resolution, or vocabulary alignment.
 
 - **Truly global distribution.** PostgreSQL is a single-region system. If sources and consumers span continents and need sub-50ms latency, a globally distributed message bus is the right choice.
 

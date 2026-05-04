@@ -248,6 +248,21 @@ pub(crate) fn has_live_statistics() -> bool {
     .unwrap_or(false)
 }
 
+// ─── pg_tide runtime detection (v0.93.0, TIDE-1) ─────────────────────────────
+
+/// Returns `true` when the pg_tide extension is installed in the current database.
+///
+/// pg_tide (trickle-labs/pg-tide) contains the relay, outbox, and inbox subsystem
+/// extracted from pg_trickle v0.46.0. All relay-dependent features gate on this
+/// check — pg_ripple core, IVM views, and CDC work without pg_tide.
+pub(crate) fn has_pg_tide() -> bool {
+    pgrx::Spi::get_one::<bool>(
+        "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'pg_tide')",
+    )
+    .unwrap_or(None)
+    .unwrap_or(false)
+}
+
 // ─── ExecutorEnd hook (v0.6.0, updated v0.74.0 FLUSH-DEFER-01) ───────────────
 
 /// Register a PostgreSQL `ExecutorEnd_hook` that:
@@ -346,6 +361,17 @@ pub extern "C-unwind" fn _PG_init() {
     // thread-local cache is flushed whenever a VP table is rebuilt by
     // VACUUM FULL (which assigns a new OID to the replacement heap).
     crate::storage::catalog::register_relcache_callback();
+
+    // ── TIDE-1 (v0.93.0): pg_tide relay extension availability notice ─────────
+    // pg_tide (trickle-labs/pg-tide ≥ 0.1.0) provides relay, outbox, and inbox
+    // features extracted from pg_trickle v0.46.0.  SPI is not available in
+    // _PG_init so the actual availability check is deferred to first call of
+    // pg_ripple.pg_tide_available().  This message informs operators to install
+    // pg_tide for full bidirectional relay support.
+    pgrx::info!(
+        "pg_ripple: pg_tide relay support enabled; \
+         call pg_ripple.pg_tide_available() to verify pg_tide is installed"
+    );
 
     // Schema and base tables are created by the `schema_setup` extension_sql!
     // block, which runs inside the CREATE EXTENSION transaction where SPI and

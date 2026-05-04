@@ -2,7 +2,8 @@
 #
 # Builds a PostgreSQL 18 image that pre-installs:
 #   - pg_ripple  (this repo)
-#   - pg_trickle (incremental materialized views)
+#   - pg_trickle (incremental materialized views, IVM only since v0.46.0)
+#   - pg_tide    (relay, outbox, and inbox subsystem — extracted from pg_trickle v0.46.0)
 #   - PostGIS    (geospatial queries via GeoSPARQL)
 #   - pgvector   (vector similarity search for hybrid SPARQL + semantic)
 #
@@ -34,8 +35,8 @@ FROM rust:1-bookworm AS builder
 ARG PGRX_VERSION=0.18.0
 ARG POSTGIS_VERSION=3.5.6
 ARG PGVECTOR_VERSION=0.8.2
-ARG PG_TRICKLE_VERSION=0.41.0
-ARG PG_TIDE_VERSION=0.1.0
+ARG PG_TRICKLE_VERSION=0.46.0
+ARG PG_TIDE_VERSION=0.4.0
 
 # Add the PostgreSQL Global Development Group APT repository so we get the
 # exact PostgreSQL 18 server development headers that match postgres:18-bookworm.
@@ -126,7 +127,7 @@ RUN curl -fsSL \
     && ./configure \
          --with-pgconfig=/usr/lib/postgresql/18/bin/pg_config \
          --without-topology \
-         --without-address-standardizer \pg_tide, 
+         --without-address-standardizer \
     && make -j"$(nproc)" \
     && make install
 
@@ -134,7 +135,7 @@ RUN curl -fsSL \
 FROM postgres:18-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/grove/pg-ripple"
-LABEL org.opencontainers.image.description="PostgreSQL 18 with pg_ripple, pg_trickle, PostGIS, pgvector"
+LABEL org.opencontainers.image.description="PostgreSQL 18 with pg_ripple, pg_trickle, pg_tide, PostGIS, pgvector"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Replace the base image's gosu (compiled with old Go stdlib) with our freshly
@@ -169,21 +170,21 @@ COPY --from=builder \
     /usr/local/bin/pg_ripple_http
 
 # ── pg_trickle ────────────────────────────────────────────────────────────────
-COPY --_tide ───────────────────────────────────────────────────────────────────
+COPY --from=builder \
+    /tmp/pg_trickle/target/release/pg_trickle-pg18/usr/lib/postgresql/18/lib/pg_trickle.so \
+    /usr/lib/postgresql/18/lib/
+
+COPY --from=builder \
+    /tmp/pg_trickle/target/release/pg_trickle-pg18/usr/share/postgresql/18/extension/ \
+    /usr/share/postgresql/18/extension/
+
+# ── pg_tide ───────────────────────────────────────────────────────────────────
 COPY --from=builder \
     /tmp/pg_tide/target/release/pg_tide-pg18/usr/lib/postgresql/18/lib/pg_tide.so \
     /usr/lib/postgresql/18/lib/
 
 COPY --from=builder \
     /tmp/pg_tide/target/release/pg_tide-pg18/usr/share/postgresql/18/extension/ \
-    /usr/share/postgresql/18/extension/
-
-# ── pgfrom=builder \
-    /tmp/pg_trickle/target/release/pg_trickle-pg18/usr/lib/postgresql/18/lib/pg_trickle.so \
-    /usr/lib/postgresql/18/lib/
-
-COPY --from=builder \
-    /tmp/pg_trickle/target/release/pg_trickle-pg18/usr/share/postgresql/18/extension/ \
     /usr/share/postgresql/18/extension/
 
 # ── pgvector ──────────────────────────────────────────────────────────────────
