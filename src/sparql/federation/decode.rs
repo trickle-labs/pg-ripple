@@ -332,6 +332,10 @@ fn collect_vars_recursive(pattern: &GraphPattern, out: &mut HashSet<String>) {
         Service { inner, .. } => {
             collect_vars_recursive(inner, out);
         }
+        Lateral { left, right } => {
+            collect_vars_recursive(left, out);
+            collect_vars_recursive(right, out);
+        }
         Path {
             subject, object, ..
         } => {

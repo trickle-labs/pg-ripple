@@ -7,7 +7,7 @@
 //!
 //! No database connection is required — all tests run in pure Rust.
 
-use oxigraph::io::{GraphFormat, GraphParser};
+use oxigraph::io::{RdfFormat, RdfParser};
 use proptest::prelude::*;
 use rio_api::parser::TriplesParser;
 use rio_turtle::{NTriplesParser, TurtleError};
@@ -53,10 +53,10 @@ fn count_rio(data: &str) -> usize {
     count
 }
 
-/// Count triples parsed by oxigraph (GraphParser with NTriples format).
+/// Count triples parsed by oxigraph (RdfParser with NTriples format).
 fn count_oxigraph(data: &str) -> usize {
     let mut count = 0usize;
-    for result in GraphParser::from_format(GraphFormat::NTriples).read_triples(data.as_bytes()) {
+    for result in RdfParser::from_format(RdfFormat::NTriples).for_reader(data.as_bytes()) {
         if result.is_ok() {
             count += 1;
         }
