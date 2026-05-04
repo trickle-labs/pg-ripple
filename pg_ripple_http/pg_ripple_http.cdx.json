@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.4",
   "version": 1,
-  "serialNumber": "urn:uuid:78acf34d-2a0d-4dfb-a3ea-44f23df82e6f",
+  "serialNumber": "urn:uuid:93c7025b-9617-425b-ae69-453bb5a2b611",
   "metadata": {
-    "timestamp": "2026-05-03T13:53:33.534518000Z",
+    "timestamp": "2026-05-04T14:32:43.742115000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,17 +14,17 @@
     ],
     "component": {
       "type": "application",
-      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.92.0",
+      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.93.0",
       "name": "pg_ripple_http",
-      "version": "0.92.0",
-      "description": "SPARQL 1.1 Protocol HTTP endpoint for pg_ripple",
+      "version": "0.93.0",
+      "description": "SPARQL 1.1 Protocol HTTP endpoint for pg_ripple — connects PostgreSQL 18 RDF triple store to the web",
       "scope": "required",
       "licenses": [
         {
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/pg_ripple_http@0.92.0?download_url=file://.",
+      "purl": "pkg:cargo/pg_ripple_http@0.93.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -34,10 +34,10 @@
       "components": [
         {
           "type": "application",
-          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.92.0 bin-target-0",
+          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.93.0 bin-target-0",
           "name": "pg_ripple_http",
-          "version": "0.92.0",
-          "purl": "pkg:cargo/pg_ripple_http@0.92.0?download_url=file://.#src/main.rs"
+          "version": "0.93.0",
+          "purl": "pkg:cargo/pg_ripple_http@0.93.0?download_url=file://.#src/main.rs"
         }
       ]
     },
@@ -1847,7 +1847,7 @@
       "author": "Alex Crichton <alex@alexcrichton.com>",
       "name": "fnv",
       "version": "1.0.7",
-      "description": "Fowler\u2013Noll\u2013Vo hash function",
+      "description": "Fowler–Noll–Vo hash function",
       "scope": "required",
       "hashes": [
         {
@@ -2168,7 +2168,7 @@
     {
       "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#generic-array@0.14.7",
-      "author": "Bart\u0142omiej Kami\u0144ski <fizyk20@gmail.com>, Aaron Trent <novacrazy@gmail.com>",
+      "author": "Bartłomiej Kamiński <fizyk20@gmail.com>, Aaron Trent <novacrazy@gmail.com>",
       "name": "generic-array",
       "version": "0.14.7",
       "description": "Generic types implementing functionality of arrays",
@@ -2907,7 +2907,7 @@
     {
       "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#iana-time-zone@0.1.65",
-      "author": "Andrew Straw <strawman@astraw.com>, Ren\u00e9 Kijewski <rene.kijewski@fu-berlin.de>, Ryan Lopopolo <rjl@hyperbo.la>",
+      "author": "Andrew Straw <strawman@astraw.com>, René Kijewski <rene.kijewski@fu-berlin.de>, Ryan Lopopolo <rjl@hyperbo.la>",
       "name": "iana-time-zone",
       "version": "0.1.65",
       "description": "get the IANA time zone for the current system",
@@ -3332,7 +3332,7 @@
     {
       "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#lazy_static@1.5.0",
-      "author": "Marvin L\u00f6bel <loebel.marvin@gmail.com>",
+      "author": "Marvin Löbel <loebel.marvin@gmail.com>",
       "name": "lazy_static",
       "version": "1.5.0",
       "description": "A macro for declaring lazily evaluated statics in Rust.",
@@ -5668,7 +5668,7 @@
     {
       "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#serde_norway@0.9.42",
-      "author": "Christina S\u00f8rensen <christina@cafkafk.com>, David Tolnay <dtolnay@gmail.com>",
+      "author": "Christina Sørensen <christina@cafkafk.com>, David Tolnay <dtolnay@gmail.com>",
       "name": "serde_norway",
       "version": "0.9.42",
       "description": "YAML data format for Serde",
@@ -7271,7 +7271,7 @@
     {
       "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#unsafe-libyaml-norway@0.2.15",
-      "author": "Christina S\u00f8rensen <christina@cafkafk.com>, David Tolnay <dtolnay@gmail.com>",
+      "author": "Christina Sørensen <christina@cafkafk.com>, David Tolnay <dtolnay@gmail.com>",
       "name": "unsafe-libyaml-norway",
       "version": "0.2.15",
       "description": "libyaml transpiled to rust by c2rust",
@@ -7973,7 +7973,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///Users/geir.gronmo/projects/pg_ripple/pg_ripple_http#0.92.0",
+      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.93.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#arrow@55.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#axum@0.8.9",

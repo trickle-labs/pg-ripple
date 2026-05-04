@@ -19,6 +19,8 @@ extension version is outside its known-compatible range.
 
 | pg_ripple_http version | pg_ripple extension range | Notes |
 |------------------------|---------------------------|-------|
+| 0.93.x | ≥ 0.92.0 | pg_tide integration: `pg_tide_available()` SQL function; BIDI relay comments updated to pg_tide API |
+| 0.92.x | ≥ 0.88.0 | A14 Low polish: PageRank bounds, damping guide, SERVICE SILENT TLS, SOURCE_DATE_EPOCH, conformance badge CI |
 | 0.91.x | ≥ 0.88.0 | OBS-01 PageRank IVM Prometheus gauges; HTTP-03 middleware extraction; HTTP-04 EXPLAIN row estimation; API-05 `explain_pagerank_json()`; CDC watermark batching GUCs |
 | 0.90.x | ≥ 0.88.0 | A14 Medium correctness/performance: PageRank streaming, convergence-norm GUC, advisory lock, module splits |
 | 0.89.x | ≥ 0.88.0 | A14 High remediation: `check_auth_write` on mutating handlers, GUC name audit, rate limit 100 req/s default |
@@ -86,3 +88,46 @@ companion. This means:
 3. Verify compatibility via `GET /ready` — returns `{"compatible": true}` when correctly paired.
 
 See also: [Arrow Flight Reference](../reference/arrow-flight.md), [HTTP API](../reference/http-api.md).
+
+## pg_tide / pg_trickle Extension Compatibility
+
+pg_ripple integrates with two companion PostgreSQL extensions:
+
+| Extension | Purpose | Required for |
+|-----------|---------|--------------|
+| pg_trickle ≥ 0.46.0 | Incremental materialized view maintenance (IVM only) | SPARQL views, Datalog views, CONSTRUCT/DESCRIBE/ASK views, ExtVP |
+| pg_tide ≥ 0.4.0 | Relay, outbox, and inbox subsystem | Bidirectional relay (BIDI-OUTBOX-01, BIDI-INBOX-01), hub-and-spoke integration |
+
+> **Architecture change (pg_ripple v0.93.0 / pg_trickle v0.46.0)**: pg_trickle v0.46.0 extracted
+> the relay, outbox, and inbox subsystem (~6,150 Rust LOC + ~2,500 SQL LOC) into the new standalone
+> `pg_tide` extension (`trickle-labs/pg-tide`). Starting with v0.93.0, pg_ripple recognises
+> pg_tide as the recommended relay transport layer.
+
+### pg_ripple + pg_trickle compatibility
+
+| pg_ripple version | pg_trickle version | IVM status |
+|-------------------|--------------------|------------|
+| ≥ 0.93.0 | ≥ 0.46.0 | ✅ IVM only (relay features in pg_tide) |
+| ≥ 0.93.0 | ≤ 0.45.0 | ⚠ IVM works; relay features require manual migration to pg_tide |
+| 0.52.0 – 0.92.0 | any | ✅ Full relay+IVM (pre-extraction) |
+
+### pg_ripple + pg_tide compatibility
+
+| pg_ripple version | pg_tide version | Relay status |
+|-------------------|-----------------|--------------|
+| ≥ 0.93.0 | ≥ 0.4.0 | ✅ Full relay support (tide.* API) |
+| ≥ 0.93.0 | 0.1.0 – 0.3.x | ✅ Core relay support (tide.* API, older feature set) |
+| ≥ 0.93.0 | not installed | ⚠ Core pg_ripple + IVM work; bidirectional relay unavailable |
+| < 0.93.0 | any | pg_tide not yet supported (use pg_trickle ≤ 0.45.0 for relay) |
+
+### Recommended stack (pg_ripple ≥ 0.93.0)
+
+```sql
+CREATE EXTENSION pg_tide;      -- relay, outbox, inbox (trickle-labs/pg-tide ≥ 0.4.0)
+CREATE EXTENSION pg_trickle;   -- IVM (grove/pg-trickle ≥ 0.46.0)
+CREATE EXTENSION pg_ripple;    -- RDF triple store (≥ 0.93.0)
+```
+
+Call `pg_ripple.pg_tide_available()` to verify pg_tide is installed at runtime.
+Call `pg_ripple.pg_trickle_available()` to verify pg_trickle is installed at runtime.
+

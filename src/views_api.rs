@@ -26,6 +26,19 @@ mod pg_ripple {
         crate::views::pg_trickle_available()
     }
 
+    /// Return `true` when the pg_tide extension is installed in the current database.
+    ///
+    /// pg_tide (trickle-labs/pg-tide ≥ 0.1.0) provides the relay, outbox, and inbox
+    /// subsystem extracted from pg_trickle v0.46.0. Required for bidirectional relay
+    /// features (BIDI-OUTBOX-01, BIDI-INBOX-01). Core pg_ripple, IVM views, and CDC
+    /// all work without pg_tide installed.
+    ///
+    /// Install pg_tide: https://github.com/trickle-labs/pg-tide
+    #[pg_extern]
+    fn pg_tide_available() -> bool {
+        crate::has_pg_tide()
+    }
+
     /// Create a named, incrementally-maintained SPARQL SELECT result table.
     ///
     /// Compiles the SPARQL query to SQL, registers a pg_trickle stream table

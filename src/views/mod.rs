@@ -50,6 +50,18 @@ use crate::sparql::sqlgen;
 const PGTRICKLE_HINT: &str = "Install pg_trickle: https://github.com/grove/pg-trickle — \
      then run: CREATE EXTENSION pg_trickle";
 
+// ─── pg_tide install hint (TIDE-3, v0.93.0) ──────────────────────────────────
+
+/// Error hint for relay-dependent operations when pg_tide is not installed.
+///
+/// pg_tide (trickle-labs/pg-tide ≥ 0.1.0) contains the relay, outbox, and inbox
+/// subsystem that was extracted from pg_trickle v0.46.0.  Add this hint to any
+/// `pgrx::error!()` call in relay-dependent code paths.
+#[allow(dead_code)]
+pub(crate) const PGTIDE_HINT: &str = "pg_tide extension is not installed; \
+     install pg_tide \u{2265}0.1.0 from https://github.com/trickle-labs/pg-tide \
+     then run: CREATE EXTENSION pg_tide";
+
 // ─── SPARQL SQL generation for views ─────────────────────────────────────────
 
 /// Compile a SPARQL SELECT query to a SQL SELECT suitable for a stream table.

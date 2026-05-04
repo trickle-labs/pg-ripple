@@ -11,8 +11,8 @@
 //! - BIDI-LOOP-01: Loop-safe subscriptions with exclude_graphs + propagation_depth
 //! - BIDI-CAS-01: Object-level outbound events with optimistic-lock base
 //! - BIDI-LINKBACK-01: Target-assigned ID rendezvous
-//! - BIDI-OUTBOX-01: Outbound events via pg-trickle outbox
-//! - BIDI-INBOX-01: Receiver feedback via pg-trickle inbox
+//! - BIDI-OUTBOX-01: Outbound events via pg_tide outbox (tide.outbox_create / tide.outbox_publish)
+//! - BIDI-INBOX-01: Receiver feedback via pg_tide inbox (tide.inbox_create / tide.inbox_status)
 //! - BIDI-WIRE-01: Frozen wire format and JSON Schema
 //! - BIDI-OBS-01: Per-graph observability
 //! - BIDI-PERF-01: Performance budget
@@ -131,7 +131,7 @@ mod pg_ripple {
         crate::bidi::abandon_linkback_impl(event_id);
     }
 
-    // ── BIDI-INBOX-01: pg-trickle inbox setup ────────────────────────────────
+    // ── BIDI-INBOX-01: pg_tide inbox setup ───────────────────────────────────
 
     /// Install the standard bidi inbox table, dispatch function, and trigger.
     #[pg_extern]
