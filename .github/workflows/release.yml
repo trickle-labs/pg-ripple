@@ -463,7 +463,7 @@ jobs:
       # v0.60.0 N7-4 / v0.64.0 TRUTH-04: Docker CVE scan — fail release if
       # HIGH/CRITICAL CVEs found. Scan the immutable digest, not the mutable tag.
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: ghcr.io/grove/pg-ripple@${{ steps.digest.outputs.digest }}
           format: table
