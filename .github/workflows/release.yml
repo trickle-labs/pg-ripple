@@ -471,3 +471,23 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
 
+  # ── 6. Publish pg_ripple_http to crates.io ───────────────────────────────────
+  publish-crate:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    needs: release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+
+      - name: Publish pg_ripple_http
+        # Only publish when a CARGO_REGISTRY_TOKEN secret is configured.
+        if: ${{ env.CARGO_REGISTRY_TOKEN != '' }}
+        run: cargo publish --package pg_ripple_http --no-verify
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+

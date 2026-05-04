@@ -2,9 +2,12 @@
 name = "pg_ripple_http"
 version = "0.92.0"
 edition = "2024"
-description = "SPARQL 1.1 Protocol HTTP endpoint for pg_ripple"
+description = "SPARQL 1.1 Protocol HTTP endpoint for pg_ripple — connects PostgreSQL 18 RDF triple store to the web"
 license = "Apache-2.0"
 repository = "https://github.com/grove/pg-ripple"
+readme = "../README.md"
+keywords = ["sparql", "rdf", "postgresql", "knowledge-graph", "linked-data"]
+categories = ["database", "command-line-utilities", "web-programming::http-server"]
 rust-version = "1.88"
 
 [[bin]]
