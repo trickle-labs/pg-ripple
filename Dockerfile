@@ -35,6 +35,7 @@ ARG PGRX_VERSION=0.18.0
 ARG POSTGIS_VERSION=3.5.6
 ARG PGVECTOR_VERSION=0.8.2
 ARG PG_TRICKLE_VERSION=0.41.0
+ARG PG_TIDE_VERSION=0.1.0
 
 # Add the PostgreSQL Global Development Group APT repository so we get the
 # exact PostgreSQL 18 server development headers that match postgres:18-bookworm.
@@ -109,6 +110,14 @@ RUN git clone --depth 1 --branch "v${PGVECTOR_VERSION}" \
     && make PG_CONFIG=/usr/lib/postgresql/18/bin/pg_config \
     && make PG_CONFIG=/usr/lib/postgresql/18/bin/pg_config install
 
+# ── Build pg_tide ────────────────────────────────────────────────────────────
+RUN git clone --depth 1 --branch "v${PG_TIDE_VERSION}" \
+      https://github.com/trickle-labs/pg-tide.git /tmp/pg_tide \
+    && cd /tmp/pg_tide \
+    && cargo pgrx package \
+         --pg-config /usr/lib/postgresql/18/bin/pg_config \
+         --features pg18
+
 # ── Build PostGIS ─────────────────────────────────────────────────────────────
 RUN curl -fsSL \
       "https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz" \
@@ -117,7 +126,7 @@ RUN curl -fsSL \
     && ./configure \
          --with-pgconfig=/usr/lib/postgresql/18/bin/pg_config \
          --without-topology \
-         --without-address-standardizer \
+         --without-address-standardizer \pg_tide, 
     && make -j"$(nproc)" \
     && make install
 
@@ -160,7 +169,16 @@ COPY --from=builder \
     /usr/local/bin/pg_ripple_http
 
 # ── pg_trickle ────────────────────────────────────────────────────────────────
+COPY --_tide ───────────────────────────────────────────────────────────────────
 COPY --from=builder \
+    /tmp/pg_tide/target/release/pg_tide-pg18/usr/lib/postgresql/18/lib/pg_tide.so \
+    /usr/lib/postgresql/18/lib/
+
+COPY --from=builder \
+    /tmp/pg_tide/target/release/pg_tide-pg18/usr/share/postgresql/18/extension/ \
+    /usr/share/postgresql/18/extension/
+
+# ── pgfrom=builder \
     /tmp/pg_trickle/target/release/pg_trickle-pg18/usr/lib/postgresql/18/lib/pg_trickle.so \
     /usr/lib/postgresql/18/lib/
 
