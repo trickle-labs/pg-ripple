@@ -639,6 +639,12 @@ pub(crate) fn translate_pattern(pattern: &GraphPattern, ctx: &mut Ctx) -> Fragme
             inner,
             silent,
         } => graph::translate_service(name, inner, *silent, ctx),
+
+        GraphPattern::Lateral { left, right } => {
+            // LATERAL join: translate as inner join (correlated subquery semantics
+            // approximated; a full correlated-CTE implementation can follow).
+            join::translate_join(left, right, ctx)
+        }
     }
 }
 // ─── Public API ───────────────────────────────────────────────────────────────
