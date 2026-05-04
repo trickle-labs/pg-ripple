@@ -640,11 +640,8 @@ pub(crate) fn translate_pattern(pattern: &GraphPattern, ctx: &mut Ctx) -> Fragme
             silent,
         } => graph::translate_service(name, inner, *silent, ctx),
 
-        GraphPattern::Lateral { left, right } => {
-            // LATERAL join: translate as inner join (correlated subquery semantics
-            // approximated; a full correlated-CTE implementation can follow).
-            join::translate_join(left, right, ctx)
-        }
+        // Future spargebra variants (e.g. Lateral behind sep-0006).
+        _ => pgrx::error!("unsupported SPARQL GraphPattern variant"),
     }
 }
 // ─── Public API ───────────────────────────────────────────────────────────────

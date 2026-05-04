@@ -332,10 +332,6 @@ fn collect_vars_recursive(pattern: &GraphPattern, out: &mut HashSet<String>) {
         Service { inner, .. } => {
             collect_vars_recursive(inner, out);
         }
-        Lateral { left, right } => {
-            collect_vars_recursive(left, out);
-            collect_vars_recursive(right, out);
-        }
         Path {
             subject, object, ..
         } => {
@@ -346,6 +342,8 @@ fn collect_vars_recursive(pattern: &GraphPattern, out: &mut HashSet<String>) {
                 out.insert(v.as_str().to_owned());
             }
         }
+        // Future spargebra variants (e.g. Lateral behind sep-0006) fall through here.
+        _ => {}
     }
 }
 
