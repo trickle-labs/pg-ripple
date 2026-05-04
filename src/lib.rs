@@ -366,12 +366,7 @@ pub extern "C-unwind" fn _PG_init() {
     // pg_tide (trickle-labs/pg-tide ≥ 0.1.0) provides relay, outbox, and inbox
     // features extracted from pg_trickle v0.46.0.  SPI is not available in
     // _PG_init so the actual availability check is deferred to first call of
-    // pg_ripple.pg_tide_available().  This message informs operators to install
-    // pg_tide for full bidirectional relay support.
-    pgrx::info!(
-        "pg_ripple: pg_tide relay support enabled; \
-         call pg_ripple.pg_tide_available() to verify pg_tide is installed"
-    );
+    // pg_ripple.pg_tide_available().
 
     // Schema and base tables are created by the `schema_setup` extension_sql!
     // block, which runs inside the CREATE EXTENSION transaction where SPI and
