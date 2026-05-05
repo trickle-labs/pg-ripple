@@ -91,21 +91,23 @@ $$);
 -- ── Test 3: Property path must not leak across graph boundaries ───────────────
 
 -- In g1: starting from x is impossible (x is only in g2)
+-- Use + (one or more) since step* would bind ?t = x via the zero-length path.
 SELECT count(*) = 0 AS path_confined_to_g1
 FROM pg_ripple.sparql($$
     SELECT ?t WHERE {
         GRAPH <https://rare.path.test/g1> {
-            <https://rare.path.test/x> <https://rare.path.test/step>* ?t
+            <https://rare.path.test/x> <https://rare.path.test/step>+ ?t
         }
     }
 $$);
 
 -- In g2: starting from a is impossible (a is only in g1)
+-- Use + (one or more) since step* would bind ?t = a via the zero-length path.
 SELECT count(*) = 0 AS path_confined_to_g2
 FROM pg_ripple.sparql($$
     SELECT ?t WHERE {
         GRAPH <https://rare.path.test/g2> {
-            <https://rare.path.test/a> <https://rare.path.test/step>* ?t
+            <https://rare.path.test/a> <https://rare.path.test/step>+ ?t
         }
     }
 $$);
