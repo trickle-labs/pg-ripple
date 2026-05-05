@@ -188,10 +188,7 @@ pub(crate) fn execute_remote_partial(
     }
 
     // M15-02 (v0.95.0): resolve hostname once and validate against SSRF blocklist.
-    let resolved = match super::policy::resolve_and_check_endpoint(url) {
-        Ok(r) => r,
-        Err(e) => return Err(e),
-    };
+    let resolved = super::policy::resolve_and_check_endpoint(url)?;
 
     let timeout = Duration::from_secs(timeout_secs.max(1) as u64);
     let pool_size = crate::FEDERATION_POOL_SIZE.get().max(1) as usize;

@@ -583,11 +583,11 @@ COMMENT ON SEQUENCE _pg_ripple.schema_generation_seq IS
 
 -- M15-07 (v0.95.0): Tune autovacuum for the high-churn dictionary table so
 -- that it fires more aggressively after bulk encode operations.
--- autovacuum_scale_factor = 0.01 → vacuum triggers after 1% of rows change.
+-- autovacuum_vacuum_scale_factor = 0.01 → vacuum triggers after 1% of rows change.
 -- autovacuum_analyze_scale_factor = 0.005 → analyze after 0.5% change.
 ALTER TABLE _pg_ripple.dictionary
     SET (
-        autovacuum_scale_factor         = 0.01,
+        autovacuum_vacuum_scale_factor  = 0.01,
         autovacuum_analyze_scale_factor = 0.005
     );
 

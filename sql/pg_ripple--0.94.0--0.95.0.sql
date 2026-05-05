@@ -30,7 +30,7 @@ COMMENT ON SEQUENCE _pg_ripple.schema_generation_seq IS
 -- M15-07: tune autovacuum on the dictionary table for more aggressive vacuuming.
 ALTER TABLE _pg_ripple.dictionary
     SET (
-        autovacuum_scale_factor         = 0.01,
+        autovacuum_vacuum_scale_factor  = 0.01,
         autovacuum_analyze_scale_factor = 0.005
     );
 

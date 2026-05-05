@@ -45,7 +45,7 @@ cache key, and ADD/COPY/MOVE through full SPARQL update pipeline.**
   `src/dictionary/mod.rs` — `maybe_vacuum_dictionary()` helper runs
   `VACUUM ANALYZE _pg_ripple.dictionary` when encode count exceeds threshold.
   `src/bulk_load.rs` — calls `maybe_vacuum_dictionary()` after large loads.
-  `src/schema/rls.rs` — `autovacuum_scale_factor = 0.01` and
+  `src/schema/rls.rs` — `autovacuum_vacuum_scale_factor = 0.01` and
   `autovacuum_analyze_scale_factor = 0.005` reloptions on `_pg_ripple.dictionary`.
 - **M15-08**: `tests/pg_regress/sql/sparql_optional_path_in_graph_rare.sql` —
   new regression test covering OPTIONAL + property path (+ * | /) + vp_rare
