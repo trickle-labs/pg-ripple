@@ -750,12 +750,37 @@ assert_table "_pg_ripple" "pagerank_dirty_edges"
 ok "v0.93.0 checkpoint assertions passed (no schema changes, pg_tide integration)"
 echo
 
+# Apply v0.93.0 → v0.94.0 migration script
+run_sql -f "${SQL_DIR}/pg_ripple--0.93.0--0.94.0.sql"
+ok "Applied migration 0.93.0 → 0.94.0"
+
+# ── A15-02 checkpoint: v0.94.0 ────────────────────────────────────────────────
+info "=== A15-02 checkpoint: v0.94.0 ==="
+# v0.94.0 recreates _pg_ripple.ddl_guard_vp_tables() with SET search_path (H15-02).
+# No new tables/columns.  Core tables from v0.93.0 must remain intact.
+assert_table "_pg_ripple" "pagerank_scores"
+assert_table "_pg_ripple" "centrality_scores"
+assert_table "_pg_ripple" "confidence"
+assert_table "_pg_ripple" "pagerank_dirty_edges"
+# Verify ddl_guard_vp_tables still exists after recreation.
+GUARD_EXISTS=$(run_sql -c "SELECT COUNT(*) FROM pg_catalog.pg_proc p \
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
+    WHERE n.nspname = '_pg_ripple' AND p.proname = 'ddl_guard_vp_tables'")
+if [[ "${GUARD_EXISTS}" -eq 1 ]]; then
+    ok "A15-02: _pg_ripple.ddl_guard_vp_tables() exists after migration"
+else
+    fail "A15-02: _pg_ripple.ddl_guard_vp_tables() missing after 0.93.0→0.94.0 migration"
+    exit 1
+fi
+ok "v0.94.0 checkpoint assertions passed (ddl_guard_vp_tables recreated with SET search_path)"
+echo
+
 info "=== MIGCHAIN-01: migration script count verification ==="
-# Count migration scripts from v0.62.0 to v0.93.0 (inclusive).
-# There are 31 minor version increments: 0.62→0.63, ..., 0.92→0.93.
-EXPECTED_COUNT=31
+# Count migration scripts from v0.62.0 to v0.94.0 (inclusive).
+# There are 32 minor version increments: 0.62→0.63, ..., 0.93→0.94.
+EXPECTED_COUNT=32
 ACTUAL_COUNT=0
-for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90 0.91 0.92; do
+for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90 0.91 0.92 0.93; do
     # Extract next version number
     major=$(echo "${ver}" | cut -d. -f1)
     minor=$(echo "${ver}" | cut -d. -f2)
@@ -771,7 +796,7 @@ for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75
     fi
 done
 if [[ "${ACTUAL_COUNT}" -eq "${EXPECTED_COUNT}" ]]; then
-    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.93.0"
+    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.94.0"
 else
     fail "MIGCHAIN-01: expected ${EXPECTED_COUNT} migration scripts, found ${ACTUAL_COUNT}"
     exit 1
@@ -788,7 +813,7 @@ HIGHEST_MIGRATION=$(ls "${SQL_DIR}"/pg_ripple--*.sql 2>/dev/null \
     | sed 's/.*--\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.sql/\1/' \
     | sort -V | tail -1 || echo "")
 # The highest checkpoint applied in this test (update this when adding new checkpoints):
-HIGHEST_CHECKPOINT="0.93.0"
+HIGHEST_CHECKPOINT="0.94.0"
 if [[ "${HIGHEST_MIGRATION}" == "${HIGHEST_CHECKPOINT}" ]]; then
     ok "MIGCHAIN-SYNC: highest migration (${HIGHEST_MIGRATION}) matches highest checkpoint (${HIGHEST_CHECKPOINT})"
 elif [[ -z "${HIGHEST_MIGRATION}" ]]; then
