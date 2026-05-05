@@ -1,13 +1,11 @@
 //! Datalog SQL compiler: recursive, on-demand CTE, semi-naive delta, aggregate rules (M15-13, v0.96.0).
 //! Moved from datalog/compiler/mod.rs.
 
-use crate::datalog::{
-    AggFunc, AggregateLiteral, Atom, BodyLiteral, Rule, StringBuiltin, Term,
-};
+use crate::datalog::{AggFunc, AggregateLiteral, Atom, BodyLiteral, Rule, StringBuiltin, Term};
 
 use super::{
-    VarMap, arith_op_sql, build_join_cond, build_not_exists_conds,
-    compare_op_sql, const_sql, is_recursive_rule, render_comparison_term, vp_read_expr, vp_table,
+    VarMap, arith_op_sql, build_join_cond, build_not_exists_conds, compare_op_sql, const_sql,
+    is_recursive_rule, render_comparison_term, vp_read_expr, vp_table,
 };
 
 pub(super) fn compile_recursive_rule(

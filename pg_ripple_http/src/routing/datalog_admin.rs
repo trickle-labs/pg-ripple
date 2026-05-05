@@ -10,9 +10,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Instant;
 
-use super::datalog_handlers::{
-    classify_pg_error, json_response, read_body,
-}; // functions defined in handlers (pub(crate))
+use super::datalog_handlers::{classify_pg_error, json_response, read_body}; // functions defined in handlers (pub(crate))
 
 // ─── Phase 4 — Admin & monitoring ─────────────────────────────────────────────
 

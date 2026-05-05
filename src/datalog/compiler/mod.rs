@@ -35,14 +35,9 @@ pub mod shacl_rules;
 pub mod sql;
 
 pub use shacl_rules::compile_constraint_check;
-pub use sql::{
-    compile_aggregate_rule, compile_on_demand_cte,
-    compile_rule_delta_variants_to,
-};
+pub use sql::{compile_aggregate_rule, compile_on_demand_cte, compile_rule_delta_variants_to};
 
-use crate::datalog::{
-    ArithOp, Atom, BodyLiteral, CompareOp, Rule, StringBuiltin, Term,
-};
+use crate::datalog::{ArithOp, Atom, BodyLiteral, CompareOp, Rule, StringBuiltin, Term};
 use pgrx::datum::DatumWithOid;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

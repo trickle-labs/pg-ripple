@@ -10,9 +10,9 @@ use spargebra::algebra::{Expression, Function};
 use super::super::sqlgen::Ctx;
 use super::cast::{xsd_cast_datatype, xsd_cast_sql};
 use super::{
+    PG_CONFIDENCE_IRI, PG_FUZZY_MATCH_IRI, PG_SIMILAR_IRI, PG_TOKEN_SET_RATIO_IRI,
     decode_lexical_sql, encode_preserving_lang, postgis_available, translate_arg_text,
-    translate_arg_value, PG_CONFIDENCE_IRI, PG_FUZZY_MATCH_IRI, PG_SIMILAR_IRI,
-    PG_TOKEN_SET_RATIO_IRI,
+    translate_arg_value,
 };
 
 // ─── Value context ────────────────────────────────────────────────────────────

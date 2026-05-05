@@ -2,10 +2,8 @@
 //! Moved from storage/ops/mod.rs lines 492-1615.
 
 use super::super::dictionary_io::{encode_rdf_term, strip_angle_brackets};
-use super::super::vp_rare_io::{
-    get_dedicated_vp_table, scan_vp_rare, scan_vp_table,
-};
 use super::super::mutation_journal;
+use super::super::vp_rare_io::{get_dedicated_vp_table, scan_vp_rare, scan_vp_table};
 use crate::dictionary;
 use pgrx::datum::DatumWithOid;
 use pgrx::prelude::*;

@@ -16,7 +16,6 @@ pub(crate) use describe::sparql_describe;
 pub(crate) use explain::{explain_sparql, plan_cache_reset, plan_cache_stats};
 pub(crate) use update::sparql_update;
 
-
 use pgrx::prelude::*;
 use serde_json::{Map, Value as Json};
 
