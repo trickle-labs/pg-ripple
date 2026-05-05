@@ -1,11 +1,180 @@
 //! Federation endpoint policy, SSRF allowlist, adaptive timeout, and result cache (v0.55.0+).
 //!
 //! Split from `federation.rs` in v0.85.0 (Q13-03).
+//!
+//! ## DNS rebinding protection (M15-02, v0.95.0)
+//!
+//! `check_endpoint_policy()` validates the URL's *hostname* at policy-check time,
+//! but the actual HTTP connection was made later — potentially to a different IP if
+//! the DNS record changed between the two calls (DNS TOCTOU / rebinding attack).
+//!
+//! `resolve_and_check_endpoint()` resolves the hostname **once**, validates every
+//! resolved IP against the SSRF blocklist, and returns a `ResolvedEndpoint` that
+//! callers use for the HTTP connection so the IP cannot change between validation
+//! and connection.
+
+use std::net::ToSocketAddrs;
 
 use super::*;
 
 // Cross-module helper: normalise_sparql_for_cache lives in decode.rs.
 use super::decode::normalise_sparql_for_cache;
+
+/// The result of a resolve-once policy check (M15-02, v0.95.0).
+///
+/// Contains:
+/// - `connect_url`: URL with the resolved IP substituted for the hostname —
+///   pass this to the HTTP client to avoid a second DNS resolution.
+/// - `host_header`: the original hostname to send as the HTTP `Host` header
+///   so that TLS SNI and virtual-host routing still work correctly.
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedEndpoint {
+    /// URL with IP address substituted for the hostname (e.g. `https://1.2.3.4/sparql`).
+    pub connect_url: String,
+    /// Original `hostname[:port]` to set as the HTTP `Host` header.
+    pub host_header: String,
+}
+
+/// Resolve the endpoint hostname **once**, validate all resolved IPs against the
+/// SSRF blocklist, and return a `ResolvedEndpoint` for subsequent HTTP connection.
+///
+/// This prevents DNS TOCTOU / rebinding attacks where the hostname resolved to a
+/// permitted IP at policy-check time but subsequently resolves to a blocked
+/// private/loopback address.
+///
+/// - In `'open'` policy mode: the original URL is returned unchanged (no DNS
+///   resolution performed) because open mode is for development/testing only.
+/// - In `'allowlist'` and `'default-deny'` modes: DNS is resolved and every
+///   candidate IP is validated.
+///
+/// Returns `Err` with a `PT606:` prefix if the endpoint is blocked.
+pub(crate) fn resolve_and_check_endpoint(url: &str) -> Result<ResolvedEndpoint, String> {
+    // First run the existing hostname-based policy check (quick path).
+    check_endpoint_policy(url)?;
+
+    let policy = crate::FEDERATION_ENDPOINT_POLICY
+        .get()
+        .map(|c| c.to_string_lossy().to_string())
+        .unwrap_or_else(|| "default-deny".to_string());
+
+    // In open mode we skip DNS resolution — it is only for dev/testing anyway.
+    if policy == "open" {
+        let host_header = extract_host(url).unwrap_or_default();
+        return Ok(ResolvedEndpoint {
+            connect_url: url.to_owned(),
+            host_header,
+        });
+    }
+
+    // Extract host and port for DNS resolution.
+    let host = match extract_host(url) {
+        Some(h) => h,
+        None => {
+            return Err(format!(
+                "PT606: could not extract host from federation URL: {url}"
+            ));
+        }
+    };
+    let port = extract_port(url).unwrap_or(if url.starts_with("https://") { 443 } else { 80 });
+
+    // Resolve the hostname to one or more IP addresses.
+    let addrs: Vec<std::net::IpAddr> = format!("{host}:{port}")
+        .to_socket_addrs()
+        .map(|iter| iter.map(|sa| sa.ip()).collect())
+        .map_err(|e| format!("PT606: DNS resolution failed for '{host}': {e}"))?;
+
+    if addrs.is_empty() {
+        return Err(format!(
+            "PT606: DNS resolution returned no addresses for '{host}'"
+        ));
+    }
+
+    // Validate every resolved IP against the SSRF blocklist.
+    for ip in &addrs {
+        let ip_str = ip.to_string();
+        if is_blocked_host(&ip_str) {
+            return Err(format!(
+                "PT606: SERVICE endpoint blocked by federation_endpoint_policy: \
+                 '{host}' resolved to blocked address {ip_str}"
+            ));
+        }
+    }
+
+    // Use the first resolved IP to build the connect URL.
+    let ip = addrs[0];
+    let connect_url = build_url_with_ip(url, &ip.to_string(), port);
+    let host_header = if port == 80 || port == 443 {
+        host.clone()
+    } else {
+        format!("{host}:{port}")
+    };
+
+    Ok(ResolvedEndpoint {
+        connect_url,
+        host_header,
+    })
+}
+
+/// Reconstruct `url` replacing the hostname with `ip_str`.
+///
+/// Example: `https://example.com:8080/sparql` + `1.2.3.4` → `https://1.2.3.4:8080/sparql`
+fn build_url_with_ip(url: &str, ip_str: &str, port: u16) -> String {
+    // Parse scheme.
+    let (scheme, after_scheme) = match url.split_once("://") {
+        Some((s, r)) => (s, r),
+        None => return url.to_owned(),
+    };
+
+    // Strip authority (host[:port]) from path.
+    let (authority, path_query) = match after_scheme.split_once('/') {
+        Some((a, rest)) => (a, format!("/{rest}")),
+        None => (after_scheme, String::new()),
+    };
+
+    // Detect if original URL included an explicit port.
+    let default_port = if scheme == "https" { 443u16 } else { 80u16 };
+
+    // For IPv6 addresses, wrap in brackets.
+    let ip_in_url = if ip_str.contains(':') {
+        // IPv6
+        if port == default_port {
+            format!("[{ip_str}]")
+        } else {
+            format!("[{ip_str}]:{port}")
+        }
+    } else {
+        // IPv4
+        let orig_had_port = authority.contains(':');
+        if orig_had_port || port != default_port {
+            format!("{ip_str}:{port}")
+        } else {
+            ip_str.to_owned()
+        }
+    };
+
+    format!("{scheme}://{ip_in_url}{path_query}")
+}
+
+/// Extract the port number from a URL, or `None` if not present.
+fn extract_port(url: &str) -> Option<u16> {
+    let after_scheme = url.split_once("://").map(|(_, r)| r)?;
+    let authority = after_scheme.split('/').next().unwrap_or(after_scheme);
+    // Strip userinfo.
+    let host_port = if let Some((_, hp)) = authority.split_once('@') {
+        hp
+    } else {
+        authority
+    };
+    // IPv6 literal: [::1]:port
+    if host_port.starts_with('[') {
+        return host_port
+            .split_once(']')
+            .and_then(|(_, rest)| rest.strip_prefix(':'))
+            .and_then(|p| p.parse().ok());
+    }
+    // IPv4/hostname: host:port
+    host_port.split_once(':').and_then(|(_, p)| p.parse().ok())
+}
 
 /// Check the federation endpoint network policy for `url`.
 ///

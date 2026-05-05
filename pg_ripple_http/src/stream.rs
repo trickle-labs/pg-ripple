@@ -19,7 +19,7 @@ use tokio::sync::mpsc;
 use tokio_stream::StreamExt as _;
 use tokio_stream::wrappers::ReceiverStream;
 
-use crate::common::AppState;
+use crate::common::{AppState, redacted_error};
 
 /// Maximum number of SSE events buffered in the channel before backpressure
 /// is applied. Keeps peak memory bounded for large result sets.
@@ -47,27 +47,26 @@ pub async fn stream_sparql_select(state: &AppState, query: &str) -> Response {
     let client = match state.pool.get().await {
         Ok(c) => c,
         Err(e) => {
-            tracing::error!("SSE stream: pool.get() error: {e}");
-            return Response::builder()
-                .status(StatusCode::SERVICE_UNAVAILABLE)
-                .header("content-type", "application/json")
-                .body(Body::from(
-                    r#"{"error":"PT503","message":"database connection unavailable"}"#.to_string(),
-                ))
-                .expect("infallible response");
+            // M15-04 (v0.95.0): use redacted_error() to hide internal database
+            // connection details from the client; log the full error internally.
+            return redacted_error(
+                "PT503",
+                &format!("SSE stream pool.get() error: {e}"),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
 
     // Validate that the query is a SELECT (basic check before opening cursor).
     let query_upper = query.trim().to_ascii_uppercase();
     if !query_upper.starts_with("SELECT") {
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .header("content-type", "application/json")
-            .body(Body::from(
-                r#"{"error":"PT400","message":"SSE streaming requires a SELECT query"}"#,
-            ))
-            .expect("infallible response");
+        // M15-04 (v0.95.0): use redacted_error() for consistency; this is not
+        // sensitive information so the detail can be included in the category.
+        return redacted_error(
+            "PT400: SSE streaming requires a SELECT query",
+            "non-SELECT query submitted to SSE endpoint",
+            StatusCode::BAD_REQUEST,
+        );
     }
 
     // Build the cursor query. The extension exposes `sparql_stream_cursor(query TEXT)`

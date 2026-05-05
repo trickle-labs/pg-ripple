@@ -13,6 +13,64 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.95.0] — 2026-05-05 — Assessment 15 Medium: Correctness, Security, Storage
+
+**Implements v0.95.0 roadmap: replace unreachable!() panics, DNS rebinding
+fix for federation, sql_drop event trigger for replication-slot cleanup,
+SSE error redaction, dictionary VACUUM threshold GUC, property-path+OPTIONAL+
+vp_rare regression tests, NaN/Inf confidence rejection, schema_generation plan
+cache key, and ADD/COPY/MOVE through full SPARQL update pipeline.**
+
+### Added
+
+- **M15-01**: `src/pagerank/export.rs`, `src/pagerank/centrality.rs` — replaced
+  bare `unreachable!()` match arms with `pgrx::error!()` so unexpected input
+  produces a clean PostgreSQL error rather than a server crash.
+  `scripts/check_no_unreachable_in_production.sh` — new CI lint script.
+  `.github/workflows/ci.yml` — `No unreachable!() in production source lint` step.
+- **M15-02**: `src/sparql/federation/policy.rs` — new `ResolvedEndpoint` struct
+  and `resolve_and_check_endpoint()` function that resolves hostnames once,
+  validates every resolved IP against the SSRF blocklist, and returns the IP-based
+  connect URL. `src/sparql/federation/http.rs` — both `execute_remote()` and
+  `execute_remote_partial()` now use the resolved endpoint to prevent DNS
+  TOCTOU / rebinding attacks.
+- **M15-03**: `src/schema/rls.rs` — `_pg_ripple.cleanup_on_drop()` event trigger
+  function + `_pg_ripple_cleanup_on_drop` event trigger on `sql_drop` that drops
+  CDC replication slots when `DROP EXTENSION pg_ripple` is executed.
+- **M15-04**: `pg_ripple_http/src/stream.rs` — SSE initialisation error paths
+  (pool unavailable, non-SELECT query) now use `redacted_error()` from `common.rs`
+  instead of inline JSON responses with raw error details.
+- **M15-07**: `src/gucs/storage.rs` — `DICT_VACUUM_THRESHOLD` GUC
+  (`pg_ripple.dict_vacuum_threshold`, default: 10000, Userset).
+  `src/dictionary/mod.rs` — `maybe_vacuum_dictionary()` helper runs
+  `VACUUM ANALYZE _pg_ripple.dictionary` when encode count exceeds threshold.
+  `src/bulk_load.rs` — calls `maybe_vacuum_dictionary()` after large loads.
+  `src/schema/rls.rs` — `autovacuum_vacuum_scale_factor = 0.01` and
+  `autovacuum_analyze_scale_factor = 0.005` reloptions on `_pg_ripple.dictionary`.
+- **M15-08**: `tests/pg_regress/sql/sparql_optional_path_in_graph_rare.sql` —
+  new regression test covering OPTIONAL + property path (+ * | /) + vp_rare
+  predicates inside `GRAPH <g> {}`.
+- **M15-09**: `src/bulk_load.rs` — explicit `is_nan()` and `is_infinite()` checks
+  in `load_triples_with_confidence()` before the range check, with clear PT0301
+  error messages naming the specific problem (NaN or +/-Infinity).
+- **M15-10**: `src/storage/mod.rs` — `bump_schema_generation()` and
+  `current_schema_generation()` helpers read/write
+  `_pg_ripple.schema_generation_seq`.
+  `src/sparql/plan_cache.rs` — `schema_gen=N` component added to plan cache key.
+  `src/storage/promote.rs` — `promote_predicate_impl()` calls
+  `bump_schema_generation()` after promotion.
+- **M15-12**: `src/sparql/execute/mod.rs` — `try_execute_add_copy_move()` early
+  return now includes mutation journal flush and SPARQL audit log entry, matching
+  the post-processing applied to all other SPARQL Update operations.
+- **SQL**: `sql/pg_ripple--0.94.0--0.95.0.sql` — schema_generation_seq,
+  dictionary autovacuum reloptions, cleanup_on_drop event trigger.
+
+### BREAKING
+
+None.
+
+---
+
 ## [0.94.0] — 2026-05-05 — Assessment 15 High Remediation
 
 **Implements v0.94.0 roadmap: security hardening (SECURITY DEFINER search_path

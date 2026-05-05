@@ -571,8 +571,25 @@ pub(crate) fn sparql_update(query_text: &str) -> i64 {
     // v0.48.0: pre-process SPARQL Update operations not yet supported by spargebra:
     // ADD, COPY, and MOVE.  These are parsed from the raw query string before
     // handing off to spargebra.
+    // M15-12 (v0.95.0): pipe ADD/COPY/MOVE through the same post-processing
+    // path as other SPARQL Update operations (mutation journal flush, audit log).
     let query_trimmed = query_text.trim();
     if let Some(n) = try_execute_add_copy_move(query_trimmed) {
+        // H-3 (v0.56.0): Record operation in the SPARQL audit log when enabled.
+        if crate::gucs::observability::AUDIT_LOG_ENABLED.get() {
+            let op_name = detect_update_operation_type(query_text);
+            let _ = Spi::run_with_args(
+                "INSERT INTO _pg_ripple.audit_log (operation, query) VALUES ($1, $2)",
+                &[
+                    pgrx::datum::DatumWithOid::from(op_name),
+                    pgrx::datum::DatumWithOid::from(query_text),
+                ],
+            );
+        }
+        // FLUSH-02-01 (v0.80.0): flush the mutation journal so CONSTRUCT writeback
+        // rules fire after ADD/COPY/MOVE operations — previously missed because
+        // these operations returned before the flush at the end of sparql_update().
+        crate::storage::mutation_journal::flush();
         return n;
     }
 

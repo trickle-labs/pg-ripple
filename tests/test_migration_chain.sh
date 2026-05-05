@@ -775,12 +775,47 @@ fi
 ok "v0.94.0 checkpoint assertions passed (ddl_guard_vp_tables recreated with SET search_path)"
 echo
 
+# Apply v0.94.0 → v0.95.0 migration script
+run_sql -f "${SQL_DIR}/pg_ripple--0.94.0--0.95.0.sql"
+ok "Applied migration 0.94.0 → 0.95.0"
+
+# ── A15-03 checkpoint: v0.95.0 ────────────────────────────────────────────────
+info "=== A15-03 checkpoint: v0.95.0 ==="
+# v0.95.0: schema_generation_seq, dictionary autovacuum reloptions, cleanup_on_drop event trigger.
+# Core tables from v0.94.0 must remain intact.
+assert_table "_pg_ripple" "pagerank_scores"
+assert_table "_pg_ripple" "centrality_scores"
+assert_table "_pg_ripple" "confidence"
+assert_table "_pg_ripple" "pagerank_dirty_edges"
+# schema_generation_seq must exist.
+SEQ_EXISTS=$(run_sql -c "SELECT COUNT(*) FROM pg_catalog.pg_class c \
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+    WHERE n.nspname = '_pg_ripple' AND c.relname = 'schema_generation_seq' AND c.relkind = 'S'")
+if [[ "${SEQ_EXISTS}" -eq 1 ]]; then
+    ok "A15-03: _pg_ripple.schema_generation_seq sequence exists after migration"
+else
+    fail "A15-03: _pg_ripple.schema_generation_seq sequence missing after 0.94.0→0.95.0 migration"
+    exit 1
+fi
+# cleanup_on_drop function must exist.
+CLEANUP_FN=$(run_sql -c "SELECT COUNT(*) FROM pg_catalog.pg_proc p \
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
+    WHERE n.nspname = '_pg_ripple' AND p.proname = 'cleanup_on_drop'")
+if [[ "${CLEANUP_FN}" -eq 1 ]]; then
+    ok "A15-03: _pg_ripple.cleanup_on_drop() exists after migration"
+else
+    fail "A15-03: _pg_ripple.cleanup_on_drop() missing after 0.94.0→0.95.0 migration"
+    exit 1
+fi
+ok "v0.95.0 checkpoint assertions passed (schema_generation_seq, cleanup_on_drop)"
+echo
+
 info "=== MIGCHAIN-01: migration script count verification ==="
-# Count migration scripts from v0.62.0 to v0.94.0 (inclusive).
-# There are 32 minor version increments: 0.62→0.63, ..., 0.93→0.94.
-EXPECTED_COUNT=32
+# Count migration scripts from v0.62.0 to v0.95.0 (inclusive).
+# There are 33 minor version increments: 0.62→0.63, ..., 0.94→0.95.
+EXPECTED_COUNT=33
 ACTUAL_COUNT=0
-for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90 0.91 0.92 0.93; do
+for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90 0.91 0.92 0.93 0.94; do
     # Extract next version number
     major=$(echo "${ver}" | cut -d. -f1)
     minor=$(echo "${ver}" | cut -d. -f2)
@@ -796,7 +831,7 @@ for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75
     fi
 done
 if [[ "${ACTUAL_COUNT}" -eq "${EXPECTED_COUNT}" ]]; then
-    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.94.0"
+    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.95.0"
 else
     fail "MIGCHAIN-01: expected ${EXPECTED_COUNT} migration scripts, found ${ACTUAL_COUNT}"
     exit 1
@@ -813,7 +848,7 @@ HIGHEST_MIGRATION=$(ls "${SQL_DIR}"/pg_ripple--*.sql 2>/dev/null \
     | sed 's/.*--\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.sql/\1/' \
     | sort -V | tail -1 || echo "")
 # The highest checkpoint applied in this test (update this when adding new checkpoints):
-HIGHEST_CHECKPOINT="0.94.0"
+HIGHEST_CHECKPOINT="0.95.0"
 if [[ "${HIGHEST_MIGRATION}" == "${HIGHEST_CHECKPOINT}" ]]; then
     ok "MIGCHAIN-SYNC: highest migration (${HIGHEST_MIGRATION}) matches highest checkpoint (${HIGHEST_CHECKPOINT})"
 elif [[ -z "${HIGHEST_MIGRATION}" ]]; then

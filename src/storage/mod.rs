@@ -272,5 +272,30 @@ pub(super) fn ensure_vp_table(predicate_id: i64) -> String {
     // Install CDC trigger on the new delta table.
     crate::cdc::install_trigger(predicate_id);
 
+    // M15-10 (v0.95.0): bump schema_generation so plan cache entries that
+    // assumed a vp_rare layout for this predicate are invalidated.
+    bump_schema_generation();
+
     view
+}
+
+/// Advance `_pg_ripple.schema_generation_seq` by one.
+///
+/// Called whenever the VP table layout changes (new table created or predicate
+/// promoted from vp_rare). The current sequence value is embedded in plan cache
+/// keys so that stale plans are never reused after a schema change. (M15-10, v0.95.0)
+pub(crate) fn bump_schema_generation() {
+    if let Err(e) = Spi::run("SELECT nextval('_pg_ripple.schema_generation_seq')") {
+        pgrx::warning!("bump_schema_generation: failed to advance sequence: {e}");
+    }
+}
+
+/// Read the current value of `_pg_ripple.schema_generation_seq` without advancing it.
+///
+/// Returns 0 on error (the sequence may not exist during fresh install before the
+/// v0.95.0 migration SQL has run). (M15-10, v0.95.0)
+pub(crate) fn current_schema_generation() -> i64 {
+    Spi::get_one::<i64>("SELECT last_value FROM _pg_ripple.schema_generation_seq")
+        .unwrap_or(None)
+        .unwrap_or(0)
 }

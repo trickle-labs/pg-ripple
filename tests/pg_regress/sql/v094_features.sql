@@ -13,8 +13,8 @@ SET search_path TO pg_ripple, public;
 
 -- ─── H15-01: Version bump ────────────────────────────────────────────────────
 
--- compiled_version should now be 0.94.0
-SELECT value = '0.94.0' AS version_ok
+-- compiled_version should be 0.94.0 or later (extension bumped to 0.95.0)
+SELECT value >= '0.94.0' AS version_ok
 FROM pg_ripple.diagnostic_report()
 WHERE key = 'compiled_version';
 

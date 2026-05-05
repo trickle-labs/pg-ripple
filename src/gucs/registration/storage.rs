@@ -930,4 +930,18 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // M15-07 (v0.95.0): scheduled VACUUM ANALYZE on dictionary after bulk encode.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.dict_vacuum_threshold",
+        c"Minimum number of new dictionary terms inserted in a batch before \
+          VACUUM ANALYZE _pg_ripple.dictionary is run automatically. \
+          Set to 0 to disable. (M15-07 v0.95.0). Default: 10000. Range: 0–10000000.",
+        c"",
+        &crate::gucs::storage::DICT_VACUUM_THRESHOLD,
+        0,
+        10_000_000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

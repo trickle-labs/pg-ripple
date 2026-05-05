@@ -162,6 +162,10 @@ fn cache_key_inner(canonical: &str) -> String {
         .unwrap_or_else(|| "error".to_string());
     let federation_timeout = crate::FEDERATION_TIMEOUT.get();
     let pgvector_enabled = crate::PGVECTOR_ENABLED.get();
+    // M15-10 (v0.95.0): include schema_generation in the key so any VP
+    // table creation or predicate promotion automatically invalidates
+    // cached plans that assumed the old vp_rare layout.
+    let schema_gen = crate::storage::current_schema_generation();
     let digest = xxhash_rust::xxh3::xxh3_128(canonical.as_bytes());
     format!(
         "{digest:x}\x00max_depth={max_depth}\x00bgp_reorder={bgp_reorder}\x00role={role_oid}\
@@ -169,6 +173,6 @@ fn cache_key_inner(canonical: &str) -> String {
          \x00wcoj_enabled={wcoj_enabled}\x00wcoj_min={wcoj_min}\
          \x00topn_pushdown={topn_pushdown}\x00sparql_max_rows={sparql_max_rows}\
          \x00sparql_overflow={sparql_overflow}\x00federation_timeout={federation_timeout}\
-         \x00pgvector_enabled={pgvector_enabled}"
+         \x00pgvector_enabled={pgvector_enabled}\x00schema_gen={schema_gen}"
     )
 }

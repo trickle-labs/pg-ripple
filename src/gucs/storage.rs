@@ -291,3 +291,11 @@ pub static BIDI_RELAY_MAX_INFLIGHT: pgrx::GucSetting<i32> = pgrx::GucSetting::<i
 /// dictionary-encoded triple stream insertion instead of batched INSERTs.
 /// May improve throughput for large loads.  Default: `off`. (H15-05 v0.94.0)
 pub static BULK_LOAD_USE_COPY: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
+
+// ─── v0.95.0 storage GUCs ─────────────────────────────────────────────────────
+
+/// GUC: minimum number of new dictionary terms inserted in a single batch
+/// before `VACUUM ANALYZE _pg_ripple.dictionary` is run automatically.
+/// Set to 0 to disable automatic post-encode VACUUM.
+/// Default: 10000. (M15-07 v0.95.0)
+pub static DICT_VACUUM_THRESHOLD: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(10_000);

@@ -41,15 +41,21 @@ pub(crate) fn execute_remote(
         ));
     }
 
-    // ── Endpoint policy check (v0.55.0) ───────────────────────────────────────
-    if let Err(e) = check_endpoint_policy(url) {
-        if crate::shmem::SHMEM_READY.load(std::sync::atomic::Ordering::Relaxed) {
-            crate::shmem::FED_BLOCKED_COUNT
-                .get()
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    // ── Endpoint policy check + DNS rebinding protection (v0.55.0 / M15-02 v0.95.0) ──────────────
+    // `resolve_and_check_endpoint` resolves the hostname once, validates every
+    // resolved IP against the SSRF blocklist, and returns the IP-based URL.
+    // Using the IP-based URL for the HTTP call prevents DNS TOCTOU rebinding.
+    let resolved = match super::policy::resolve_and_check_endpoint(url) {
+        Ok(r) => r,
+        Err(e) => {
+            if crate::shmem::SHMEM_READY.load(std::sync::atomic::Ordering::Relaxed) {
+                crate::shmem::FED_BLOCKED_COUNT
+                    .get()
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+            return Err(e);
         }
-        return Err(e);
-    }
+    };
 
     // v0.55.0 G-4: increment total call counter.
     if crate::shmem::SHMEM_READY.load(std::sync::atomic::Ordering::Relaxed) {
@@ -72,10 +78,13 @@ pub(crate) fn execute_remote(
     // FED-COST-01 (v0.82.0): measure HTTP call latency for federation stats.
     let call_start = std::time::Instant::now();
 
+    // M15-02 (v0.95.0): Use the IP-based connect URL and pin the Host header so
+    // that TLS SNI and virtual-host routing still work with the correct hostname.
     let response = agent
-        .get(url)
+        .get(&resolved.connect_url)
         .query("query", sparql_text)
         .set("Accept", "application/sparql-results+json")
+        .set("Host", &resolved.host_header)
         .call()
         .map_err(|e| {
             let msg = format!(
@@ -178,14 +187,18 @@ pub(crate) fn execute_remote_partial(
             .map_err(|e| format!("federation cache parse error: {e}"));
     }
 
+    // M15-02 (v0.95.0): resolve hostname once and validate against SSRF blocklist.
+    let resolved = super::policy::resolve_and_check_endpoint(url)?;
+
     let timeout = Duration::from_secs(timeout_secs.max(1) as u64);
     let pool_size = crate::FEDERATION_POOL_SIZE.get().max(1) as usize;
     let agent = get_agent(timeout, pool_size);
 
     let response = match agent
-        .get(url)
+        .get(&resolved.connect_url)
         .query("query", sparql_text)
         .set("Accept", "application/sparql-results+json")
+        .set("Host", &resolved.host_header)
         .call()
     {
         Ok(r) => r,
