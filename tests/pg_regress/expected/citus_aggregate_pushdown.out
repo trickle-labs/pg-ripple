@@ -35,7 +35,24 @@ SELECT EXISTS (
  t
 (1 row)
 
--- Cleanup.
+-- Cleanup: delete the test triples so they don't pollute subsequent tests
+-- (e.g. temporal_rdf_post_merge counts exact Alice triples).
+SELECT pg_ripple.sparql_update(
+    'DELETE WHERE { <https://example.org/Alice> ?p ?o }'
+) IS NOT NULL AS alice_deleted;
+ alice_deleted 
+---------------
+ t
+(1 row)
+
+SELECT pg_ripple.sparql_update(
+    'DELETE WHERE { <https://example.org/Bob> ?p ?o }'
+) IS NOT NULL AS bob_deleted;
+ bob_deleted 
+-------------
+ t
+(1 row)
+
 SELECT pg_ripple.triple_count() >= 0 AS cleanup_done;
  cleanup_done 
 --------------

@@ -24,5 +24,12 @@ SELECT EXISTS (
     AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'pg_ripple')
 ) AS explain_fn_exists;
 
--- Cleanup.
+-- Cleanup: delete the test triples so they don't pollute subsequent tests
+-- (e.g. temporal_rdf_post_merge counts exact Alice triples).
+SELECT pg_ripple.sparql_update(
+    'DELETE WHERE { <https://example.org/Alice> ?p ?o }'
+) IS NOT NULL AS alice_deleted;
+SELECT pg_ripple.sparql_update(
+    'DELETE WHERE { <https://example.org/Bob> ?p ?o }'
+) IS NOT NULL AS bob_deleted;
 SELECT pg_ripple.triple_count() >= 0 AS cleanup_done;
