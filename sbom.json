@@ -16,7 +16,7 @@
       "type": "library",
       "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.95.0",
       "name": "pg_ripple",
-      "version": "0.95.0",
+      "version": "0.96.0",
       "description": "High-performance RDF triple store with native SPARQL query execution for PostgreSQL 18",
       "scope": "required",
       "licenses": [

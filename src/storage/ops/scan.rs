@@ -343,6 +343,25 @@ pub fn clear_graph_by_id(g_id: i64) -> i64 {
             .unwrap_or_else(|e| pgrx::error!("predicate count update SPI error: {e}"));
             deleted += d;
         }
+
+        // M15-05 (v0.96.0): if tombstones were added to main, update tombstone_count
+        // and rebuild the HTAP view to the tombstone-aware (LEFT JOIN) form when
+        // the count transitions 0 → positive.  Without this, the tombstone-skip view
+        // would keep showing the deleted main rows, causing stale reads.
+        if d_main > 0 {
+            let prev_count: i64 = Spi::get_one_with_args::<i64>(
+                "UPDATE _pg_ripple.predicates \
+                 SET tombstone_count = tombstone_count + $2 \
+                 WHERE id = $1 \
+                 RETURNING tombstone_count - $2",
+                &[DatumWithOid::from(p_id), DatumWithOid::from(d_main)],
+            )
+            .unwrap_or(None)
+            .unwrap_or(1); // default 1 = already had tombstones, skip rebuild
+            if prev_count == 0 {
+                crate::storage::merge::rebuild_htap_view(p_id, true);
+            }
+        }
     }
 
     let d = Spi::get_one_with_args::<i64>(
@@ -735,6 +754,21 @@ pub(crate) fn delete_triple_by_ids(s_id: i64, p_id: i64, o_id: i64, g_id: i64) -
                 ],
             )
             .unwrap_or_else(|e| pgrx::error!("tombstone insert SPI error: {e}"));
+
+            // M15-05 (v0.96.0): update tombstone_count and rebuild HTAP view
+            // to tombstone-aware form on the 0→1 transition.
+            let prev_count: i64 = Spi::get_one_with_args::<i64>(
+                "UPDATE _pg_ripple.predicates \
+                 SET tombstone_count = tombstone_count + 1 \
+                 WHERE id = $1 \
+                 RETURNING tombstone_count - 1",
+                &[DatumWithOid::from(p_id)],
+            )
+            .unwrap_or(None)
+            .unwrap_or(1); // default 1 = already had tombstones, skip rebuild
+            if prev_count == 0 {
+                crate::storage::merge::rebuild_htap_view(p_id, true);
+            }
 
             let in_main = Spi::get_one_with_args::<i64>(
                 &format!(
