@@ -7,6 +7,8 @@
 -- confidence, timestamps) to individual triple statements.
 
 SET search_path TO pg_ripple, public;
+-- Disable parallel query to avoid non-deterministic WARNING output from workers.
+SET max_parallel_workers_per_gather = 0;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Setup: load annotated triples using Turtle-star syntax

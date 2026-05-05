@@ -10,6 +10,8 @@
 -- table statistics that vary by run); it verifies the infrastructure is in place.
 
 SET allow_system_table_mods = on;
+-- Disable parallel query to avoid non-deterministic WARNING output from workers.
+SET max_parallel_workers_per_gather = 0;
 
 -- ── BGP reordering GUC ────────────────────────────────────────────────────────
 
