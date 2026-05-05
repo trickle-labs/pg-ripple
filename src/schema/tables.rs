@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS _pg_ripple.predicates (
     table_name            TEXT,
     tombstones_cleared_at TIMESTAMPTZ,
     brin_summarize_failures INT       NOT NULL DEFAULT 0,
-    promotion_status      TEXT
+    promotion_status      TEXT,
+    tombstone_count       BIGINT      NOT NULL DEFAULT 0
 );
 
 -- Rare-predicate consolidation table

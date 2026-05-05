@@ -142,8 +142,11 @@ pub(super) fn get_agent(timeout: Duration, pool_size: usize) -> ureq::Agent {
     SHARED_AGENT.with(|cell| {
         let mut opt = cell.borrow_mut();
         if opt.is_none() {
+            let connect_secs = crate::FEDERATION_CONNECT_TIMEOUT_SECS.get() as u64;
+            let connect_timeout = Duration::from_secs(connect_secs.max(1));
             *opt = Some(
                 ureq::AgentBuilder::new()
+                    .timeout_connect(connect_timeout)
                     .timeout(timeout)
                     .max_idle_connections_per_host(pool_size)
                     .build(),

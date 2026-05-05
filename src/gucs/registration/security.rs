@@ -131,4 +131,15 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.96.0 GUCs ─────────────────────────────────────────────────────────
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.star_join_collapse",
+        c"Collapse star-shaped BGP patterns into a single subject-seeded CTE. \
+          Default on; disable for debugging. (M15-06, v0.96.0)",
+        c"",
+        &crate::gucs::sparql::STAR_JOIN_COLLAPSE,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

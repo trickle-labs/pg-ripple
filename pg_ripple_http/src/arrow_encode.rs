@@ -251,33 +251,29 @@ pub(crate) async fn flight_do_get(
         .max(1);
 
     // HTTP-04: attempt planner estimate first.
+    // M15-22 (v0.96.0): EXPLAIN (FORMAT JSON) is the sole row-estimate mechanism.
+    // The COUNT(*) fallback is removed — if EXPLAIN fails, skip the row-count guard
+    // rather than paying the full scan cost.
     let row_count_check: Option<i64> = {
         let explain_sql = format!(
             "EXPLAIN (FORMAT JSON, ANALYZE FALSE) SELECT * FROM ({full_sql}) _arrow_count_ LIMIT 1"
         );
-        let estimate = match client.query_one(&explain_sql, &[]).await {
+        match client.query_one(&explain_sql, &[]).await {
             Ok(r) => {
                 let json_str: String = r.try_get::<_, String>(0).unwrap_or_default();
-                extract_plan_rows_from_explain(&json_str)
+                let estimate = extract_plan_rows_from_explain(&json_str);
+                if estimate.is_none() {
+                    tracing::warn!(
+                        "Arrow Flight EXPLAIN pre-check: could not extract row estimate from plan JSON; skipping row-count guard"
+                    );
+                }
+                estimate
             }
             Err(e) => {
-                tracing::debug!(
-                    "Arrow Flight EXPLAIN pre-check failed, falling back to COUNT(*): {e}"
+                tracing::warn!(
+                    "Arrow Flight EXPLAIN pre-check failed; skipping row-count guard: {e}"
                 );
                 None
-            }
-        };
-        if estimate.is_some() {
-            estimate
-        } else {
-            // Fallback: COUNT(*) (original behaviour).
-            let count_sql = format!("SELECT COUNT(*) FROM ({full_sql}) _arrow_count_");
-            match client.query_one(&count_sql, &[]).await {
-                Ok(r) => r.try_get::<_, i64>(0).ok(),
-                Err(e) => {
-                    tracing::error!("Arrow Flight row-count fallback COUNT(*) failed: {e}");
-                    None
-                }
             }
         }
     };

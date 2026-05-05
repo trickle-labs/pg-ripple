@@ -173,24 +173,12 @@ pub fn ensure_htap_tables(pred_id: i64) -> String {
     // ensures no duplicates within delta itself, and future merges will prevent
     // main+delta duplicates via the merging process. This view definition covers
     // historical data that may not have had the constraint when inserted.
-    Spi::run_with_args(
-        &format!(
-            "CREATE OR REPLACE VIEW {view} AS \
-             SELECT DISTINCT ON (s, o, g) s, o, g, i, source \
-             FROM ( \
-                 SELECT m.s, m.o, m.g, m.i, m.source \
-                 FROM {main} m \
-                 LEFT JOIN {tombs} t ON m.s = t.s AND m.o = t.o AND m.g = t.g \
-                 WHERE t.s IS NULL \
-                 UNION ALL \
-                 SELECT d.s, d.o, d.g, d.i, d.source \
-                 FROM {delta} d \
-             ) merged \
-             ORDER BY s, o, g, i ASC"
-        ),
-        &[],
-    )
-    .unwrap_or_else(|e| pgrx::error!("vp view creation error: {e}"));
+    //
+    // M15-05 (v0.96.0): new tables start with tombstone_count = 0, so we use the
+    // simpler tombstone-skip form (no LEFT JOIN overhead on the hot read path).
+    let view_sql = htap_view_sql(&view, &main, &delta, &tombs, false);
+    Spi::run_with_args(&view_sql, &[])
+        .unwrap_or_else(|e| pgrx::error!("vp view creation error: {e}"));
 
     // Update predicates catalog: set htap=true and table_oid = view OID.
     Spi::run_with_args(
@@ -206,6 +194,57 @@ pub fn ensure_htap_tables(pred_id: i64) -> String {
     .unwrap_or_else(|e| pgrx::error!("predicates htap upsert error: {e}"));
 
     view
+}
+
+/// Build the HTAP view SQL for a predicate.
+///
+/// When `has_tombstones` is `false` (tombstone_count = 0), the view omits the
+/// `LEFT JOIN` on the tombstones table, eliminating that join overhead on the
+/// hot read path.  When `has_tombstones` is `true`, the full form with the
+/// `LEFT JOIN` is used to filter out pending deletes.  (M15-05, v0.96.0)
+fn htap_view_sql(view: &str, main: &str, delta: &str, tombs: &str, has_tombstones: bool) -> String {
+    if has_tombstones {
+        format!(
+            "CREATE OR REPLACE VIEW {view} AS \
+             SELECT DISTINCT ON (s, o, g) s, o, g, i, source \
+             FROM ( \
+                 SELECT m.s, m.o, m.g, m.i, m.source \
+                 FROM {main} m \
+                 LEFT JOIN {tombs} t ON m.s = t.s AND m.o = t.o AND m.g = t.g \
+                 WHERE t.s IS NULL \
+                 UNION ALL \
+                 SELECT d.s, d.o, d.g, d.i, d.source \
+                 FROM {delta} d \
+             ) merged \
+             ORDER BY s, o, g, i ASC"
+        )
+    } else {
+        // Tombstone-skip form: no LEFT JOIN when tombstone_count = 0.
+        format!(
+            "CREATE OR REPLACE VIEW {view} AS \
+             SELECT DISTINCT ON (s, o, g) s, o, g, i, source \
+             FROM ( \
+                 SELECT s, o, g, i, source FROM {main} \
+                 UNION ALL \
+                 SELECT s, o, g, i, source FROM {delta} \
+             ) merged \
+             ORDER BY s, o, g, i ASC"
+        )
+    }
+}
+
+/// Rebuild the HTAP view for `pred_id` to the tombstone-aware or tombstone-free form.
+///
+/// Called when tombstone_count transitions 0 → 1 (switch to LEFT JOIN form) or
+/// when tombstones are fully cleared after a merge cycle (switch to simple form).
+pub fn rebuild_htap_view(pred_id: i64, has_tombstones: bool) {
+    let view = format!("_pg_ripple.vp_{pred_id}");
+    let main = format!("_pg_ripple.vp_{pred_id}_main");
+    let delta = format!("_pg_ripple.vp_{pred_id}_delta");
+    let tombs = format!("_pg_ripple.vp_{pred_id}_tombstones");
+    let sql = htap_view_sql(&view, &main, &delta, &tombs, has_tombstones);
+    Spi::run_with_args(&sql, &[])
+        .unwrap_or_else(|e| pgrx::error!("rebuild_htap_view: view rebuild error: {e}"));
 }
 
 /// Check whether a predicate has been split into HTAP partitions.
@@ -398,24 +437,12 @@ pub fn merge_predicate(pred_id: i64) -> i64 {
     // c. CREATE OR REPLACE VIEW — atomically repoints to new main OID.
     // The view must exist for find_triples / SPARQL queries to work correctly.
     let view = format!("_pg_ripple.vp_{pred_id}");
-    Spi::run_with_args(
-        &format!(
-            "CREATE OR REPLACE VIEW {view} AS \
-             SELECT DISTINCT ON (s, o, g) s, o, g, i, source \
-             FROM ( \
-                 SELECT m.s, m.o, m.g, m.i, m.source \
-                 FROM {main} m \
-                 LEFT JOIN {tombs} t ON m.s = t.s AND m.o = t.o AND m.g = t.g \
-                 WHERE t.s IS NULL \
-                 UNION ALL \
-                 SELECT d.s, d.o, d.g, d.i, d.source \
-                 FROM {delta} d \
-             ) merged \
-             ORDER BY s, o, g, i ASC"
-        ),
-        &[],
-    )
-    .unwrap_or_else(|e| pgrx::error!("merge: recreate view error: {e}"));
+    // M15-05 (v0.96.0): after renaming main_new → main, we have clean merged data.
+    // Tombstones will be cleared in step 4; use the full LEFT JOIN form here
+    // (tombstones may still exist until TRUNCATE/DELETE below).
+    let view_sql = htap_view_sql(&view, &main, &delta, &tombs, true);
+    Spi::run_with_args(&view_sql, &[])
+        .unwrap_or_else(|e| pgrx::error!("merge: recreate view error: {e}"));
 
     // d. Drop the old main table now that the view points to the new one.
     Spi::run_with_args(&format!("DROP TABLE IF EXISTS {main_old}"), &[])
@@ -531,12 +558,35 @@ pub fn merge_predicate(pred_id: i64) -> i64 {
             &[DatumWithOid::from(pred_id)],
         )
         .unwrap_or_else(|e| pgrx::warning!("merge: tombstones_cleared_at update error: {e}"));
+
+        // M15-05 (v0.96.0): all tombstones cleared — reset tombstone_count and rebuild
+        // the HTAP view to the tombstone-skip form (no LEFT JOIN).
+        Spi::run_with_args(
+            "UPDATE _pg_ripple.predicates SET tombstone_count = 0 WHERE id = $1",
+            &[DatumWithOid::from(pred_id)],
+        )
+        .unwrap_or_else(|e| pgrx::warning!("merge: reset tombstone_count error: {e}"));
+        rebuild_htap_view(pred_id, false);
     } else {
         Spi::run_with_args(
             &format!("DELETE FROM {tombs} WHERE i <= $1"),
             &[DatumWithOid::from(max_sid_at_snapshot)],
         )
         .unwrap_or_else(|e| pgrx::error!("merge: delete old tombstones error: {e}"));
+
+        // M15-05 (v0.96.0): check if tombstones are now all gone; if so rebuild view.
+        let remaining_tombs: i64 =
+            Spi::get_one_with_args::<i64>(&format!("SELECT count(*)::bigint FROM {tombs}"), &[])
+                .unwrap_or(None)
+                .unwrap_or(1); // default 1 = assume tombstones remain, safer
+        if remaining_tombs == 0 {
+            Spi::run_with_args(
+                "UPDATE _pg_ripple.predicates SET tombstone_count = 0 WHERE id = $1",
+                &[DatumWithOid::from(pred_id)],
+            )
+            .unwrap_or_else(|e| pgrx::warning!("merge: reset tombstone_count error: {e}"));
+            rebuild_htap_view(pred_id, false);
+        }
     }
 
     // Step 5: ANALYZE so planner has fresh stats.

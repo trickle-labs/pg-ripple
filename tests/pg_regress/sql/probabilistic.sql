@@ -29,6 +29,20 @@ FROM information_schema.columns
 WHERE table_schema = 'pg_ripple'
   AND table_name   = 'shacl_report_scored';
 
+-- ── Test 4b: shacl_report_scored column-order regression (M15-18, v0.96.0) ───
+-- Assert that the function exists and its return type includes the expected
+-- column names in the correct order: focus_node, shape_iri, result_severity,
+-- result_severity_score, message.
+SELECT
+    pg_get_function_result(p.oid) LIKE '%focus_node%' AS has_focus_node,
+    pg_get_function_result(p.oid) LIKE '%shape_iri%' AS has_shape_iri,
+    pg_get_function_result(p.oid) LIKE '%result_severity%' AS has_result_severity,
+    pg_get_function_result(p.oid) LIKE '%result_severity_score%' AS has_severity_score,
+    pg_get_function_result(p.oid) LIKE '%message%' AS has_message
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE p.proname = 'shacl_report_scored' AND n.nspname = 'pg_ripple';
+
 -- ── Test 5: export_turtle_with_confidence ─────────────────────────────────────
 -- export_turtle_with_confidence() must return a non-null text value.
 SELECT pg_ripple.export_turtle_with_confidence() IS NOT NULL AS turtle_ok;

@@ -326,7 +326,19 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
          pg_ripple_pagerank_queue_oldest_enqueue_seconds{{topic=\"\"}} {}\n\
          # HELP pg_ripple_bidi_relay_dropped_total Total bidi relay dispatch calls dropped due to inflight overflow (H15-03)\n\
          # TYPE pg_ripple_bidi_relay_dropped_total counter\n\
-         pg_ripple_bidi_relay_dropped_total {}\n",
+         pg_ripple_bidi_relay_dropped_total {}\n\
+         # HELP pg_ripple_merge_cycle_duration_seconds Cumulative merge cycle wall-clock time in seconds (M15-19)\n\
+         # TYPE pg_ripple_merge_cycle_duration_seconds counter\n\
+         pg_ripple_merge_cycle_duration_seconds {}\n\
+         # HELP pg_ripple_datalog_stratum_duration_seconds Cumulative Datalog stratum execution time in seconds (M15-19)\n\
+         # TYPE pg_ripple_datalog_stratum_duration_seconds counter\n\
+         pg_ripple_datalog_stratum_duration_seconds {}\n\
+         # HELP pg_ripple_shacl_validation_queue_depth SHACL async validation queue depth (M15-19)\n\
+         # TYPE pg_ripple_shacl_validation_queue_depth gauge\n\
+         pg_ripple_shacl_validation_queue_depth {}\n\
+         # HELP pg_ripple_cdc_replication_slot_lag_bytes CDC replication slot lag in bytes (M15-19)\n\
+         # TYPE pg_ripple_cdc_replication_slot_lag_bytes gauge\n\
+         pg_ripple_cdc_replication_slot_lag_bytes {}\n",
         m.sparql_query_count(),
         m.datalog_query_count(),
         m.error_count(),
@@ -357,6 +369,10 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
         m.pagerank_queue_max_delta(),
         m.pagerank_queue_oldest_enqueue_seconds(),
         m.bidi_relay_dropped_total(),
+        m.merge_cycle_duration_secs(),
+        m.datalog_stratum_duration_secs(),
+        m.shacl_validation_queue_depth(),
+        m.cdc_replication_slot_lag_bytes(),
     );
 
     Response::builder()

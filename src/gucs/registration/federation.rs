@@ -231,4 +231,18 @@ pub fn register() {
     GucContext::Userset,
     GucFlags::default(),
 );
+
+    // ── v0.96.0 GUCs — separate connect timeout (M15-11) ──────────────────────
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.federation_connect_timeout_secs",
+        c"TCP/TLS connect timeout in seconds for SERVICE clause endpoints (default: 10). \
+          Governs the initial handshake only; use federation_timeout for the query-body deadline. \
+          (v0.96.0)",
+        c"",
+        &crate::gucs::federation::FEDERATION_CONNECT_TIMEOUT_SECS,
+        1,
+        3600,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

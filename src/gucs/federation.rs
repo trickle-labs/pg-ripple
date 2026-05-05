@@ -82,3 +82,14 @@ pub static FEDERATION_CIRCUIT_BREAKER_THRESHOLD: pgrx::GucSetting<i32> =
 /// GUC: seconds until a tripped circuit half-opens for a retry (v0.56.0).
 pub static FEDERATION_CIRCUIT_BREAKER_RESET_SECONDS: pgrx::GucSetting<i32> =
     pgrx::GucSetting::<i32>::new(60);
+
+// ─── v0.96.0 federation GUCs — connect timeout (M15-11) ─────────────────────
+
+/// GUC: TCP/TLS connect timeout in seconds for federation SERVICE endpoints (v0.96.0).
+///
+/// Separate from `federation_timeout` (query-body timeout).  The connect
+/// timeout governs the initial TCP handshake and TLS negotiation; if the
+/// endpoint does not accept the connection within this window the call is
+/// immediately rejected.  Default 10 s (shorter than the 30 s query timeout).
+pub static FEDERATION_CONNECT_TIMEOUT_SECS: pgrx::GucSetting<i32> =
+    pgrx::GucSetting::<i32>::new(10);

@@ -481,3 +481,118 @@ pub fn load_predicate_hints(pred_ids: &[i64]) -> HashMap<i64, PredicateHints> {
 
     hints
 }
+
+// ─── Star-pattern self-join collapse (M15-06, v0.96.0) ───────────────────────
+
+/// Detect star-shaped groups in a BGP: sets of triple patterns that share the
+/// same unbound subject variable.
+///
+/// Returns `(star_groups, non_star_patterns)` where each inner `Vec` in
+/// `star_groups` contains ≥ 2 patterns with the same subject variable (ordered
+/// by ascending selectivity cost with the most selective first), and
+/// `non_star_patterns` contains the remaining patterns.
+///
+/// When `pg_ripple.star_join_collapse = off` or there are no star groups with
+/// ≥ 2 arms, returns `(vec![], all_patterns)`.
+#[allow(dead_code)]
+pub fn detect_star_groups(
+    patterns: &[TriplePattern],
+    encode_iri: &mut dyn FnMut(&str) -> Option<i64>,
+) -> (Vec<Vec<TriplePattern>>, Vec<TriplePattern>) {
+    if !crate::STAR_JOIN_COLLAPSE.get() || patterns.len() < 2 {
+        return (vec![], patterns.to_vec());
+    }
+
+    // Group pattern indices by subject variable name (only unbound variables).
+    let mut by_subject: HashMap<String, Vec<usize>> = HashMap::new();
+    for (i, tp) in patterns.iter().enumerate() {
+        if let spargebra::term::TermPattern::Variable(v) = &tp.subject {
+            by_subject.entry(v.as_str().to_owned()).or_default().push(i);
+        }
+    }
+
+    // Keep only groups with ≥ 2 patterns (actual star shapes).
+    let star_indices: std::collections::HashSet<usize> = by_subject
+        .values()
+        .filter(|group| group.len() >= 2)
+        .flat_map(|group| group.iter().copied())
+        .collect();
+
+    if star_indices.is_empty() {
+        return (vec![], patterns.to_vec());
+    }
+
+    // For each star group, sort arms by ascending cost (most selective first).
+    let mut stats_cache: HashMap<i64, TableStats> = HashMap::new();
+    let mut star_groups: Vec<Vec<TriplePattern>> = Vec::new();
+    for group_indices in by_subject.values().filter(|g| g.len() >= 2) {
+        let mut group_with_cost: Vec<(Cost, TriplePattern)> = group_indices
+            .iter()
+            .map(|&idx| {
+                let tp = &patterns[idx];
+                let cost = pattern_cost(tp, encode_iri, &mut stats_cache);
+                (cost, tp.clone())
+            })
+            .collect();
+        group_with_cost.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+        star_groups.push(group_with_cost.into_iter().map(|(_, p)| p).collect());
+    }
+
+    // Collect non-star patterns.
+    let non_star: Vec<TriplePattern> = patterns
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !star_indices.contains(i))
+        .map(|(_, p)| p.clone())
+        .collect();
+
+    (star_groups, non_star)
+}
+
+/// Compute a selectivity cost for a single triple pattern.
+/// Factored out from `reorder_bgp` so it can be reused by `detect_star_groups`.
+#[allow(dead_code)]
+pub(super) fn pattern_cost(
+    tp: &TriplePattern,
+    encode_iri: &mut dyn FnMut(&str) -> Option<i64>,
+    stats_cache: &mut HashMap<i64, TableStats>,
+) -> Cost {
+    let pred_id = match &tp.predicate {
+        spargebra::term::NamedNodePattern::NamedNode(nn) => encode_iri(nn.as_str()),
+        spargebra::term::NamedNodePattern::Variable(_) => None,
+    };
+    let pred_id = match pred_id {
+        Some(id) => id,
+        None => return UNKNOWN_COST,
+    };
+    let stats = stats_cache.entry(pred_id).or_insert_with(|| {
+        fetch_table_stats(pred_id).unwrap_or(TableStats {
+            reltuples: -1.0,
+            n_distinct_s: 0.0,
+            n_distinct_o: 0.0,
+        })
+    });
+
+    let subj_bound = matches!(
+        &tp.subject,
+        spargebra::term::TermPattern::NamedNode(_) | spargebra::term::TermPattern::Literal(_)
+    );
+    let obj_bound = matches!(
+        &tp.object,
+        spargebra::term::TermPattern::NamedNode(_) | spargebra::term::TermPattern::Literal(_)
+    );
+
+    if subj_bound && obj_bound {
+        1.0
+    } else if subj_bound {
+        let rt = stats.effective_reltuples();
+        let nd = stats.effective_ndistinct_s();
+        (rt / nd).max(1.0)
+    } else if obj_bound {
+        let rt = stats.effective_reltuples();
+        let nd = stats.effective_ndistinct_o();
+        (rt / nd).max(1.0)
+    } else {
+        stats.effective_reltuples()
+    }
+}

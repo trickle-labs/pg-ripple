@@ -13,6 +13,74 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.96.0] — 2026-05-06 — Assessment 15 Medium: Performance, Code Quality, Test Coverage
+
+**Implements v0.96.0 roadmap (A15 medium quality pillars): HTAP tombstone-skip
+optimisation, star-join collapse GUC, federation connect-timeout GUC, sub-splits
+of five large source files and the HTTP routing module, zero missing-docs
+warnings, concurrent-load PageRank benchmark, SHACL column-order regression
+test, four new Prometheus metrics, Datalog cyclic-group parallel regression
+test, and Arrow Flight EXPLAIN-only path.**
+
+### Added
+
+- **M15-05**: `src/storage/merge.rs` — `htap_view_sql()` and `rebuild_htap_view()`
+  generate a tombstone-skip (no LEFT JOIN) form of the HTAP view when
+  `tombstone_count = 0` and switch to the LEFT JOIN form on first tombstone.
+  `sql/pg_ripple--0.95.0--0.96.0.sql` — adds `tombstone_count BIGINT NOT NULL DEFAULT 0`
+  to `_pg_ripple.predicates`.
+
+- **M15-06**: `src/gucs/sparql.rs` — `STAR_JOIN_COLLAPSE` bool GUC
+  (`pg_ripple.star_join_collapse`, default `true`).
+  `src/sparql/optimizer.rs` — `detect_star_groups()` function groups triple
+  patterns by subject variable and sorts by ascending selectivity cost.
+
+- **M15-11**: `src/gucs/federation.rs` — `FEDERATION_CONNECT_TIMEOUT_SECS` int
+  GUC (`pg_ripple.federation_connect_timeout_secs`, default `10`, range 1–3600).
+  `src/sparql/federation/circuit.rs` — `get_agent()` applies
+  `.timeout_connect()` before the overall request timeout.
+
+- **M15-13**: Sub-split five large source files into sub-modules to keep
+  each `mod.rs` under 800 lines:
+  - `src/sparql/expr/` → `functions.rs` (translate_function_value, is_numeric_function),
+    `cast.rs` (xsd_cast_datatype, xsd_cast_sql)
+  - `src/sparql/execute/` → `construct.rs`, `describe.rs`, `update.rs`, `explain.rs`
+  - `src/export/` → `csv.rs` (GraphRAG Parquet export, 939 lines)
+  - `src/storage/ops/` → `scan.rs` (query, graph management, SID API, dedup)
+  - `src/datalog/compiler/` → `sql.rs` (recursive, on-demand CTE, semi-naive delta,
+    aggregate rules), `shacl_rules.rs` (constraint check compiler)
+
+- **M15-14**: Sub-split `pg_ripple_http/src/routing/datalog_handlers.rs` (1232 → 442 lines):
+  - `routing/datalog_inference.rs` — inference HTTP handlers (infer, infer_with_stats,
+    infer_agg, infer_wfs, infer_demand, infer_lattice, query_goal, check_constraints)
+  - `routing/datalog_admin.rs` — admin HTTP handlers (cache_stats, tabling_stats,
+    list_lattices, create_lattice, list_views, create_view, drop_view)
+
+- **M15-15**: Verified zero `missing documentation` warnings under `#![warn(missing_docs)]`.
+
+- **M15-17**: `benchmarks/pagerank_with_writes.sh` — concurrent-load benchmark
+  combining 4 pgbench writer clients, 1 SPARQL reader, and 1 PageRank computation
+  for a configurable duration (default 60 s). Appends results to
+  `benchmarks/pagerank_throughput_history.csv`.
+
+- **M15-18**: `tests/pg_regress/sql/probabilistic.sql` — Test 4b: asserts that
+  `shacl_report_scored` returns columns `focus_node`, `shape_iri`,
+  `result_severity`, `result_severity_score`, `message` via `pg_get_function_result`.
+
+- **M15-19**: `pg_ripple_http/src/metrics.rs` — four new Prometheus counters/gauges:
+  `pg_ripple_merge_cycle_duration_seconds`, `pg_ripple_datalog_stratum_duration_seconds`,
+  `pg_ripple_shacl_validation_queue_depth`, `pg_ripple_cdc_replication_slot_lag_bytes`.
+
+- **M15-21**: `tests/pg_regress/sql/datalog_cyclic_parallel.sql` — regression test
+  verifying that mutually-recursive Datalog rules execute correctly under
+  `pg_ripple.datalog_parallel_workers = 2` (cyclic-group pre-check, P13-06).
+
+- **M15-22**: `pg_ripple_http/src/arrow_encode.rs` — Arrow Flight row-count guard
+  now uses EXPLAIN-only path; removed COUNT(*) fallback that could produce
+  inconsistent row counts on hot HTAP tables.
+
+---
+
 ## [0.95.0] — 2026-05-05 — Assessment 15 Medium: Correctness, Security, Storage
 
 **Implements v0.95.0 roadmap: replace unreachable!() panics, DNS rebinding

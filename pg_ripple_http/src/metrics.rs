@@ -104,6 +104,16 @@ pub struct Metrics {
     // H15-03 (v0.94.0): bidi relay bounded channel counter.
     /// Total bidi relay dispatch calls dropped due to inflight overflow.
     bidi_relay_dropped_total: AtomicU64,
+
+    // M15-19 (v0.96.0): four missing Prometheus metrics.
+    /// Cumulative merge cycle wall-clock time in microseconds.
+    merge_cycle_duration_us: AtomicU64,
+    /// Cumulative Datalog stratum execution time in microseconds.
+    datalog_stratum_duration_us: AtomicU64,
+    /// Snapshot: SHACL async validation queue depth (number of pending validations).
+    shacl_validation_queue_depth: AtomicU64,
+    /// Snapshot: CDC replication slot lag in bytes (from pg_replication_slots).
+    cdc_replication_slot_lag_bytes: AtomicU64,
 }
 
 impl Default for Metrics {
@@ -147,6 +157,10 @@ impl Metrics {
             pagerank_queue_max_delta_bits: AtomicU64::new(0),
             pagerank_queue_oldest_enqueue_seconds: AtomicU64::new(0),
             bidi_relay_dropped_total: AtomicU64::new(0),
+            merge_cycle_duration_us: AtomicU64::new(0),
+            datalog_stratum_duration_us: AtomicU64::new(0),
+            shacl_validation_queue_depth: AtomicU64::new(0),
+            cdc_replication_slot_lag_bytes: AtomicU64::new(0),
         }
     }
 
@@ -413,5 +427,51 @@ impl Metrics {
     /// Return the total number of bidi relay calls dropped due to inflight overflow.
     pub fn bidi_relay_dropped_total(&self) -> u64 {
         self.bidi_relay_dropped_total.load(Ordering::Relaxed)
+    }
+
+    // M15-19 (v0.96.0): four new Prometheus metrics.
+
+    /// Record a completed merge cycle with its wall-clock duration.
+    pub fn record_merge_cycle_duration(&self, duration: std::time::Duration) {
+        self.merge_cycle_duration_us
+            .fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
+    }
+
+    /// Cumulative merge cycle duration in seconds.
+    pub fn merge_cycle_duration_secs(&self) -> f64 {
+        self.merge_cycle_duration_us.load(Ordering::Relaxed) as f64 / 1_000_000.0
+    }
+
+    /// Record a completed Datalog stratum execution with its wall-clock duration.
+    pub fn record_datalog_stratum_duration(&self, duration: std::time::Duration) {
+        self.datalog_stratum_duration_us
+            .fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
+    }
+
+    /// Cumulative Datalog stratum execution duration in seconds.
+    pub fn datalog_stratum_duration_secs(&self) -> f64 {
+        self.datalog_stratum_duration_us.load(Ordering::Relaxed) as f64 / 1_000_000.0
+    }
+
+    /// Update the SHACL validation queue depth snapshot.
+    pub fn update_shacl_validation_queue_depth(&self, depth: u64) {
+        self.shacl_validation_queue_depth
+            .store(depth, Ordering::Relaxed);
+    }
+
+    /// Current SHACL validation queue depth.
+    pub fn shacl_validation_queue_depth(&self) -> u64 {
+        self.shacl_validation_queue_depth.load(Ordering::Relaxed)
+    }
+
+    /// Update the CDC replication slot lag bytes snapshot.
+    pub fn update_cdc_replication_slot_lag_bytes(&self, lag_bytes: u64) {
+        self.cdc_replication_slot_lag_bytes
+            .store(lag_bytes, Ordering::Relaxed);
+    }
+
+    /// CDC replication slot lag in bytes.
+    pub fn cdc_replication_slot_lag_bytes(&self) -> u64 {
+        self.cdc_replication_slot_lag_bytes.load(Ordering::Relaxed)
     }
 }

@@ -98,3 +98,10 @@ pub static STRICT_SPARQL_FILTERS: pgrx::GucSetting<bool> = pgrx::GucSetting::<bo
 /// Arguments longer than this limit raise PT0308. Default 4096, range 1–65536.
 /// (v0.89.0 SEC-02)
 pub static FUZZY_MAX_INPUT_LENGTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(4096);
+
+// ─── v0.96.0 SPARQL GUCs ─────────────────────────────────────────────────────
+
+/// GUC: when `on` (default), collapse star-shaped BGP patterns
+/// `(?s p1 ?o1 . ?s p2 ?o2 . …)` into a single subject-seeded CTE rather than
+/// emitting N independent VP-table joins.  Disable for debugging.  (M15-06, v0.96.0)
+pub static STAR_JOIN_COLLAPSE: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(true);

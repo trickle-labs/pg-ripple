@@ -21,7 +21,10 @@ pub mod middleware;
 use crate::arrow_encode::flight_do_get;
 use crate::common::{AppState, check_auth};
 // CQ-05 (v0.90.0): datalog handlers moved into the routing sub-module.
+// M15-14 (v0.96.0): datalog handlers split into sub-modules.
+pub(crate) mod datalog_admin;
 pub(crate) mod datalog_handlers;
+pub(crate) mod datalog_inference;
 use self::datalog_handlers as datalog;
 
 // ─── OpenAPI specification (K-1, v0.55.0) ────────────────────────────────────
