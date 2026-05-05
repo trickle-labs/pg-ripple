@@ -46,6 +46,9 @@ $$;
 -- dropped outside pg_ripple maintenance functions.
 -- The trigger is suppressed when pg_ripple.maintenance_mode = 'on' so that
 -- the merge worker and vacuum functions can drop/rename VP tables freely.
+-- H15-02 (v0.94.0): SET search_path to prevent search-path injection in this
+-- SECURITY DEFINER function.  Any unqualified name resolves to pg_catalog or
+-- _pg_ripple rather than a caller-controlled schema.
 CREATE OR REPLACE FUNCTION _pg_ripple.ddl_guard_vp_tables()
     RETURNS event_trigger
     LANGUAGE plpgsql
@@ -53,6 +56,7 @@ CREATE OR REPLACE FUNCTION _pg_ripple.ddl_guard_vp_tables()
     -- pg_event_trigger_dropped_objects(), which requires elevated privilege; the
     -- function only reads the event trigger context and raises a WARNING/ERROR
     -- to protect VP tables from accidental DDL drops outside maintenance mode.
+    SET search_path = pg_catalog, _pg_ripple, public
 AS $$
 DECLARE
     _obj record;

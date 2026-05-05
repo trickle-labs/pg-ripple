@@ -164,11 +164,12 @@ pub(super) fn compile_construct_to_inserts(
 
         let (plain_insert, prov_sql) = if has_vp_table {
             // Promoted VP table: one combined RETURNING CTE handles INSERT + provenance.
-            // The INSERT may be a no-op for the promoted-VP shared-target case, but
-            // promoted predicates are rarely shared across rules in practice.
+            // In the HTAP model, `vp_{id}` is the union view; writes MUST go to
+            // `vp_{id}_delta` (the heap/B-tree write inlet).  Inserting into the
+            // view directly yields "cannot insert into view" — fixed here (v0.94.0).
             let combined_cte = format!(
                 "WITH inserted AS ( \
-                     INSERT INTO _pg_ripple.vp_{pred_id} (s, o, g, source) \
+                     INSERT INTO _pg_ripple.vp_{pred_id}_delta (s, o, g, source) \
                      SELECT DISTINCT {s_expr}, {o_expr}, {target_graph_id}::bigint, 1 \
                      FROM ({clean_sql}) AS {inner_alias} \
                      WHERE ({s_expr}) IS NOT NULL AND ({o_expr}) IS NOT NULL \

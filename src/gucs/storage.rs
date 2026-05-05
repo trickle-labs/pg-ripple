@@ -276,3 +276,18 @@ pub static CDC_WATERMARK_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<
 /// Ensures progress is recorded even during low-volume CDC streams. Default: 50. (v0.91.0 CDC-01)
 pub static CDC_WATERMARK_FLUSH_INTERVAL_MS: pgrx::GucSetting<i32> =
     pgrx::GucSetting::<i32>::new(50);
+
+// ─── v0.94.0 bidi relay GUCs ──────────────────────────────────────────────────
+
+/// GUC: maximum number of concurrent in-flight bidi relay operations per process.
+/// When the inflight count reaches this limit, new relay dispatch calls are dropped
+/// (drop-oldest policy) and the `pg_ripple_bidi_relay_dropped_total` counter is
+/// incremented.  Default: 1000. Min: 1. Max: 100000. (H15-03 v0.94.0)
+pub static BIDI_RELAY_MAX_INFLIGHT: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(1000);
+
+// ─── v0.94.0 bulk load GUCs ───────────────────────────────────────────────────
+
+/// GUC: when `on`, bulk loaders use `COPY ... FROM STDIN BINARY` for
+/// dictionary-encoded triple stream insertion instead of batched INSERTs.
+/// May improve throughput for large loads.  Default: `off`. (H15-05 v0.94.0)
+pub static BULK_LOAD_USE_COPY: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);

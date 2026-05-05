@@ -87,7 +87,21 @@ pub fn ingest_jsonld_impl(
             other
         ),
     }
+
+    // H15-03 (v0.94.0): bounded bidi relay channel.
+    // Reject if inflight limit is reached to prevent unbounded queue growth.
+    if !crate::stats::relay_inflight_acquire() {
+        pgrx::warning!(
+            "pg_ripple: bidi relay inflight limit reached (bidi_relay_max_inflight={}); \
+             dropping ingest_jsonld call for graph={:?} — see pg_ripple_bidi_relay_dropped_total",
+            crate::BIDI_RELAY_MAX_INFLIGHT.get(),
+            graph_iri
+        );
+        return 0;
+    }
+
     let inserted = crate::bulk_load::json_ld_load(document, graph_iri);
+    crate::stats::relay_inflight_release();
 
     if inserted > 0 {
         let graph_id = graph_iri

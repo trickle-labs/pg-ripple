@@ -100,6 +100,10 @@ pub struct Metrics {
     pagerank_queue_max_delta_bits: AtomicU64,
     /// Snapshot: age in seconds of the oldest entry in the dirty-edges queue.
     pagerank_queue_oldest_enqueue_seconds: AtomicU64,
+
+    // H15-03 (v0.94.0): bidi relay bounded channel counter.
+    /// Total bidi relay dispatch calls dropped due to inflight overflow.
+    bidi_relay_dropped_total: AtomicU64,
 }
 
 impl Default for Metrics {
@@ -142,6 +146,7 @@ impl Metrics {
             pagerank_queue_depth: AtomicU64::new(0),
             pagerank_queue_max_delta_bits: AtomicU64::new(0),
             pagerank_queue_oldest_enqueue_seconds: AtomicU64::new(0),
+            bidi_relay_dropped_total: AtomicU64::new(0),
         }
     }
 
@@ -395,5 +400,18 @@ impl Metrics {
     pub fn pagerank_queue_oldest_enqueue_seconds(&self) -> u64 {
         self.pagerank_queue_oldest_enqueue_seconds
             .load(Ordering::Relaxed)
+    }
+
+    // H15-03 (v0.94.0): bidi relay dropped counter.
+
+    /// Refresh the bidi relay dropped counter from the extension's streaming_metrics().
+    pub fn update_bidi_relay_dropped_total(&self, dropped: u64) {
+        self.bidi_relay_dropped_total
+            .store(dropped, Ordering::Relaxed);
+    }
+
+    /// Return the total number of bidi relay calls dropped due to inflight overflow.
+    pub fn bidi_relay_dropped_total(&self) -> u64 {
+        self.bidi_relay_dropped_total.load(Ordering::Relaxed)
     }
 }

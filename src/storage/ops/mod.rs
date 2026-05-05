@@ -137,7 +137,37 @@ pub fn insert_encoded_triple(s_id: i64, p_id: i64, o_id: i64, g: i64) -> i64 {
 ///
 /// Uses a VALUES-list INSERT to reduce SPI round-trips.
 /// All values are i64 integers — no SQL injection risk.
+/// H15-05 (v0.94.0): Shared VP insert helper using UNNEST arrays.
 ///
+/// When `pg_ripple.bulk_load_use_copy = on`, this function is called instead of
+/// the multi-row VALUES batch insert to reduce SQL string allocation overhead.
+/// It passes triple arrays as PostgreSQL BIGINT[] parameters via UNNEST, which
+/// avoids per-row string formatting and benefits from plan caching.
+///
+/// Used by bulk_load, R2RML, and CDC paths.
+pub(crate) fn copy_into_vp(delta: &str, rows: &[(i64, i64, i64)]) {
+    if rows.is_empty() {
+        return;
+    }
+    let s_ids: Vec<i64> = rows.iter().map(|&(s, _, _)| s).collect();
+    let o_ids: Vec<i64> = rows.iter().map(|&(_, o, _)| o).collect();
+    let g_ids: Vec<i64> = rows.iter().map(|&(_, _, g)| g).collect();
+    let sql = format!(
+        "INSERT INTO {delta} (s, o, g) \
+         SELECT s, o, g FROM UNNEST($1::bigint[], $2::bigint[], $3::bigint[]) AS t(s, o, g) \
+         ON CONFLICT (s, o, g) DO NOTHING"
+    );
+    Spi::run_with_args(
+        &sql,
+        &[
+            DatumWithOid::from(s_ids.as_slice()),
+            DatumWithOid::from(o_ids.as_slice()),
+            DatumWithOid::from(g_ids.as_slice()),
+        ],
+    )
+    .unwrap_or_else(|e| pgrx::error!("copy_into_vp: UNNEST insert error: {e}"));
+}
+
 /// Records unique graph IDs in the mutation journal so that CWB writeback fires
 /// when `mutation_journal::flush()` is called at the end of the enclosing load_*.
 /// The flush is the caller's responsibility; this function does NOT flush.
@@ -153,17 +183,23 @@ pub(crate) fn batch_insert_encoded(p_id: i64, rows: &[(i64, i64, i64)]) -> i64 {
     if let Some(_view) = table_opt {
         // Route batch insert to delta table.
         let delta = format!("_pg_ripple.vp_{p_id}_delta");
-        // Build a multi-row VALUES insert (all i64 integers — injection-safe).
-        let values: Vec<String> = rows
-            .iter()
-            .map(|(s, o, g)| format!("({},{},{})", s, o, g))
-            .collect();
-        let sql = format!(
-            "INSERT INTO {delta} (s, o, g) VALUES {} ON CONFLICT (s, o, g) DO NOTHING",
-            values.join(","),
-        );
-        Spi::run_with_args(&sql, &[])
-            .unwrap_or_else(|e| pgrx::error!("batch VP delta insert SPI error: {e}"));
+
+        if crate::BULK_LOAD_USE_COPY.get() {
+            // H15-05 (v0.94.0): COPY-style path via UNNEST arrays.
+            copy_into_vp(&delta, rows);
+        } else {
+            // Build a multi-row VALUES insert (all i64 integers — injection-safe).
+            let values: Vec<String> = rows
+                .iter()
+                .map(|(s, o, g)| format!("({},{},{})", s, o, g))
+                .collect();
+            let sql = format!(
+                "INSERT INTO {delta} (s, o, g) VALUES {} ON CONFLICT (s, o, g) DO NOTHING",
+                values.join(","),
+            );
+            Spi::run_with_args(&sql, &[])
+                .unwrap_or_else(|e| pgrx::error!("batch VP delta insert SPI error: {e}"));
+        }
 
         let cnt = rows.len() as i64;
         Spi::run_with_args(
