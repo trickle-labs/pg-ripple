@@ -3,6 +3,11 @@
 
 SET search_path TO pg_ripple, public;
 
+-- Ensure clean state: remove any residual Alice triples from prior tests.
+SELECT pg_ripple.sparql_update(
+    'DELETE WHERE { <https://example.org/Alice> ?p ?o }'
+) >= 0 AS alice_pre_cleanup;
+
 -- Insert triples into the default graph (they go to delta first).
 SELECT pg_ripple.load_ntriples(
     '<https://example.org/Alice> <https://schema.org/name> "Alice"^^<http://www.w3.org/2001/XMLSchema#string> .' || E'\n' ||

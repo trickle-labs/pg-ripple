@@ -1,12 +1,21 @@
 -- pg_regress test: Temporal RDF post-merge correctness (v0.61.0 J7-3)
 -- Verifies that triples are queryable before and after a merge cycle.
 SET search_path TO pg_ripple, public;
+-- Ensure clean state: remove any residual Alice triples from prior tests.
+SELECT pg_ripple.sparql_update(
+    'DELETE WHERE { <https://example.org/Alice> ?p ?o }'
+) >= 0 AS alice_pre_cleanup;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ alice_pre_cleanup 
+-------------------
+ t
+(1 row)
+
 -- Insert triples into the default graph (they go to delta first).
 SELECT pg_ripple.load_ntriples(
     '<https://example.org/Alice> <https://schema.org/name> "Alice"^^<http://www.w3.org/2001/XMLSchema#string> .' || E'\n' ||
     '<https://example.org/Alice> <https://schema.org/age>  "30"^^<http://www.w3.org/2001/XMLSchema#integer> .'
 ) = 2 AS delta_loaded;
-WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
  delta_loaded 
 --------------
  t
