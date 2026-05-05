@@ -174,9 +174,10 @@ pub fn ensure_htap_tables(pred_id: i64) -> String {
     // main+delta duplicates via the merging process. This view definition covers
     // historical data that may not have had the constraint when inserted.
     //
-    // M15-05 (v0.96.0): new tables start with tombstone_count = 0, so we use the
-    // simpler tombstone-skip form (no LEFT JOIN overhead on the hot read path).
-    let view_sql = htap_view_sql(&view, &main, &delta, &tombs, false);
+    // Always start with tombstone-aware form (LEFT JOIN). The tombstone-skip
+    // optimisation (no LEFT JOIN) is enabled after a merge cycle confirms
+    // tombstone_count == 0 (see rebuild_htap_view in merge_predicate).
+    let view_sql = htap_view_sql(&view, &main, &delta, &tombs, true);
     Spi::run_with_args(&view_sql, &[])
         .unwrap_or_else(|e| pgrx::error!("vp view creation error: {e}"));
 
