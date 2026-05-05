@@ -125,6 +125,9 @@ fn promote_predicate_impl(p_id: i64) {
     // A cached plan compiled when this predicate lived in vp_rare would still
     // scan vp_rare after promotion, missing data in the dedicated table.
     crate::sparql::plan_cache_reset();
+    // M15-10 (v0.95.0): bump schema_generation so plan cache entries that
+    // assumed a vp_rare layout for this predicate are invalidated.
+    super::bump_schema_generation();
 }
 /// Crash recovery for interrupted VP promotions (v0.68.0 PROMO-01).
 ///

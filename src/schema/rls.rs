@@ -564,3 +564,94 @@ COMMENT ON TABLE _pg_ripple.federation_stats IS
     name = "v082_schema_additions",
     requires = ["v078_schema_version_stamp"]
 );
+
+// ─── v0.95.0 schema additions ─────────────────────────────────────────────────
+// M15-03: sql_drop event trigger for DROP EXTENSION replication-slot cleanup.
+// M15-07: autovacuum_scale_factor reloptions on _pg_ripple.dictionary.
+// M15-10: schema_generation_seq sequence for plan cache invalidation.
+pgrx::extension_sql!(
+    r#"
+-- M15-10 (v0.95.0): schema_generation sequence.
+-- Incremented by ensure_vp_table() and promote_predicate() so that SPARQL plan
+-- cache entries that depend on VP table layout are automatically invalidated
+-- when new predicates are registered or promoted.
+CREATE SEQUENCE IF NOT EXISTS _pg_ripple.schema_generation_seq
+    START 1 INCREMENT 1 NO CYCLE;
+COMMENT ON SEQUENCE _pg_ripple.schema_generation_seq IS
+    'Monotonic counter bumped on every VP table schema change. \
+     Included in plan cache keys to invalidate stale plans. (v0.95.0 M15-10)';
+
+-- M15-07 (v0.95.0): Tune autovacuum for the high-churn dictionary table so
+-- that it fires more aggressively after bulk encode operations.
+-- autovacuum_scale_factor = 0.01 → vacuum triggers after 1% of rows change.
+-- autovacuum_analyze_scale_factor = 0.005 → analyze after 0.5% change.
+ALTER TABLE _pg_ripple.dictionary
+    SET (
+        autovacuum_scale_factor         = 0.01,
+        autovacuum_analyze_scale_factor = 0.005
+    );
+
+-- M15-03 (v0.95.0): Event trigger to clean up CDC replication slots when the
+-- extension is dropped (DROP EXTENSION pg_ripple).
+-- Without this, orphaned slots continue to consume WAL and can eventually
+-- exhaust disk space.
+-- SECURITY DEFINER is required to call pg_drop_replication_slot(), which
+-- requires the replication privilege.
+CREATE OR REPLACE FUNCTION _pg_ripple.cleanup_on_drop()
+    RETURNS event_trigger
+    LANGUAGE plpgsql
+    SECURITY DEFINER
+    SET search_path = pg_catalog, _pg_ripple, public
+AS $$
+DECLARE
+    _rec record;
+BEGIN
+    -- Only fire when the pg_ripple extension itself is being dropped.
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_event_trigger_dropped_objects()
+        WHERE object_type = 'extension'
+          AND object_name = 'pg_ripple'
+    ) THEN
+        RETURN;
+    END IF;
+
+    -- Drop all logical replication slots associated with pg_ripple.
+    FOR _rec IN
+        SELECT slot_name
+        FROM pg_replication_slots
+        WHERE plugin = 'pg_ripple'
+           OR slot_name LIKE 'pg_ripple%'
+    LOOP
+        BEGIN
+            PERFORM pg_drop_replication_slot(_rec.slot_name);
+            RAISE NOTICE 'pg_ripple: dropped replication slot % on extension drop', _rec.slot_name;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'pg_ripple: could not drop replication slot %: %',
+                _rec.slot_name, SQLERRM;
+        END;
+    END LOOP;
+END;
+$$;
+
+COMMENT ON FUNCTION _pg_ripple.cleanup_on_drop() IS
+    'Event trigger function: drops pg_ripple CDC replication slots when the extension is uninstalled. \
+     (M15-03 v0.95.0)';
+
+-- Create the event trigger only if it does not already exist.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_event_trigger WHERE evtname = '_pg_ripple_cleanup_on_drop'
+    ) THEN
+        EXECUTE $et$
+            CREATE EVENT TRIGGER _pg_ripple_cleanup_on_drop
+                ON sql_drop
+                EXECUTE FUNCTION _pg_ripple.cleanup_on_drop()
+        $et$;
+    END IF;
+END;
+$$;
+"#,
+    name = "v095_schema_additions",
+    requires = ["v082_schema_additions"]
+);

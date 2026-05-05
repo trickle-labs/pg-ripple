@@ -91,7 +91,12 @@ pub fn export_pagerank(format: &str, top_k: Option<i32>, topic: Option<&str>) ->
             }
             format!("[\n{}\n]", items.join(",\n"))
         }
-        _ => unreachable!(),
+        // M15-01 (v0.95.0): use pgrx::error! instead of unreachable!() so an unexpected format
+        // value produces a clean user-visible error rather than a server crash.
+        _ => pgrx::error!(
+            "{PT0417}: unsupported export format '{}'; supported: turtle, jsonld, csv, ntriples",
+            format
+        ),
     }
 }
 

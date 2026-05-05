@@ -121,7 +121,12 @@ pub fn centrality_run(
              SELECT id.node, {katz_alpha} * id.d::FLOAT8 AS score \
              FROM in_degree id"
         ),
-        _ => unreachable!(),
+        // M15-01 (v0.95.0): use pgrx::error! instead of unreachable!() so an unexpected metric
+        // value produces a clean user-visible error rather than a server crash.
+        _ => pgrx::error!(
+            "unsupported centrality metric '{}'; expected betweenness, closeness, eigenvector, or katz",
+            metric
+        ),
     };
 
     let metric_escaped = metric.replace('\'', "''");

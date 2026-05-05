@@ -123,6 +123,11 @@ jobs:
       - name: SECURITY DEFINER search_path lint
         run: bash scripts/check_security_definer_search_path.sh
 
+      # M15-01 (v0.95.0): Verify no bare unreachable!() in production source
+      # paths that run inside the PostgreSQL server process.
+      - name: No unreachable!() in production source lint
+        run: bash scripts/check_no_unreachable_in_production.sh
+
       # v0.64.0 TRUTH-03: Reject mutable GitHub Actions refs (requires pinned SHAs).
       - name: GitHub Actions pinning lint
         run: bash scripts/check_github_actions_pinned.sh

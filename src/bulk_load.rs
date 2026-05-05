@@ -203,6 +203,10 @@ pub fn load_ntriples(data: &str, strict: bool) -> i64 {
     // once per load_* call rather than never (bulk inserts skip per-triple flush).
     crate::storage::mutation_journal::flush();
     post_load_cleanup(touched.into_iter().collect());
+    // M15-07 (v0.95.0): if this load was large, run VACUUM ANALYZE on the
+    // dictionary table to keep planner statistics fresh without waiting for
+    // the autovacuum daemon.  Each triple may add up to 3 new dictionary terms.
+    crate::dictionary::maybe_vacuum_dictionary(total as usize * 3);
     // v0.58.0: emit PROV-O provenance triples if enabled.
     crate::prov::emit_load_provenance("ntriples:inline", total);
     total
@@ -1088,7 +1092,23 @@ pub fn load_triples_with_confidence(
     format: &str,
     graph_uri: Option<&str>,
 ) -> i64 {
-    // Validate confidence range.
+    // Validate confidence value: reject NaN, Inf, and out-of-range values.
+    // M15-09 (v0.95.0): explicit NaN and Inf checks come first so that the
+    // error message identifies the specific problem rather than just saying
+    // "outside [0.0, 1.0]".
+    if confidence.is_nan() {
+        pgrx::error!("confidence value is NaN — must be a finite number in [0.0, 1.0] (PT0301)");
+    }
+    if confidence.is_infinite() {
+        pgrx::error!(
+            "confidence value is {} — must be a finite number in [0.0, 1.0] (PT0301)",
+            if confidence.is_sign_positive() {
+                "+Infinity"
+            } else {
+                "-Infinity"
+            }
+        );
+    }
     if !(0.0..=1.0).contains(&confidence) {
         pgrx::error!(
             "confidence must be in [0.0, 1.0]; got {} (PT0301)",
