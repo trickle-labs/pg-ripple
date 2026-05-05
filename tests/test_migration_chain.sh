@@ -810,12 +810,33 @@ fi
 ok "v0.95.0 checkpoint assertions passed (schema_generation_seq, cleanup_on_drop)"
 echo
 
+# Apply v0.95.0 → v0.96.0 migration script
+run_sql -f "${SQL_DIR}/pg_ripple--0.95.0--0.96.0.sql"
+ok "Applied migration 0.95.0 → 0.96.0"
+
+# ── A15-05 checkpoint: v0.96.0 ────────────────────────────────────────────────
+info "=== A15-05 checkpoint: v0.96.0 ==="
+# v0.96.0: tombstone_count column added to _pg_ripple.predicates (M15-05).
+# Core tables from v0.95.0 must remain intact.
+assert_table "_pg_ripple" "predicates"
+# tombstone_count column must exist after migration.
+TOMBSTONE_COL=$(run_sql -c "SELECT COUNT(*) FROM information_schema.columns \
+    WHERE table_schema = '_pg_ripple' AND table_name = 'predicates' AND column_name = 'tombstone_count'")
+if [[ "${TOMBSTONE_COL}" -eq 1 ]]; then
+    ok "A15-05: _pg_ripple.predicates.tombstone_count column exists after migration"
+else
+    fail "A15-05: _pg_ripple.predicates.tombstone_count column missing after 0.95.0→0.96.0 migration"
+    exit 1
+fi
+ok "v0.96.0 checkpoint assertions passed (tombstone_count)"
+echo
+
 info "=== MIGCHAIN-01: migration script count verification ==="
-# Count migration scripts from v0.62.0 to v0.95.0 (inclusive).
-# There are 33 minor version increments: 0.62→0.63, ..., 0.94→0.95.
-EXPECTED_COUNT=33
+# Count migration scripts from v0.62.0 to v0.96.0 (inclusive).
+# There are 34 minor version increments: 0.62→0.63, ..., 0.95→0.96.
+EXPECTED_COUNT=34
 ACTUAL_COUNT=0
-for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90 0.91 0.92 0.93 0.94; do
+for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90 0.91 0.92 0.93 0.94 0.95; do
     # Extract next version number
     major=$(echo "${ver}" | cut -d. -f1)
     minor=$(echo "${ver}" | cut -d. -f2)
@@ -831,7 +852,7 @@ for ver in 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75
     fi
 done
 if [[ "${ACTUAL_COUNT}" -eq "${EXPECTED_COUNT}" ]]; then
-    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.95.0"
+    ok "MIGCHAIN-01: found ${ACTUAL_COUNT}/${EXPECTED_COUNT} migration scripts from v0.62.0 to v0.96.0"
 else
     fail "MIGCHAIN-01: expected ${EXPECTED_COUNT} migration scripts, found ${ACTUAL_COUNT}"
     exit 1
@@ -848,7 +869,7 @@ HIGHEST_MIGRATION=$(ls "${SQL_DIR}"/pg_ripple--*.sql 2>/dev/null \
     | sed 's/.*--\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.sql/\1/' \
     | sort -V | tail -1 || echo "")
 # The highest checkpoint applied in this test (update this when adding new checkpoints):
-HIGHEST_CHECKPOINT="0.95.0"
+HIGHEST_CHECKPOINT="0.96.0"
 if [[ "${HIGHEST_MIGRATION}" == "${HIGHEST_CHECKPOINT}" ]]; then
     ok "MIGCHAIN-SYNC: highest migration (${HIGHEST_MIGRATION}) matches highest checkpoint (${HIGHEST_CHECKPOINT})"
 elif [[ -z "${HIGHEST_MIGRATION}" ]]; then
