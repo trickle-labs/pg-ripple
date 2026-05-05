@@ -595,12 +595,11 @@ ALTER TABLE _pg_ripple.dictionary
 -- extension is dropped (DROP EXTENSION pg_ripple).
 -- Without this, orphaned slots continue to consume WAL and can eventually
 -- exhaust disk space.
--- SECURITY DEFINER is required to call pg_drop_replication_slot(), which
--- requires the replication privilege.
--- SECURITY-JUSTIFY: Required to call pg_drop_replication_slot() which needs replication privilege; SET search_path pins execution context.
+-- Elevated privilege is required to call pg_drop_replication_slot().
 CREATE OR REPLACE FUNCTION _pg_ripple.cleanup_on_drop()
     RETURNS event_trigger
     LANGUAGE plpgsql
+    -- SECURITY-JUSTIFY: Required to call pg_drop_replication_slot() which needs replication privilege; SET search_path pins execution context.
     SECURITY DEFINER
     SET search_path = pg_catalog, _pg_ripple, public
 AS $$

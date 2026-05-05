@@ -35,10 +35,10 @@ ALTER TABLE _pg_ripple.dictionary
     );
 
 -- M15-03: event trigger to clean up CDC replication slots on DROP EXTENSION.
--- SECURITY-JUSTIFY: Required to call pg_drop_replication_slot() which needs replication privilege; SET search_path pins execution context.
 CREATE OR REPLACE FUNCTION _pg_ripple.cleanup_on_drop()
     RETURNS event_trigger
     LANGUAGE plpgsql
+    -- SECURITY-JUSTIFY: Required to call pg_drop_replication_slot() which needs replication privilege; SET search_path pins execution context.
     SECURITY DEFINER
     SET search_path = pg_catalog, _pg_ripple, public
 AS $$
