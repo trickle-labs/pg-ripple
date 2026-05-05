@@ -21,7 +21,9 @@ for dir in "${DIRS[@]}"; do
         continue
     fi
     while IFS= read -r -d '' file; do
-        if grep -n 'unreachable!()' "$file"; then
+        # grep for unreachable!() but exclude lines that are comments (start with optional
+        # whitespace then // or * — covers single-line Rust comments).
+        if grep -n 'unreachable!()' "$file" | grep -v '^\s*[0-9]*:\s*\(//\|*\)'; then
             echo "ERROR: $file contains bare unreachable!() — replace with pgrx::error!()" >&2
             VIOLATIONS=$((VIOLATIONS + 1))
         fi
