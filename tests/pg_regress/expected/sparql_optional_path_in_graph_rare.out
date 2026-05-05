@@ -184,5 +184,3 @@ SELECT pg_ripple.drop_graph('https://rare.path.test/g2') IS NOT NULL AS g2_dropp
 ------------
  t
 (1 row)
-
-

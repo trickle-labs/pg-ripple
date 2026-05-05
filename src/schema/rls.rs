@@ -597,6 +597,7 @@ ALTER TABLE _pg_ripple.dictionary
 -- exhaust disk space.
 -- SECURITY DEFINER is required to call pg_drop_replication_slot(), which
 -- requires the replication privilege.
+-- SECURITY-JUSTIFY: Required to call pg_drop_replication_slot() which needs replication privilege; SET search_path pins execution context.
 CREATE OR REPLACE FUNCTION _pg_ripple.cleanup_on_drop()
     RETURNS event_trigger
     LANGUAGE plpgsql
