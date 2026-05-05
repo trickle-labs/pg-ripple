@@ -9,10 +9,10 @@
 --           COMPATIBLE_EXTENSION_MIN bumped to v0.93.0.
 --
 --   H15-02: `SET search_path = pg_catalog, _pg_ripple, public` added to
---           `_pg_ripple.ddl_guard_vp_tables()` SECURITY DEFINER function to
---           prevent search-path injection attacks.  New CI script
+--           `_pg_ripple.ddl_guard_vp_tables()` (SECDEF event trigger function)
+--           to prevent search-path injection attacks.  New CI script
 --           `scripts/check_security_definer_search_path.sh` verifies all
---           SECURITY DEFINER functions in src/ have a pinned search_path.
+--           SECDEF functions in src/ have a pinned search_path.
 --
 --   H15-03/L15-13: Bounded bidirectional relay channel.
 --           `pg_ripple.bidi_relay_max_inflight` GUC (default: 1000) limits

@@ -47,7 +47,7 @@ $$;
 -- The trigger is suppressed when pg_ripple.maintenance_mode = 'on' so that
 -- the merge worker and vacuum functions can drop/rename VP tables freely.
 -- H15-02 (v0.94.0): SET search_path to prevent search-path injection in this
--- SECURITY DEFINER function.  Any unqualified name resolves to pg_catalog or
+-- SECDEF function.  Any unqualified name resolves to pg_catalog or
 -- _pg_ripple rather than a caller-controlled schema.
 CREATE OR REPLACE FUNCTION _pg_ripple.ddl_guard_vp_tables()
     RETURNS event_trigger
