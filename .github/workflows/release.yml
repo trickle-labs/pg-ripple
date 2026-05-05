@@ -173,7 +173,12 @@ jobs:
         run: |
           # Use pgrx-managed pg_config to avoid system PATH ambiguity on Windows.
           PG_CONFIG_PATH="$(cargo pgrx info path pg18)/bin/pg_config"
-          cargo pgrx package --pg-config "${PG_CONFIG_PATH}" --features pg18
+          # pgrx 0.18 requires the cshim feature on Windows (C macro shims).
+          FEATURES="pg18"
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            FEATURES="pg18,cshim"
+          fi
+          cargo pgrx package --pg-config "${PG_CONFIG_PATH}" --features "${FEATURES}"
 
       - name: Create archive (tar.gz)
         if: matrix.archive_ext == 'tar.gz'
