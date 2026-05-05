@@ -323,7 +323,10 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
          pg_ripple_pagerank_queue_max_delta{{topic=\"\"}} {:.6}\n\
          # HELP pg_ripple_pagerank_queue_oldest_enqueue_seconds Age in seconds of the oldest entry in the PageRank dirty-edges queue (OBS-01)\n\
          # TYPE pg_ripple_pagerank_queue_oldest_enqueue_seconds gauge\n\
-         pg_ripple_pagerank_queue_oldest_enqueue_seconds{{topic=\"\"}} {}\n",
+         pg_ripple_pagerank_queue_oldest_enqueue_seconds{{topic=\"\"}} {}\n\
+         # HELP pg_ripple_bidi_relay_dropped_total Total bidi relay dispatch calls dropped due to inflight overflow (H15-03)\n\
+         # TYPE pg_ripple_bidi_relay_dropped_total counter\n\
+         pg_ripple_bidi_relay_dropped_total {}\n",
         m.sparql_query_count(),
         m.datalog_query_count(),
         m.error_count(),
@@ -353,6 +356,7 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
         m.pagerank_queue_depth(),
         m.pagerank_queue_max_delta(),
         m.pagerank_queue_oldest_enqueue_seconds(),
+        m.bidi_relay_dropped_total(),
     );
 
     Response::builder()

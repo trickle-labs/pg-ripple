@@ -904,4 +904,30 @@ pub fn register() {
         GucContext::Suset,
         GucFlags::default(),
     );
+
+    // H15-03 (v0.94.0): bounded bidi relay channel.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.bidi_relay_max_inflight",
+        c"Maximum number of in-flight bidi relay operations per process. \
+          When this limit is reached, new relay calls are dropped and \
+          pg_ripple_bidi_relay_dropped_total is incremented (H15-03 v0.94.0). \
+          Default: 1000. Range: 1–100000.",
+        c"",
+        &crate::gucs::storage::BIDI_RELAY_MAX_INFLIGHT,
+        1,
+        100_000,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+
+    // H15-05 (v0.94.0): bulk load COPY FROM STDIN BINARY path.
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.bulk_load_use_copy",
+        c"When on, bulk loaders use COPY ... FROM STDIN BINARY for triple insertion \
+          instead of batched INSERTs (H15-05 v0.94.0). Default: off.",
+        c"",
+        &crate::gucs::storage::BULK_LOAD_USE_COPY,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

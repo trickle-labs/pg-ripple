@@ -13,6 +13,50 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.94.0] — 2026-05-05 — Assessment 15 High Remediation
+
+**Implements v0.94.0 roadmap: security hardening (SECURITY DEFINER search_path
+injection fix), bump-version recipe improvements, bounded bidi relay channel with
+Prometheus counter, and shared copy_into_vp() helper for COPY-style bulk loads.**
+
+### Added
+
+- **H15-01**: `justfile` — `bump-version NEW_VERSION [COMPAT_MIN]` accepts an
+  optional `COMPAT_MIN` argument to set `COMPATIBLE_EXTENSION_MIN` independently
+  from the release version; `check-version-sync` recipe updated to allow
+  `COMPAT_MIN ≤ EXT_VER` (not `COMPAT_MIN == EXT_VER`), matching the CI gate.
+  `COMPATIBLE_EXTENSION_MIN` bumped to `"0.93.0"` for this release.
+- **H15-02**: `src/schema/triggers.rs` — `_pg_ripple.ddl_guard_vp_tables()` gains
+  `SET search_path = pg_catalog, _pg_ripple, public` to prevent search-path injection.
+  `scripts/check_security_definer_search_path.sh` — new CI script verifying all
+  SECURITY DEFINER functions in `src/` have a pinned `SET search_path` clause.
+  Wired into `.github/workflows/ci.yml` as `SECURITY DEFINER search_path lint`.
+- **H15-03**: `src/gucs/storage.rs` — `BIDI_RELAY_MAX_INFLIGHT` GUC
+  (`pg_ripple.bidi_relay_max_inflight`, default: 1000, Suset).
+  `src/stats.rs` — `BIDI_RELAY_INFLIGHT` and `BIDI_RELAY_DROPPED_TOTAL` static
+  `AtomicI64` counters; `relay_inflight_acquire()` / `relay_inflight_release()`
+  helpers. Both counters exposed in `streaming_metrics()`.
+  `src/bidi/relay.rs`:`ingest_jsonld_impl()` — gated on `relay_inflight_acquire()`;
+  emits WARNING and returns 0 when inflight limit is reached.
+- **L15-13**: `pg_ripple_http/src/metrics.rs` — `bidi_relay_dropped_total` field;
+  `update_bidi_relay_dropped_total()` / `bidi_relay_dropped_total()` methods.
+  `pg_ripple_http/src/routing/admin_handlers.rs` — `pg_ripple_bidi_relay_dropped_total`
+  Prometheus counter in `/metrics` endpoint.
+- **H15-05**: `src/storage/ops/mod.rs` — `copy_into_vp()` helper using UNNEST-array
+  based batch insertion; `pub(crate)` for use by bulk loader, R2RML, and CDC paths.
+  `src/gucs/storage.rs` — `BULK_LOAD_USE_COPY` GUC (`pg_ripple.bulk_load_use_copy`,
+  default: off, Userset). `batch_insert_encoded()` dispatches to `copy_into_vp()`
+  when the GUC is on.
+- **SQL**: `sql/pg_ripple--0.93.0--0.94.0.sql` — recreates
+  `_pg_ripple.ddl_guard_vp_tables()` with `SET search_path` and records schema version.
+- **Roadmap**: `roadmap/v0.94.0.md` + `roadmap/v0.94.0-full.md` created.
+
+### Changed
+
+- `pg_ripple.control` `comment` updated to `v0.94.0`.
+
+---
+
 ## [0.93.0] — 2026-05-04 — pg_tide Integration & Documentation Modernisation
 
 **Implements v0.93.0 roadmap: integrates pg_tide as the recommended relay transport

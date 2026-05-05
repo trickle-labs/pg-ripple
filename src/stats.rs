@@ -27,6 +27,16 @@ static ARROW_TICKET_REJECTIONS: AtomicI64 = AtomicI64::new(0);
 /// Total Citus BRIN summarise operations completed after merge.
 static CITUS_BRIN_SUMMARISE_COMPLETED: AtomicI64 = AtomicI64::new(0);
 
+// ─── v0.94.0 bidi relay counters (H15-03) ─────────────────────────────────────
+
+/// Current number of in-flight bidi relay dispatch calls (per process).
+/// Used to gate new relay calls against `bidi_relay_max_inflight`.
+pub(crate) static BIDI_RELAY_INFLIGHT: AtomicI64 = AtomicI64::new(0);
+
+/// Total number of bidi relay dispatch calls dropped due to inflight overflow.
+/// Exposed via `streaming_metrics()` and the `/metrics` Prometheus endpoint.
+pub(crate) static BIDI_RELAY_DROPPED_TOTAL: AtomicI64 = AtomicI64::new(0);
+
 // -- Increment helpers --------------------------------------------------------
 
 pub fn increment_cursor_pages_opened() {
@@ -54,6 +64,28 @@ pub fn increment_arrow_ticket_rejections() {
 
 pub fn increment_citus_brin_summarise_completed(n: i64) {
     CITUS_BRIN_SUMMARISE_COMPLETED.fetch_add(n, Ordering::Relaxed);
+}
+
+// ─── v0.94.0 bidi relay helpers ───────────────────────────────────────────────
+
+/// Try to acquire an inflight slot for a bidi relay dispatch.
+/// Returns `true` if the slot was acquired (caller should call `relay_inflight_release` when done).
+/// Returns `false` if max_inflight is reached; the dropped counter is incremented.
+pub fn relay_inflight_acquire() -> bool {
+    let max = crate::BIDI_RELAY_MAX_INFLIGHT.get() as i64;
+    let current = BIDI_RELAY_INFLIGHT.load(Ordering::Relaxed);
+    if current >= max {
+        BIDI_RELAY_DROPPED_TOTAL.fetch_add(1, Ordering::Relaxed);
+        false
+    } else {
+        BIDI_RELAY_INFLIGHT.fetch_add(1, Ordering::Relaxed);
+        true
+    }
+}
+
+/// Release an inflight slot acquired by `relay_inflight_acquire`.
+pub fn relay_inflight_release() {
+    BIDI_RELAY_INFLIGHT.fetch_sub(1, Ordering::Relaxed);
 }
 
 // -- SQL API ------------------------------------------------------------------
@@ -86,7 +118,9 @@ mod pg_ripple {
             "cursor_rows_streamed":           CURSOR_ROWS_STREAMED.load(Ordering::Relaxed),
             "arrow_batches_sent":             ARROW_BATCHES_SENT.load(Ordering::Relaxed),
             "arrow_ticket_rejections":        ARROW_TICKET_REJECTIONS.load(Ordering::Relaxed),
-            "citus_brin_summarise_completed": CITUS_BRIN_SUMMARISE_COMPLETED.load(Ordering::Relaxed)
+            "citus_brin_summarise_completed": CITUS_BRIN_SUMMARISE_COMPLETED.load(Ordering::Relaxed),
+            "bidi_relay_inflight":            super::BIDI_RELAY_INFLIGHT.load(Ordering::Relaxed),
+            "bidi_relay_dropped_total":       super::BIDI_RELAY_DROPPED_TOTAL.load(Ordering::Relaxed)
         }))
     }
 }

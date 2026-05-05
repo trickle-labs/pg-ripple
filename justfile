@@ -192,22 +192,27 @@ release VERSION:
     @echo "  4. git tag v{{VERSION}} && git push --tags"
 
 # BUILD-02 (v0.84.0): Bump all version strings atomically.
-# Updates Cargo.toml (root + pg_ripple_http), pg_ripple.control,
-# COMPATIBLE_EXTENSION_MIN in pg_ripple_http/src/main.rs,
-# docker-compose.yml image tag, creates a stub migration script,
-# and appends a CHANGELOG stub for the new version.
+# H15-01 (v0.94.0): accepts an optional COMPAT_MIN to pin COMPATIBLE_EXTENSION_MIN
+# independently from the release version (it is a *minimum*, not the current version).
+# When COMPAT_MIN is omitted, COMPATIBLE_EXTENSION_MIN is left unchanged.
 #
-# Usage:  just bump-version 0.85.0
+# Usage:  just bump-version 0.94.0
+#         just bump-version 0.95.0 0.94.0   # also bumps COMPATIBLE_EXTENSION_MIN
 # ROAD-02 (v0.89.0): atomically updates all nine version references and creates
 # CHANGELOG + migration stubs. Use bump-version-dry to preview without writing.
 [group: "release"]
-bump-version NEW_VERSION:
+bump-version NEW_VERSION COMPAT_MIN="":
     @OLD_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/.*"\([^"]*\)".*/\1/'); \
      echo "Bumping $$OLD_VERSION → {{NEW_VERSION}}"; \
      sed -i '' "s/^version = \"$$OLD_VERSION\"/version = \"{{NEW_VERSION}}\"/" Cargo.toml; \
      sed -i '' "s/^version = \"$$OLD_VERSION\"/version = \"{{NEW_VERSION}}\"/" pg_ripple_http/Cargo.toml; \
      sed -i '' "s/^default_version = '$$OLD_VERSION'/default_version = '{{NEW_VERSION}}'/" pg_ripple.control; \
-     sed -i '' "s/COMPATIBLE_EXTENSION_MIN: \&str = \"$$OLD_VERSION\"/COMPATIBLE_EXTENSION_MIN: \&str = \"{{NEW_VERSION}}\"/" pg_ripple_http/src/main.rs; \
+     sed -i '' "s/^comment = '.*'/comment = 'High-performance RDF triple store with SPARQL 1.1, SHACL, Datalog, HTAP, federation, and Datalog-native PageRank (v{{NEW_VERSION}})'/" pg_ripple.control; \
+     if [ -n "{{COMPAT_MIN}}" ]; then \
+       OLD_COMPAT=$(grep 'COMPATIBLE_EXTENSION_MIN' pg_ripple_http/src/main.rs | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1); \
+       sed -i '' "s/COMPATIBLE_EXTENSION_MIN: \&str = \"$$OLD_COMPAT\"/COMPATIBLE_EXTENSION_MIN: \&str = \"{{COMPAT_MIN}}\"/" pg_ripple_http/src/main.rs; \
+       echo "Updated COMPATIBLE_EXTENSION_MIN: $$OLD_COMPAT → {{COMPAT_MIN}}"; \
+     fi; \
      sed -i '' "s|ghcr.io/grove/pg_ripple:$$OLD_VERSION|ghcr.io/grove/pg_ripple:{{NEW_VERSION}}|g" docker-compose.yml; \
      MIGRATION_FILE="sql/pg_ripple--$$OLD_VERSION--{{NEW_VERSION}}.sql"; \
      if [ ! -f "$$MIGRATION_FILE" ]; then \
@@ -227,7 +232,7 @@ bump-version NEW_VERSION:
      echo ""; \
      echo "=== Version bump complete ==="; \
      echo "Files updated: Cargo.toml, pg_ripple_http/Cargo.toml, pg_ripple.control,"; \
-     echo "  pg_ripple_http/src/main.rs, docker-compose.yml, CHANGELOG.md"; \
+     echo "  docker-compose.yml, CHANGELOG.md"; \
      echo "Next: fill in CHANGELOG.md and $$MIGRATION_FILE"
 
 # Dry-run for bump-version: prints proposed changes without writing any files.
@@ -265,26 +270,29 @@ regen-sbom:
     @echo "sbom.json regenerated. Review changes with: git diff sbom.json"
 
 # BUILD-02 (v0.84.0): Check that all version strings are consistent.
+# H15-01 (v0.94.0): COMPATIBLE_EXTENSION_MIN only needs to be ≤ current version,
+# not equal.  This matches the CI lint-version-sync gate in ci.yml.
 # Verifies: Cargo.toml root, pg_ripple_http/Cargo.toml, pg_ripple.control,
 # COMPATIBLE_EXTENSION_MIN in pg_ripple_http/src/main.rs, docker-compose.yml.
 [group: "release"]
 check-version-sync:
-    @CARGO_VER=$(grep '^version = ' Cargo.toml | head -1 | grep -oP '"\\K[^"]+'); \
-     HTTP_VER=$(grep '^version = ' pg_ripple_http/Cargo.toml | head -1 | grep -oP '"\\K[^"]+'); \
-     CTRL_VER=$(grep '^default_version' pg_ripple.control | grep -oP "'\\K[^']+"); \
-     COMPAT_VER=$(grep 'COMPATIBLE_EXTENSION_MIN' pg_ripple_http/src/main.rs | grep -oP '"\\K[^"]+' | head -1); \
-     DC_VER=$(grep 'ghcr.io/grove/pg_ripple:' docker-compose.yml | grep -oP ':\\K[0-9.]+' | head -1); \
+    @CARGO_VER=$(grep '^version = ' Cargo.toml | head -1 | grep -oP '"\K[^"]+'); \
+     HTTP_VER=$(grep '^version = ' pg_ripple_http/Cargo.toml | head -1 | grep -oP '"\K[^"]+'); \
+     CTRL_VER=$(grep '^default_version' pg_ripple.control | grep -oP "'\K[^']+"); \
+     COMPAT_VER=$(grep 'COMPATIBLE_EXTENSION_MIN' pg_ripple_http/src/main.rs | grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+' | head -1); \
+     DC_VER=$(grep 'ghcr.io/grove/pg_ripple:' docker-compose.yml | grep -oP ':\K[0-9.]+' | head -1); \
      FAIL=0; \
-     echo "Cargo.toml:         $$CARGO_VER"; \
-     echo "pg_ripple_http:     $$HTTP_VER"; \
-     echo "pg_ripple.control:  $$CTRL_VER"; \
-     echo "COMPAT_EXTENSION_MIN: $$COMPAT_VER"; \
-     echo "docker-compose.yml: $$DC_VER"; \
+     echo "Cargo.toml:              $$CARGO_VER"; \
+     echo "pg_ripple_http:          $$HTTP_VER"; \
+     echo "pg_ripple.control:       $$CTRL_VER"; \
+     echo "COMPATIBLE_EXTENSION_MIN: $$COMPAT_VER"; \
+     echo "docker-compose.yml:      $$DC_VER"; \
      [ "$$CARGO_VER" = "$$HTTP_VER" ]   || { echo "FAIL: pg_ripple_http version mismatch"; FAIL=1; }; \
      [ "$$CARGO_VER" = "$$CTRL_VER" ]   || { echo "FAIL: pg_ripple.control version mismatch"; FAIL=1; }; \
-     [ "$$CARGO_VER" = "$$COMPAT_VER" ] || { echo "FAIL: COMPATIBLE_EXTENSION_MIN mismatch"; FAIL=1; }; \
      [ "$$CARGO_VER" = "$$DC_VER" ]     || { echo "FAIL: docker-compose.yml image tag mismatch"; FAIL=1; }; \
-     if [ $$FAIL -eq 0 ]; then echo "OK: all versions consistent at $$CARGO_VER"; fi; \
+     LOWEST=$(printf '%s\n%s' "$$COMPAT_VER" "$$CARGO_VER" | sort -V | head -1); \
+     [ "$$LOWEST" = "$$COMPAT_VER" ] || { echo "FAIL: COMPATIBLE_EXTENSION_MIN ($$COMPAT_VER) > extension version ($$CARGO_VER)"; FAIL=1; }; \
+     if [ $$FAIL -eq 0 ]; then echo "OK: all versions consistent at $$CARGO_VER (COMPAT_MIN=$$COMPAT_VER)"; fi; \
      exit $$FAIL
 
 # BUILD-02 (v0.84.0): Regenerate the OpenAPI spec from the running HTTP service.

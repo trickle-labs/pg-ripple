@@ -118,6 +118,11 @@ jobs:
       - name: SECURITY DEFINER lint
         run: bash scripts/check_no_security_definer.sh
 
+      # H15-02 (v0.94.0): Verify all SECURITY DEFINER functions in src/ have
+      # an explicit SET search_path clause to prevent search-path injection.
+      - name: SECURITY DEFINER search_path lint
+        run: bash scripts/check_security_definer_search_path.sh
+
       # v0.64.0 TRUTH-03: Reject mutable GitHub Actions refs (requires pinned SHAs).
       - name: GitHub Actions pinning lint
         run: bash scripts/check_github_actions_pinned.sh

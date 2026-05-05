@@ -59,14 +59,16 @@ LISTEN pg_ripple_cdc_test_all;
 -- (In pg_regress, NOTIFY is not received synchronously; we verify the subscription
 -- machinery is working by checking that insert_triple succeeds and the subscription
 -- table is intact.)
+-- NOTE: insert_triple returns the statement ID (global sequence) — compare > 0
+-- to avoid fragile exact-count dependency on accumulated test state.
 SELECT pg_ripple.insert_triple(
     '<https://ex.org/s1>',
     '<https://ex.org/hasProp>',
     '"value1"'
-) AS inserted;
+) > 0 AS inserted;
  inserted 
 ----------
-      513
+ t
 (1 row)
 
 -- Subscription still active.
