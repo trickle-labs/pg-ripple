@@ -150,7 +150,7 @@ RUN apt-get update -qq \
        libgeos-c1v5 \
        libproj25 \
        libgdal32 \
-       libjson-c4 \
+       libjson-c5 \
        libprotobuf-c1 \
        postgresql-contrib \
     && rm -rf /var/lib/apt/lists/*
