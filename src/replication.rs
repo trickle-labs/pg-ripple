@@ -27,6 +27,7 @@ use std::time::Duration;
 // ─── Replication status SRF ──────────────────────────────────────────────────
 
 /// One row returned by `pg_ripple.replication_stats()`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub(crate) struct ReplicationStatRow {
     pub slot_name: Option<String>,

@@ -18,6 +18,8 @@ pub fn register() {
     // When loaded outside that context (e.g. direct CREATE EXTENSION), fall back
     // to Suset context so the GUC is still registered.
     {
+        // SAFETY: `process_shared_preload_libraries_in_progress` is a stable PostgreSQL
+        // global read-only during GUC registration, safe to read from any context.
         let ctx = if unsafe { pgrx::pg_sys::process_shared_preload_libraries_in_progress } {
             GucContext::Postmaster
         } else {

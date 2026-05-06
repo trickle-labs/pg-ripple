@@ -21,12 +21,16 @@
 // Q14-08: these sub-modules are split for future refactoring but their public
 // symbols are re-exported via pg_extern macros. The compiler cannot see through
 // pgrx macro expansion so dead_code is suppressed intentionally (Q13-05 pattern).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod confidence_table;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod fuzzy;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod prov;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod shacl;
 

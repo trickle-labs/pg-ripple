@@ -10,6 +10,7 @@
 use thiserror::Error;
 
 /// Uncertain knowledge engine errors (PT0301–PT0307) — v0.87.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum UncertainKnowledgeError {
@@ -69,6 +70,7 @@ pub enum UncertainKnowledgeError {
 }
 
 /// Dictionary-layer errors (PT001–PT099).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum DictionaryError {
@@ -86,6 +88,7 @@ pub enum DictionaryError {
 }
 
 /// Storage-layer errors (PT100–PT199).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum StorageError {
@@ -103,6 +106,7 @@ pub enum StorageError {
 }
 
 /// Embedding / vector subsystem errors (PT601–PT607) — v0.27.0 / v0.28.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum EmbeddingError {
@@ -145,6 +149,7 @@ pub enum EmbeddingError {
 }
 
 /// Datalog optimization errors (PT501–PT502) — v0.29.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum DatalogOptError {
@@ -174,6 +179,7 @@ pub enum DatalogOptError {
 }
 
 /// Datalog aggregation errors (PT510–PT511) — v0.30.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum DatalogAggError {
@@ -203,6 +209,7 @@ pub enum DatalogAggError {
 }
 
 /// Well-founded semantics errors (PT520) — v0.32.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum WfsError {
@@ -222,6 +229,7 @@ pub enum WfsError {
 }
 
 /// LLM integration errors (PT700–PT702) — v0.49.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum LlmError {
@@ -255,6 +263,7 @@ pub enum LlmError {
 }
 
 /// SHACL-AF errors (PT480–PT481) — v0.53.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum ShAFError {
@@ -278,6 +287,7 @@ pub enum ShAFError {
 }
 
 /// Lattice errors (PT540–PT541) — v0.36.0 / v0.45.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum LatticeError {

@@ -26,6 +26,7 @@ use pgrx::prelude::*;
 /// Create `_pg_ripple.cdc_subscriptions` and the notify trigger function.
 ///
 /// Called once from `storage::initialize_schema`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn initialize_cdc_schema() {
     // Subscription registry.
@@ -107,6 +108,7 @@ $$
 ///
 /// Called after each CDC batch is committed so that consumers and the
 /// slot-cleanup worker can observe the replication progress.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn update_lsn_watermark(slot_name: &str, lsn: &str) {
     let _ = Spi::run_with_args(
@@ -295,6 +297,7 @@ pub fn list_named_subscriptions() -> pgrx::iter::TableIterator<
 /// Called from the trigger function (via `notify_named_subscription`) after INSERT/DELETE.
 /// For each matching named subscription, emits `NOTIFY pg_ripple_cdc_{name}` with
 /// a JSON payload: `{"op": "add"|"remove", "s": "...", "p": "...", "o": "...", "g": "..."}`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn notify_named_subscriptions(op: &str, s: i64, p: i64, o: i64, g: i64) {
     // Decode IDs to N-Triples format for the human-readable payload.

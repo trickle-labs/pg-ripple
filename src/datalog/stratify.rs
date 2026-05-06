@@ -24,6 +24,7 @@ pub struct Stratum {
     pub rules: Vec<Rule>,
     pub is_recursive: bool,
     /// Predicate IDs defined (derived) in this stratum.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub derived_predicates: Vec<i64>,
 }

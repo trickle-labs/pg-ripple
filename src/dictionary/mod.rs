@@ -48,12 +48,16 @@ use xxhash_rust::xxh3::xxh3_128;
 const CACHE_CAPACITY: usize = 16_384;
 
 pub const KIND_IRI: i16 = 0;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub const KIND_BLANK: i16 = 1;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub const KIND_LITERAL: i16 = 2;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub const KIND_TYPED_LITERAL: i16 = 3;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub const KIND_LANG_LITERAL: i16 = 4;
 /// RDF-star quoted triple: the `value` holds the canonical N-Triples-star form;

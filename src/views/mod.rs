@@ -31,10 +31,13 @@
 //! - `pg_ripple.list_ask_views()` — list ASK views
 
 // v0.90.0 CQ-02: pre-emptive split sub-modules
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod construct;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod describe;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod sparql;
 
@@ -57,6 +60,7 @@ const PGTRICKLE_HINT: &str = "Install pg_trickle: https://github.com/grove/pg-tr
 /// pg_tide (trickle-labs/pg-tide ≥ 0.1.0) contains the relay, outbox, and inbox
 /// subsystem that was extracted from pg_trickle v0.46.0.  Add this hint to any
 /// `pgrx::error!()` call in relay-dependent code paths.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub(crate) const PGTIDE_HINT: &str = "pg_tide extension is not installed; \
      install pg_tide \u{2265}0.1.0 from https://github.com/trickle-labs/pg-tide \

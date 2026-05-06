@@ -211,9 +211,11 @@ pub struct WcojAnalysis {
     /// Whether this BGP should use the WCOJ execution path.
     pub use_wcoj: bool,
     /// Number of VP table joins in this BGP.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub table_count: usize,
     /// Whether the pattern was detected as cyclic.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub is_cyclic: bool,
 }
@@ -498,6 +500,7 @@ impl SortedIterator {
     }
 
     /// Reset to the beginning of the iterator.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.pos = 0;
@@ -685,18 +688,21 @@ impl EdgeData {
     }
 
     /// Return `true` if the edge (s, o) exists.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn has_edge(&self, s: i64, o: i64) -> bool {
         self.by_s.binary_search(&(s, o)).is_ok()
     }
 
     /// Total number of edges.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.by_s.len()
     }
 
     /// Return `true` if there are no edges.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.by_s.is_empty()

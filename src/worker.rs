@@ -98,6 +98,7 @@ pub fn register_merge_workers() {
 }
 
 /// Legacy single-worker shim kept for backward compatibility.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn register_merge_worker() {
     register_merge_workers();
@@ -126,6 +127,8 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
     // Only worker 0 writes to the shared PID (other workers also process merges
     // but backends always wake worker 0 as the primary latch target).
     if worker_idx == 0 {
+        // SAFETY: `pg_sys::MyProcPid` is a stable PostgreSQL global holding the
+        // current backend's PID; reading it is safe from any backend or worker context.
         let my_pid = unsafe { pg_sys::MyProcPid };
         crate::shmem::MERGE_WORKER_PID
             .get()
@@ -154,6 +157,9 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
             });
         });
         if let Err(e) = run_result {
+            // SAFETY: `FlushErrorState` clears the PostgreSQL error stack after a caught
+            // panic. Calling it after `catch_unwind` returns `Err` is the correct pattern
+            // for discarding a non-fatal error in a background worker context.
             unsafe {
                 pg_sys::FlushErrorState();
             }
@@ -193,6 +199,8 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
                 });
             });
             if run_result.is_err() {
+                // SAFETY: `FlushErrorState` clears the PostgreSQL error stack after a
+                // caught panic — safe to call from background worker context.
                 unsafe {
                     pg_sys::FlushErrorState();
                 }

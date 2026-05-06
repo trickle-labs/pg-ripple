@@ -190,6 +190,7 @@ pub(crate) fn is_endpoint_healthy(url: &str) -> bool {
 ///
 /// ENUM-02 (v0.74.0): complexity column is now SMALLINT (1=fast, 2=normal, 3=slow).
 /// The query casts back to text for backward-compatible return type.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub(crate) fn get_endpoint_complexity(url: &str) -> String {
     Spi::get_one_with_args::<String>(
@@ -381,6 +382,7 @@ pub fn register_vector_endpoint(url: &str, api_type: &str) {
 
 /// Returns `true` when `url` is registered in `_pg_ripple.vector_endpoints`
 /// with `enabled = true`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn is_vector_endpoint_registered(url: &str) -> bool {
     pgrx::Spi::get_one_with_args::<bool>(
@@ -406,6 +408,7 @@ pub fn is_vector_endpoint_registered(url: &str) -> bool {
 ///
 /// Currently supports Weaviate GraphQL, Qdrant REST, and Pinecone REST APIs.
 /// The `pgvector` api_type is handled locally (no HTTP call needed).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn query_vector_endpoint(url: &str, query_text: &str, k: i32) -> Vec<(i64, String, f64)> {
     if !is_vector_endpoint_registered(url) {
@@ -447,6 +450,7 @@ pub fn query_vector_endpoint(url: &str, query_text: &str, k: i32) -> Vec<(i64, S
 }
 
 /// Query a Weaviate v4 GraphQL `/v1/graphql` endpoint.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 fn query_weaviate_endpoint(
     base_url: &str,
@@ -518,6 +522,7 @@ fn query_weaviate_endpoint(
 }
 
 /// Query a Qdrant REST `/collections/{name}/points/search` endpoint.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 fn query_qdrant_endpoint(
     base_url: &str,
@@ -629,6 +634,7 @@ fn query_qdrant_endpoint(
 }
 
 /// Query a Pinecone REST `/query` endpoint.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 fn query_pinecone_endpoint(
     base_url: &str,
@@ -749,6 +755,7 @@ fn query_pinecone_endpoint(
 ///
 /// `iri_path` is a JSON pointer relative to each result object.
 /// `score_path` is a JSON pointer for the score field.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 fn resolve_iri_scores(
     items: Vec<serde_json::Value>,

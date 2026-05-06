@@ -216,6 +216,7 @@ pub(crate) fn build_all_predicates_union(graph_filter: Option<i64>, svc_excl: &s
 /// Mutable state carried through recursive translation.
 pub(crate) struct Ctx {
     pub(crate) alias_counter: u32,
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub(crate) opt_counter: u32,
     pub(crate) path_counter: u32,
@@ -336,6 +337,7 @@ impl Ctx {
         format!("_t{n}")
     }
 
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     fn next_opt(&mut self) -> String {
         let n = self.opt_counter;
@@ -373,6 +375,7 @@ impl Ctx {
 
     /// Translate an expression to a SQL value (dictionary ID or raw numeric).
     /// Used by expr.rs when resolving function arguments.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub(crate) fn translate_value(
         &mut self,
@@ -384,6 +387,7 @@ impl Ctx {
 
     /// Translate an expression to a SQL boolean.
     /// Used by expr.rs when resolving IF conditions.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub(crate) fn translate_filter(
         &mut self,
@@ -486,6 +490,7 @@ impl Fragment {
     }
 
     /// Render as a subquery SELECT for all bound variables.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     fn as_subquery(&self, prefix: &str) -> String {
         if self.bindings.is_empty() {

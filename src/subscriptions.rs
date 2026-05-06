@@ -96,6 +96,7 @@ mod pg_ripple {
 }
 
 /// Called from the mutation journal flush path to fire any affected subscriptions.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn notify_affected_subscriptions(affected_graph_ids: &[i64]) {
     let graph_iris: Vec<String> = affected_graph_ids

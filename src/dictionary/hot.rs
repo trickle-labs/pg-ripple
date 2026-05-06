@@ -76,6 +76,7 @@ pub fn prewarm_hot_table() {
 ///
 /// Called after encoding a new predicate or prefix IRI.
 /// DICT-01 (v0.74.0): takes (hash_hi, hash_lo) instead of hash_bytes.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn add_to_hot(id: i64, hash_hi: i64, hash_lo: i64, value: &str, kind: i16) {
     if kind != 0 {
@@ -101,6 +102,7 @@ pub fn add_to_hot(id: i64, hash_hi: i64, hash_lo: i64, value: &str, kind: i16) {
 /// Lookup a term in the hot table by its (hash_hi, hash_lo) BIGINT pair.
 ///
 /// Returns the dictionary `id` if found, or `None`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn lookup_hot(hash_hi: i64, hash_lo: i64) -> Option<i64> {
     Spi::get_one_with_args::<i64>(

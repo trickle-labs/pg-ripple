@@ -21,6 +21,7 @@ use pgrx::prelude::*;
 // ─── Schema setup ─────────────────────────────────────────────────────────────
 
 /// Create the `subject_patterns` and `object_patterns` tables if they are absent.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn initialize_pattern_tables() {
     Spi::run_with_args(

@@ -47,16 +47,19 @@ pub fn increment_cursor_pages_fetched() {
     CURSOR_PAGES_FETCHED.fetch_add(1, Ordering::Relaxed);
 }
 
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn increment_cursor_rows_streamed(n: i64) {
     CURSOR_ROWS_STREAMED.fetch_add(n, Ordering::Relaxed);
 }
 
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn increment_arrow_batches_sent(n: i64) {
     ARROW_BATCHES_SENT.fetch_add(n, Ordering::Relaxed);
 }
 
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn increment_arrow_ticket_rejections() {
     ARROW_TICKET_REJECTIONS.fetch_add(1, Ordering::Relaxed);

@@ -185,6 +185,7 @@ pub fn tabling_stats_impl() -> Vec<(i64, i64, f64, String)> {
 /// Incorporates a lightweight "data generation" counter (max SID from the
 /// statement sequence) so that the same query after a triple insert returns a
 /// different hash and bypasses the stale cache entry.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn sparql_goal_hash(query: &str) -> i64 {
     // Mix in the current max SID as a data-generation marker.

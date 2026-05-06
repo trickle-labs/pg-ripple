@@ -86,6 +86,7 @@ pub fn get_canonical(canonical: &str) -> Option<CacheEntry> {
 /// Store a translation in the cache by raw query text.
 /// Falls back to re-parsing for canonicalization; prefer `put_canonical` when
 /// the caller already holds the canonical form.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn put(query_text: &str, entry: CacheEntry) {
     let key = cache_key(query_text);

@@ -214,6 +214,7 @@ pub fn sparql_explain(query_text: &str, analyze: bool) -> String {
 /// current result set and send it via `pg_notify`.
 ///
 /// Returns `Err` with a descriptive message if the query fails or is not a SELECT.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn sparql_query_to_json(query_text: &str) -> Result<String, String> {
     let preprocessed = parse::preprocess_arq_aggregates(query_text);

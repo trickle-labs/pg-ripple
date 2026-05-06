@@ -61,6 +61,7 @@ fn get_agg_cache() -> &'static Mutex<CacheState> {
 /// Returns `Some(sqls)` on a cache hit (and increments the hit counter).
 /// Returns `None` on a miss (and increments the miss counter, creating the entry
 /// if it doesn't exist yet so the miss is tracked).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn lookup(rule_set: &str) -> Option<Vec<String>> {
     if !crate::RULE_PLAN_CACHE.get() {
@@ -85,6 +86,7 @@ pub fn lookup(rule_set: &str) -> Option<Vec<String>> {
 /// Store the compiled SQL for a rule set.
 ///
 /// Evicts the entry with the lowest hit count when the cache is full.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn store(rule_set: &str, sqls: &[String]) {
     if !crate::RULE_PLAN_CACHE.get() {
@@ -120,6 +122,7 @@ pub fn invalidate(rule_set: &str) {
 }
 
 /// Invalidate all cache entries.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn invalidate_all() {
     if let Ok(mut state) = get_cache().lock() {

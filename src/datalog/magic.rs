@@ -40,6 +40,7 @@ pub struct GoalPattern {
 
 impl GoalPattern {
     /// Return true when all three positions are free (no binding constraints).
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn is_unconstrained(&self) -> bool {
         self.s.is_none() && self.p.is_none() && self.o.is_none()

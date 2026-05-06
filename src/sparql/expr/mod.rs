@@ -461,6 +461,7 @@ pub(super) fn translate_arg_value(
 ///
 /// Handles the common cases: boolean literals, variable IS NOT NULL check,
 /// and comparison expressions.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub(super) fn translate_arg_filter(
     expr: &Expression,

@@ -40,11 +40,13 @@ use crate::datalog::{BodyLiteral, Rule, Term};
 #[derive(Debug, Clone)]
 pub struct DemandSpec {
     /// Bound subject IRI encoded as dictionary ID, or `None` for free variable.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub s: Option<i64>,
     /// Bound predicate IRI encoded as dictionary ID, or `None` for free variable.
     pub p: Option<i64>,
     /// Bound object IRI/literal encoded as dictionary ID, or `None` for free variable.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub o: Option<i64>,
 }

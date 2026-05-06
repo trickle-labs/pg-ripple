@@ -374,6 +374,7 @@ pub fn reorder_bgp(
 
 /// Per-predicate SHACL hints used by the SQL generator.
 #[derive(Debug, Clone, Default)]
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub struct PredicateHints {
     /// True if `sh:maxCount 1` is set for this predicate (at most 1 value per
@@ -390,6 +391,7 @@ pub struct PredicateHints {
 /// Looks for property shapes with `sh:maxCount` and `sh:minCount` constraints.
 /// Only applies hints when the constraint is provably global (no additional FILTER
 /// or conditional constraints in the shape JSON).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn load_predicate_hints(pred_ids: &[i64]) -> HashMap<i64, PredicateHints> {
     if pred_ids.is_empty() {
@@ -494,6 +496,7 @@ pub fn load_predicate_hints(pred_ids: &[i64]) -> HashMap<i64, PredicateHints> {
 ///
 /// When `pg_ripple.star_join_collapse = off` or there are no star groups with
 /// ≥ 2 arms, returns `(vec![], all_patterns)`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn detect_star_groups(
     patterns: &[TriplePattern],
@@ -551,6 +554,7 @@ pub fn detect_star_groups(
 
 /// Compute a selectivity cost for a single triple pattern.
 /// Factored out from `reorder_bgp` so it can be reused by `detect_star_groups`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub(super) fn pattern_cost(
     tp: &TriplePattern,

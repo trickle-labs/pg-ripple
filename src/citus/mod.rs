@@ -26,12 +26,16 @@
 //! - PT536 — Citus extension is not installed.
 
 // v0.90.0 CQ-02: pre-emptive split sub-modules
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod aggregate;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod federation;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod rls;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod sharding;
 
@@ -441,6 +445,7 @@ pub struct ShardPruneInfo {
 /// // shard_count = 32 → slot in [0..31]
 /// assert!(crate::citus::compute_shard_id(42, 32) < 32);
 /// ```
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn compute_shard_id(subject_id: i64, shard_count: i64) -> i64 {
     if shard_count <= 0 {
@@ -514,6 +519,7 @@ pub fn prune_bound_subject(logical_table: &str, subject_id: i64) -> Option<Shard
 /// With `citus_sharding_enabled = on` and subject `<http://example.org/Alice>`
 /// mapping to shard 102008, returns `"_pg_ripple.vp_1234_delta_102008"`.
 /// Without Citus or an unbound subject, returns `"_pg_ripple.vp_1234_delta"`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn resolve_shard_table(logical_table: &str, subject_id: i64) -> String {
     match prune_bound_subject(logical_table, subject_id) {
@@ -639,6 +645,7 @@ fn first_bound_subject_iri(pattern: &spargebra::algebra::GraphPattern) -> Option
 /// The role of a bound term in a triple pattern — determines which index column
 /// to use when pruning shards in Citus.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub enum TermRole {
     /// The term appears as the subject of a triple pattern.
@@ -661,6 +668,7 @@ pub enum TermRole {
 /// - Citus is not installed
 /// - The table is not distributed
 /// - The term ID does not map to a shard range
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn prune_bound_term(
     logical_table: &str,
@@ -725,6 +733,7 @@ pub fn clear_graph_shard_affinity_impl(graph_iri: &str) {
 ///
 /// Returns `None` when no affinity is registered or when the
 /// `graph_shard_affinity` table does not yet exist.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn get_graph_shard_affinity(graph_id: i64) -> Option<String> {
     Spi::get_one_with_args::<String>(
@@ -774,23 +783,27 @@ mod pg_ripple {
 ///
 /// Active only when the set has ≤ `pg_ripple.citus_prune_carry_max` entries;
 /// degrades gracefully to full fan-out above that threshold.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub struct ShardPruneSet(pub Vec<i64>);
 
 impl ShardPruneSet {
     /// Create a new empty set.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self(Vec::new())
     }
 
     /// Add a subject ID to the set.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn insert(&mut self, id: i64) {
         self.0.push(id);
     }
 
     /// Deduplicate and sort (idempotent).
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn finalize(&mut self) {
         self.0.sort_unstable();
@@ -798,6 +811,7 @@ impl ShardPruneSet {
     }
 
     /// Return `true` if the set is within the carry-forward threshold.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn is_prunable(&self) -> bool {
         let max = crate::gucs::storage::CITUS_PRUNE_CARRY_MAX.get() as usize;
@@ -818,6 +832,7 @@ impl Default for ShardPruneSet {
 /// constraint on the next hop's VP scan, narrowing the fan-out.
 ///
 /// Returns the new set of intermediate subjects for the following hop.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn prune_hop(current_subjects: &ShardPruneSet, vp_table: &str) -> ShardPruneSet {
     if !crate::gucs::storage::CITUS_SHARDING_ENABLED.get() || !current_subjects.is_prunable() {
@@ -1028,6 +1043,7 @@ mod pg_ripple_v062 {
 /// - Citus is not enabled.
 /// - The result set exceeds `pg_ripple.citus_prune_carry_max` unique subjects.
 /// - Any subject IRI is not in the dictionary.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn service_result_shard_prune_impl(subject_iris: &[String]) -> Vec<i64> {
     if !crate::gucs::storage::CITUS_SHARDING_ENABLED.get() || !is_citus_loaded() {

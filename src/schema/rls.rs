@@ -655,3 +655,34 @@ $$;
     name = "v095_schema_additions",
     requires = ["v082_schema_additions"]
 );
+
+// ─── v0.97.0 schema additions ────────────────────────────────────────────────
+// GEN-UUID-01 (v0.97.0): gen_random_uuid() availability check at CREATE EXTENSION time.
+pgrx::extension_sql!(
+    r#"
+-- GEN-UUID-01 (v0.97.0): Verify gen_random_uuid() is available.
+-- In PostgreSQL 14+, gen_random_uuid() is a built-in function that does not
+-- require the pgcrypto extension.  On PostgreSQL 18 (the only supported target)
+-- it is always present.  This check is a defensive guard for unusual build
+-- configurations; if it fires, the user should run:
+--   CREATE EXTENSION IF NOT EXISTS pgcrypto;
+DO $$
+DECLARE
+    _uuid uuid;
+BEGIN
+    _uuid := gen_random_uuid();
+    -- Function available; no action needed.
+EXCEPTION WHEN undefined_function THEN
+    RAISE WARNING
+        'pg_ripple: gen_random_uuid() is not available. '
+        'The bidi relay and SPARQL uuid() / struuid() functions will not work. '
+        'HINT: run CREATE EXTENSION IF NOT EXISTS pgcrypto; to enable it.';
+END;
+$$;
+
+INSERT INTO _pg_ripple.schema_version (version, upgraded_from, installed_at)
+    VALUES ('0.97.0', '0.96.0', clock_timestamp());
+"#,
+    name = "v097_schema_additions",
+    requires = ["v095_schema_additions"]
+);

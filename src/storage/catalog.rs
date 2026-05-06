@@ -98,12 +98,12 @@ pub static PREDICATE_CACHE: LocalPredicateCache = LocalPredicateCache;
 /// Called once from `_PG_init`.  Safe to call in both `shared_preload_libraries`
 /// and direct `CREATE EXTENSION` contexts.
 pub fn register_relcache_callback() {
+    // SAFETY: `CacheRegisterRelcacheCallback` is a standard PostgreSQL
+    // extension point for cache invalidation notifications.  The callback
+    // `relcache_inval_cb` is a C-compatible `extern "C"` function that
+    // performs only safe Rust (clearing a thread_local HashMap).
+    // The `arg` Datum is never dereferenced by our code — we pass 0.
     unsafe {
-        // SAFETY: `CacheRegisterRelcacheCallback` is a standard PostgreSQL
-        // extension point for cache invalidation notifications.  The callback
-        // `relcache_inval_cb` is a C-compatible `extern "C"` function that
-        // performs only safe Rust (clearing a thread_local HashMap).
-        // The `arg` Datum is never dereferenced by our code — we pass 0.
         pgrx::pg_sys::CacheRegisterRelcacheCallback(
             Some(relcache_inval_cb),
             pgrx::pg_sys::Datum::from(0_usize),

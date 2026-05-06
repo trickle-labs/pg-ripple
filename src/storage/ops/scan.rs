@@ -105,6 +105,7 @@ pub fn find_triples(
 }
 
 /// Collect all (s_id, p_id, o_id, g_id) from all VP tables (for export).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn all_encoded_triples(graph: Option<i64>) -> Vec<(i64, i64, i64, i64)> {
     let mut results = Vec::new();

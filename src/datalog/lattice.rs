@@ -71,6 +71,7 @@ use pgrx::prelude::*;
 
 /// Built-in lattice types available without user registration.
 #[derive(Debug, Clone, PartialEq)]
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub enum BuiltinLattice {
     /// MIN lattice: join = MIN, bottom = +infinity.
@@ -89,6 +90,7 @@ pub enum BuiltinLattice {
 
 impl BuiltinLattice {
     /// Return the name string used in the lattice catalog.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         match self {
@@ -104,6 +106,7 @@ impl BuiltinLattice {
     /// The expression takes two arguments (old value, new value) and returns
     /// the joined value. The first `%s` is the existing column expression;
     /// the second `%s` is the newly computed value expression.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn join_sql_expr(&self) -> &'static str {
         match self {
@@ -116,6 +119,7 @@ impl BuiltinLattice {
 
     /// Return the bottom element for this lattice (as a numeric dict ID placeholder).
     /// This is a sentinel value; the actual bottom is encoded when inserting.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn bottom_sentinel(&self) -> &'static str {
         match self {
@@ -127,6 +131,7 @@ impl BuiltinLattice {
     }
 
     /// Parse a lattice name string to the corresponding BuiltinLattice.
+    // Q15-01: internal API field; kept for public API surface or future extension consumers.
     #[allow(dead_code)]
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
@@ -143,6 +148,7 @@ impl BuiltinLattice {
 
 /// A registered lattice type (built-in or user-defined).
 #[derive(Debug, Clone)]
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub struct LatticeType {
     /// Lattice name (e.g. "min", "trust", "my_lattice").
@@ -289,6 +295,7 @@ pub fn get_lattice(name: &str) -> Option<LatticeType> {
 /// - The lattice type (`MIN`)
 /// - The variables to combine (`?trust1`, `?trust2`)
 #[derive(Debug, Clone)]
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub struct LatticeRule {
     /// Head predicate dictionary ID.
@@ -310,6 +317,7 @@ pub struct LatticeRule {
 /// Generates a two-part SQL statement:
 /// 1. An `INSERT … ON CONFLICT DO UPDATE` that applies the lattice join.
 /// 2. Returns the change count (used for fixpoint convergence check).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn compile_lattice_rule_to_sql(
     head_pred_id: i64,
@@ -499,6 +507,7 @@ pub fn run_infer_lattice(rule_set: &str, lattice_name: &str) -> serde_json::Valu
 /// Rule: `?x ex:trust (MIN ?t1 ?t2) :- ?x ex:knows ?y, ?y ex:trust ?t1, ?x ex:directTrust ?t2`
 ///
 /// Returns `(triples_derived, iterations)`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn run_trust_propagation_demo(
     knows_pred_iri: &str,
@@ -553,6 +562,7 @@ pub fn run_trust_propagation_demo(
 }
 
 /// Build a read expression for a predicate (dedicated table or vp_rare subquery).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 fn vp_read_expr(pred_id: i64) -> String {
     let has_dedicated = Spi::get_one_with_args::<i64>(

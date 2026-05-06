@@ -27,8 +27,10 @@
 //!   enabling the PostgreSQL planner to apply index scans early.
 
 // v0.90.0 CQ-02 / M15-13 v0.96.0: split sub-modules
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod builtins;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod prob;
 pub mod shacl_rules;

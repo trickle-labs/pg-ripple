@@ -16,6 +16,7 @@ use crate::datalog::parallel::{ParallelAnalysis, execute_with_savepoint};
 use pgrx::prelude::*;
 
 /// Analyse rule groups and return parallelism statistics.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn analyze_groups(rules: &[Rule]) -> ParallelAnalysis {
     let parallel_workers = crate::DATALOG_PARALLEL_WORKERS.get();
@@ -24,12 +25,14 @@ pub fn analyze_groups(rules: &[Rule]) -> ParallelAnalysis {
 
 /// Run full semi-naive inference with statistics.
 /// This is the primary entry point for `infer_with_stats()`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn run_with_stats(rule_set_name: &str) -> (i64, i32, Vec<String>, usize, usize) {
     super::seminaive::run_inference_seminaive_full(rule_set_name)
 }
 
 /// Execute a single stratum's SQL batch using savepoints for isolation.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn execute_stratum_batch(stmts: &[String], stratum_index: usize, worker_id: usize) -> bool {
     let savepoint_name = format!("dl_stratum_{stratum_index}_w{worker_id}");

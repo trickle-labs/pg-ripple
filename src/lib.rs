@@ -17,6 +17,9 @@
 #![cfg_attr(not(any(test, feature = "pg_test")), deny(clippy::expect_used))]
 // v0.46.0: Warn on missing doc comments for public items (rustdoc lint gate).
 #![warn(missing_docs)]
+// L15-04 (v0.97.0): Enforce 1:1 unsafe/SAFETY documentation ratio.
+#![warn(clippy::missing_safety_doc)]
+#![warn(clippy::undocumented_unsafe_blocks)]
 
 use pgrx::prelude::*;
 
@@ -284,8 +287,14 @@ fn register_executor_end_hook() {
         pg_sys::ExecutorEnd_hook = Some(pg_ripple_executor_end);
 
         #[pg_guard]
+        // SAFETY: This is a standard C FFI callback invoked by PostgreSQL. The
+        // `query_desc` pointer is valid for the duration of the call as guaranteed
+        // by the PostgreSQL executor contract. Accessing `PREV_EXECUTOR_END` is safe
+        // because the hook is installed single-threaded in `_PG_init`.
         unsafe extern "C-unwind" fn pg_ripple_executor_end(query_desc: *mut pg_sys::QueryDesc) {
             // Call the previous hook first.
+            // SAFETY: `prev` is a valid function pointer registered by PostgreSQL.
+            // `query_desc` is valid for the duration of this call.
             unsafe {
                 if let Some(prev) = PREV_EXECUTOR_END {
                     prev(query_desc);
@@ -326,6 +335,9 @@ pub extern "C-unwind" fn _PG_init() {
     // shared_preload_libraries context.  When loaded via CREATE EXTENSION the
     // hooks have already fired; skip to avoid the "PgAtomic was not
     // initialized" panic.
+    // SAFETY: `process_shared_preload_libraries_in_progress` is a stable
+    // PostgreSQL global set by the postmaster before loading shared libraries.
+    // Reading it is safe at any point during extension initialisation.
     if unsafe { pg_sys::process_shared_preload_libraries_in_progress } {
         shmem::init();
         worker::register_merge_workers();
@@ -368,6 +380,14 @@ pub extern "C-unwind" fn _PG_init() {
     // _PG_init so the actual availability check is deferred to first call of
     // pg_ripple.pg_tide_available().
 
+    // GEN-UUID-01 (v0.97.0): gen_random_uuid() availability note.
+    // In PostgreSQL 14+, gen_random_uuid() is a built-in system function and does
+    // not require pgcrypto.  For PostgreSQL 18 (our only supported target), it is
+    // always available.  The runtime check is performed via extension_sql at
+    // CREATE EXTENSION time (see src/schema/rls.rs: v097_gen_uuid_check) using a
+    // DO block that emits a WARNING if gen_random_uuid() is somehow unavailable.
+    // SPI cannot be used here in _PG_init; the check is deferred appropriately.
+
     // Schema and base tables are created by the `schema_setup` extension_sql!
     // block, which runs inside the CREATE EXTENSION transaction where SPI and
     // DDL are available.  Nothing to do here.
@@ -388,11 +408,11 @@ pub extern "C-unwind" fn _PG_init() {
 ///   when a SAVEPOINT is rolled back, preventing phantom CWB firings for
 ///   triples that were never durably written.
 fn register_xact_callback() {
+    // SAFETY: RegisterXactCallback and RegisterSubXactCallback are standard
+    // PostgreSQL callback registration APIs called from _PG_init while the
+    // postmaster holds the process lock.  Both callbacks use only Rust code
+    // with no SPI calls, making them safe to invoke from callback context.
     unsafe {
-        // SAFETY: RegisterXactCallback and RegisterSubXactCallback are standard
-        // PostgreSQL callback registration APIs called from _PG_init while the
-        // postmaster holds the process lock.  Both callbacks use only Rust code
-        // with no SPI calls, making them safe to invoke from callback context.
         pg_sys::RegisterXactCallback(Some(xact_callback_c), std::ptr::null_mut());
         pg_sys::RegisterSubXactCallback(Some(sub_xact_callback_c), std::ptr::null_mut());
     }

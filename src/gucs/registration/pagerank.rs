@@ -7,6 +7,7 @@ use pgrx::guc::{GucContext, GucFlags};
 use pgrx::prelude::*;
 
 /// Validate `pagerank_dangling_policy`: `'redistribute'` or `'ignore'`.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 unsafe extern "C-unwind" fn check_pagerank_dangling_policy(
     newval: *mut *mut std::ffi::c_char,

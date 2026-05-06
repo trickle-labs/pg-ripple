@@ -184,6 +184,7 @@ pub fn attach_timeline_trigger(pred_id: i64) {
 /// Return the current session PIT threshold (0 = no filter).
 ///
 /// Used by the SQL generator to append `AND i <= $threshold` to VP table scans.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn current_pit_threshold() -> i64 {
     Spi::get_one::<i64>(

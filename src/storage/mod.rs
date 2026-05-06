@@ -51,6 +51,7 @@ pub use ops::*;
 
 /// Initialize the extension's base schemas and tables.
 /// Called once from _PG_init to ensure all base infrastructure exists.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn initialize_schema() {
     // Create the user-visible schema if it doesn't exist.

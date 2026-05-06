@@ -203,7 +203,13 @@ pub fn init() {
         pg_sys::shmem_startup_hook = Some(shmem_ready_hook);
 
         #[pg_guard]
+        // SAFETY: This is a standard C FFI shmem_startup callback invoked by PostgreSQL
+        // after shared memory segments are mapped. Calling `prev()` chains to the
+        // previous hook which has already initialised all PgAtomics. Setting
+        // `SHMEM_READY` via an atomic store is safe from this context.
         unsafe extern "C-unwind" fn shmem_ready_hook() {
+            // SAFETY: `prev` is a valid PostgreSQL hook function pointer; calling it here
+            // is the standard hook-chaining pattern.
             unsafe {
                 if let Some(prev) = PREV_FINAL_STARTUP {
                     prev(); // initialises LAYOUT_VERSION, MERGE_WORKER_PID, TOTAL_DELTA_ROWS
@@ -227,10 +233,10 @@ pub fn poke_merge_worker() {
         return;
     }
     #[cfg(unix)]
+    // SAFETY: pid is a process ID from shared memory; we send SIGHUP to
+    // wake the merge worker from its WaitLatch call.  The worker installs
+    // a SIGHUP handler that only sets an atomic flag — safe to deliver.
     unsafe {
-        // SAFETY: pid is a process ID from shared memory; we send SIGHUP to
-        // wake the merge worker from its WaitLatch call.  The worker installs
-        // a SIGHUP handler that only sets an atomic flag — safe to deliver.
         let _ = libc::kill(pid as libc::pid_t, libc::SIGHUP);
     }
 }
@@ -341,6 +347,7 @@ pub fn clear_predicate_delta_bit(pred_id: i64) {
 /// then performed and may find no rows.
 ///
 /// Returns `true` (conservative: scan delta) when shmem is not initialised.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn predicate_may_have_delta(pred_id: i64) -> bool {
     if !SHMEM_READY.load(Ordering::Acquire) {

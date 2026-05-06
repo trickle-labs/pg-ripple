@@ -109,6 +109,7 @@ pub fn build_signed_ticket(
 /// Used by `pg_ripple_http` to verify tickets before streaming.
 ///
 /// `allow_unsigned` should be `false` in production (FLIGHT-SEC-01).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn validate_ticket(
     ticket: &serde_json::Value,

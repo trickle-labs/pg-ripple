@@ -320,6 +320,7 @@ pub(crate) fn translate_expr(
 
 // v0.56.0 dead-code audit (A-6): expr_as_text_sql is a utility function
 // used for text-comparison filters; suppress until wired into all filter paths.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub(crate) fn expr_as_text_sql(
     expr_in: &Expression,

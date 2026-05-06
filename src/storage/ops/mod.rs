@@ -4,10 +4,13 @@
 //! Insert, delete, query, graph management, prefix registry, SID API, dedup.
 
 // v0.90.0 CQ-02 / M15-13 v0.96.0: split sub-modules
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod delete;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod insert;
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod merge;
 pub mod scan;
@@ -111,6 +114,7 @@ pub fn insert_triple(s: &str, p: &str, o: &str, g: i64) -> i64 {
 ///
 /// Routes to vp_rare or dedicated table based on current predicate state.
 /// Does NOT check/trigger promotion (bulk load calls promote_rare_predicates at end).
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn insert_encoded_triple(s_id: i64, p_id: i64, o_id: i64, g: i64) -> i64 {
     if let Some(_view) = get_dedicated_vp_table(p_id) {
@@ -289,6 +293,7 @@ pub(crate) fn batch_insert_encoded(p_id: i64, rows: &[(i64, i64, i64)]) -> i64 {
 /// # Safety
 ///
 /// All values are `i64` integers; no string-format interpolation of user data.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub fn batch_insert_encoded_shard_direct(p_id: i64, rows: &[(i64, i64, i64)]) -> i64 {
     if rows.is_empty() {

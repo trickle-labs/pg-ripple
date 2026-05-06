@@ -814,6 +814,8 @@ pub fn register() {
     // loading.  `process_shared_preload_libraries_in_progress` is the correct
     // flag — `IsPostmasterEnvironment` is true in every server process and
     // cannot be used to distinguish this case.
+    // SAFETY: `process_shared_preload_libraries_in_progress` is a stable PostgreSQL
+    // global set by the postmaster; reading it is safe from any GUC registration context.
     if unsafe { pg_sys::process_shared_preload_libraries_in_progress } {
         pgrx::GucRegistry::define_int_guc(
             c"pg_ripple.dictionary_cache_size",
