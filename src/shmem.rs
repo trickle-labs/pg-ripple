@@ -226,6 +226,7 @@ pub fn poke_merge_worker() {
     if pid == 0 {
         return;
     }
+    #[cfg(unix)]
     unsafe {
         // SAFETY: pid is a process ID from shared memory; we send SIGHUP to
         // wake the merge worker from its WaitLatch call.  The worker installs

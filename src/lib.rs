@@ -404,21 +404,24 @@ fn register_xact_callback() {
 /// We forward to the Rust clear_caches function only on XACT_EVENT_ABORT and
 /// XACT_EVENT_PARALLEL_ABORT events.
 #[allow(non_snake_case)]
-unsafe extern "C-unwind" fn xact_callback_c(event: u32, _arg: *mut std::ffi::c_void) {
-    // XactEvent enum values from PostgreSQL 18 src/include/access/xact.h:
-    //   XACT_EVENT_COMMIT          = 0
-    //   XACT_EVENT_PARALLEL_COMMIT = 1
-    //   XACT_EVENT_ABORT           = 2
-    //   XACT_EVENT_PARALLEL_ABORT  = 3
-    //   XACT_EVENT_PREPARE         = 4
-    //   XACT_EVENT_PRE_COMMIT      = 5
-    if event == 2 || event == 3 {
+unsafe extern "C-unwind" fn xact_callback_c(
+    event: pgrx::pg_sys::XactEvent::Type,
+    _arg: *mut std::ffi::c_void,
+) {
+    // XactEvent enum values from PostgreSQL 18 src/include/access/xact.h.
+    // Using pg_sys::XactEvent::Type (c_uint on Unix, c_int on Windows) and
+    // the named constants ensures cross-platform ABI compatibility.
+    if event == pgrx::pg_sys::XactEvent::XACT_EVENT_ABORT
+        || event == pgrx::pg_sys::XactEvent::XACT_EVENT_PARALLEL_ABORT
+    {
         // Transaction is being rolled back: evict shmem entries inserted in
         // this transaction so stale hash→id mappings cannot pollute later txns.
         crate::dictionary::clear_caches();
         // Also clear any pending journal entries — they must not fire after rollback.
         crate::storage::mutation_journal::clear();
-    } else if event == 0 || event == 1 {
+    } else if event == pgrx::pg_sys::XactEvent::XACT_EVENT_COMMIT
+        || event == pgrx::pg_sys::XactEvent::XACT_EVENT_PARALLEL_COMMIT
+    {
         // Transaction committed successfully: dictionary rows are durable, so
         // the shmem entries are correct — just clear the tracking list.
         crate::dictionary::commit_cleanup();

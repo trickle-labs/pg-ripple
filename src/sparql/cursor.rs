@@ -136,7 +136,7 @@ impl CursorIter {
                 .unwrap_or_else(|e| pgrx::error!("CursorIter: find_cursor failed: {e}"));
 
             let table = cursor
-                .fetch(page_size)
+                .fetch(page_size as libc::c_long)
                 .unwrap_or_else(|e| pgrx::error!("CursorIter: fetch failed: {e}"));
 
             // Collect raw values and all dictionary IDs in one pass.
@@ -416,7 +416,7 @@ impl Iterator for ConstructCursorIter {
                 .unwrap_or_else(|e| pgrx::error!("ConstructCursorIter: find_cursor failed: {e}"));
 
             let table = cursor
-                .fetch(page_size)
+                .fetch(page_size as libc::c_long)
                 .unwrap_or_else(|e| pgrx::error!("ConstructCursorIter: fetch failed: {e}"));
 
             // Collect raw variable bindings (one i64 per variable per row).
