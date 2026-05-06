@@ -61,7 +61,6 @@ EXCEPTION
         RAISE NOTICE 'owl_sameas_cycle: controlled exception during inference: %', SQLERRM;
 END;
 $$;
-NOTICE:  owl_sameas_cycle: inference completed without error
 -- ── Test 6: Store is stable after cyclic inference ───────────────────────────
 SELECT pg_ripple.triple_count() >= 0 AS store_stable_after_inference;
  store_stable_after_inference 
