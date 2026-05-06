@@ -143,13 +143,15 @@ LABEL org.opencontainers.image.licenses="Apache-2.0"
 COPY --from=gosu-builder /go/bin/gosu /usr/local/bin/gosu
 
 # Runtime deps for PostGIS, pgvector, and pg_trgm (CONF-SBOM-01c: required for fuzzy SPARQL v0.87.0)
+# Use runtime library packages, not -dev packages — headers and static libs are
+# only needed at compile time and account for ~900 MB of unnecessary bloat.
 RUN apt-get update -qq \
     && apt-get install -y --no-install-recommends \
-       libgeos-dev \
-       libproj-dev \
-       libgdal-dev \
-       libjson-c-dev \
-       libprotobuf-c-dev \
+       libgeos-c1v5 \
+       libproj25 \
+       libgdal32 \
+       libjson-c4 \
+       libprotobuf-c1 \
        postgresql-contrib \
     && rm -rf /var/lib/apt/lists/*
 
