@@ -271,3 +271,74 @@ pg_ripple v0.58.0+ supports distributing VP tables across Citus worker nodes. Tr
 ```admonish tip title="Start small, measure, scale"
 Deploy with conservative settings, load your data, and run representative queries. Use `pg_ripple.stats()` and PostgreSQL's `pg_stat_user_tables` to identify bottlenecks before adding hardware.
 ```
+
+---
+
+## Sequence Exhaustion (`statement_id_seq`) {#sequence-exhaustion}
+
+**(L15-11, v0.97.0)**
+
+Every triple stored by pg_ripple receives a globally-unique **statement identifier (SID)** from
+the `_pg_ripple.statement_id_seq` sequence. The sequence is a standard PostgreSQL `BIGINT`
+sequence, which means it can count from 1 to 9,223,372,036,854,775,807 (approximately 9.2 × 10¹⁸).
+
+### How Long Until Exhaustion?
+
+| Insert Rate | Years to Exhaustion |
+|---|---|
+| 1,000 triples/second | ~292,000 years |
+| 1,000,000 triples/second | ~292 years |
+| 1,000,000,000 triples/second (theoretical max) | ~0.3 years |
+
+At realistic workloads the sequence will never exhaust. However, if you ever hit this limit,
+PostgreSQL raises:
+
+```
+ERROR:  nextval: reached maximum value of sequence "_pg_ripple.statement_id_seq" (9223372036854775807)
+```
+
+### Checking Remaining Capacity
+
+Use `pg_ripple.sid_exhaustion_years()` to check how many years remain:
+
+```sql
+SELECT pg_ripple.sid_exhaustion_years();
+-- Returns: 291723.6 (years remaining at current insert rate)
+```
+
+The function returns `NULL` if fewer than 100,000 SIDs have been assigned (the rate estimate
+is unreliable at low counts).
+
+You can also query the sequence directly:
+
+```sql
+SELECT
+    last_value                                  AS current_sid,
+    9223372036854775807 - last_value            AS sids_remaining,
+    (9223372036854775807 - last_value)::numeric
+        / NULLIF((SELECT count(*) FROM _pg_ripple.vp_rare), 0) AS approx_years_at_current_rate
+FROM _pg_ripple.statement_id_seq;
+```
+
+### Recovery Procedure (if exhaustion occurs)
+
+```admonish warning title="Data-destructive procedure"
+Resetting the sequence requires clearing all VP tables. Only do this in a development
+environment or after a full dump/restore cycle where SID uniqueness is re-established.
+```
+
+1. **Dump all data** using `pg_ripple.export_turtle()` or `pg_dump`.
+2. **Truncate all VP tables**:
+   ```sql
+   SELECT pg_ripple.truncate_all_triples();  -- development only!
+   ```
+3. **Reset the sequence**:
+   ```sql
+   ALTER SEQUENCE _pg_ripple.statement_id_seq RESTART WITH 1;
+   ```
+4. **Reload data** from the dump.
+
+In production, the correct long-term solution is to use a `CYCLE` sequence, which pg_ripple
+does not currently support (adding `CYCLE` would allow SID reuse which could cause
+correctness issues with time-travel queries). Track this in a support ticket if you project
+you will hit the limit within your deployment horizon.

@@ -402,3 +402,33 @@ feature to its implementation status.
 **Overall**: pg_ripple's RDF-star foundation (v0.4.0) covers the most widely-used SPARQL-star
 patterns. Remaining gaps depend on `spargebra` 0.x adopting the SPARQL 1.2 grammar and are
 tracked as post-v1.0.0 work (see [SPARQL 1.2 tracking](../../../plans/sparql12_tracking.md)).
+
+---
+
+## `<<` `>>` Position Support Matrix (L15-08, v0.97.0)
+
+This table summarises which positions a quoted triple pattern `<< s p o >>` can appear in
+across all SPARQL 1.1 query and update forms. Use this matrix when writing queries that
+combine RDF-star with other features.
+
+| `<< s p o >>` position | Status | Since | Notes |
+|---|---|---|---|
+| Subject position in BGP | ✅ Supported | v0.4.0 | Stored via `qt_s/qt_p/qt_o` dictionary columns |
+| Object position in BGP | ✅ Supported | v0.4.0 | |
+| Subject of quoted triple in `BIND` | ✅ Supported | v0.16.0 | Full expression support |
+| Nested quoted triples `<< << s p o >> p2 o2 >>` | ✅ Supported | v0.4.0 | Dictionary recursion |
+| In `FILTER` expressions | ✅ Supported | v0.16.0 | `isTriple()`, comparison operators |
+| In `CONSTRUCT` head | ✅ Supported | v0.16.0 | Emitted as Turtle-star |
+| In `SELECT` projections | ✅ Supported | v0.16.0 | |
+| In `INSERT DATA` | ✅ Supported | v0.16.0 | Written to `qt_s/qt_p/qt_o` columns |
+| In `DELETE DATA` | ✅ Supported | v0.16.0 | Matched and deleted via dictionary lookup |
+| Variable-in-quoted-triple `<< ?s ?p ?o >>` | ⚠️ Partial | v0.16.0 | Returns 0 rows with WARNING; ground patterns work |
+| Blank nodes inside `<< >>` | ⚠️ Partial | v0.4.0 | No document-scope isolation; avoid in multi-load scenarios |
+| In `VALUES` clause | ✅ Supported | v0.25.0 | Ground quoted triples only |
+| In `GRAPH` clause | ✅ Supported | v0.4.0 | Named graph + quoted triple combination |
+| In `UNION` branches | ✅ Supported | v0.16.0 | |
+| In `OPTIONAL` | ✅ Supported | v0.16.0 | |
+| In property paths | ❌ Not supported | — | Path expressions inside `<< >>` are not yet handled |
+| In `SERVICE` (federation) | ✅ Supported | v0.4.0 | Forwarded as-is to remote endpoint |
+| In `GROUP BY` / `HAVING` | ✅ Supported | v0.16.0 | |
+| In `ORDER BY` | ✅ Supported | v0.16.0 | Lexicographic order on serialised form |
