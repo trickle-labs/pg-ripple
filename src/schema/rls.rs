@@ -686,3 +686,50 @@ INSERT INTO _pg_ripple.schema_version (version, upgraded_from, installed_at)
     name = "v097_schema_additions",
     requires = ["v095_schema_additions"]
 );
+
+// ─── v0.98.0 schema additions ────────────────────────────────────────────────
+// SKOS support, named bundle API & graph intelligence (v0.98.0)
+pgrx::extension_sql!(
+    r#"
+-- ── BUNDLE-01: Named Datalog bundle catalog ────────────────────────────────
+-- Records which named Datalog rule bundles have been activated, in which
+-- named graph (empty = all graphs), at what version, and when.
+CREATE TABLE IF NOT EXISTS _pg_ripple.datalog_bundles (
+    bundle_name    TEXT        NOT NULL,
+    bundle_version INT         NOT NULL DEFAULT 1,
+    loaded_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    named_graph    TEXT        NOT NULL DEFAULT '',
+    PRIMARY KEY (bundle_name, named_graph)
+);
+
+-- Ensure the user-visible schema exists before creating objects in it.
+CREATE SCHEMA IF NOT EXISTS pg_ripple;
+
+-- ── FED-TRUST-01: User-facing federation endpoint trust registry ───────────
+-- Holds per-endpoint trust scores and configuration for the federation trust
+-- layer introduced in v0.98.0.  Remote SERVICE triples are tagged with
+-- pg:sourceTrust = min_confidence via RDF-star when an endpoint is registered.
+CREATE TABLE IF NOT EXISTS pg_ripple.federation_endpoints (
+    name            TEXT PRIMARY KEY,
+    endpoint_url    TEXT        NOT NULL,
+    auth_token      TEXT,
+    min_confidence  FLOAT4      NOT NULL DEFAULT 0.0
+                    CHECK (min_confidence >= 0.0 AND min_confidence <= 1.0),
+    timeout_ms      INT         NOT NULL DEFAULT 5000
+                    CHECK (timeout_ms > 0),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ── BUNDLE-02: active_datalog_bundles view ─────────────────────────────────
+-- Exposes the bundle catalog in the user-visible pg_ripple schema.
+CREATE OR REPLACE VIEW pg_ripple.active_datalog_bundles AS
+SELECT bundle_name, bundle_version, loaded_at, named_graph
+FROM _pg_ripple.datalog_bundles
+ORDER BY bundle_name, named_graph;
+
+INSERT INTO _pg_ripple.schema_version (version, upgraded_from, installed_at)
+    VALUES ('0.98.0', '0.97.0', clock_timestamp());
+"#,
+    name = "v098_schema_additions",
+    requires = ["v097_schema_additions"]
+);

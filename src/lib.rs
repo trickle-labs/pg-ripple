@@ -81,6 +81,8 @@ mod uncertain_knowledge_api;
 // v0.88.0 modules — Datalog-native PageRank & Graph Analytics
 mod pagerank;
 mod pagerank_api;
+// v0.98.0 modules — SKOS support, named bundle API & graph intelligence
+mod skos;
 
 // Re-export all GUC statics at the crate root so that `crate::SOME_GUC` paths
 // in existing code continue to work after the split.

@@ -245,4 +245,16 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.98.0 GUCs — unregistered SERVICE endpoint policy ─────────────────
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.allow_unregistered_service_endpoints",
+        c"When off (default), SERVICE clauses against endpoints not in \
+          pg_ripple.federation_endpoints raise PT-SSRF-01. \
+          Set on to allow ad-hoc federation (not recommended in production). (v0.98.0)",
+        c"",
+        &crate::gucs::federation::FEDERATION_ALLOW_UNREGISTERED_SERVICE_ENDPOINTS,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

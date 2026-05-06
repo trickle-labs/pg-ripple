@@ -1,0 +1,260 @@
+-- v0.98.0 Feature Regression Tests
+-- Tests for: SKOS support, named bundle API, explain_contradiction,
+--            federation trust layer, and coverage_map
+--
+-- These tests require the pg_ripple extension to be installed.
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+-- ─── SKOS-01: load_builtin_rules('skos') ─────────────────────────────────────
+-- Loading the 'skos' rule set must return a positive rule count.
+SELECT pg_ripple.load_rules_builtin('skos') > 0 AS skos_rules_loaded;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ skos_rules_loaded 
+-------------------
+ t
+(1 row)
+
+-- ─── SKOS-02: load_builtin_rules('skosxl') ───────────────────────────────────
+SELECT pg_ripple.load_rules_builtin('skosxl') > 0 AS skosxl_rules_loaded;
+ skosxl_rules_loaded 
+---------------------
+ t
+(1 row)
+
+-- ─── SKOS-03: load_builtin_rules('skos-transitive') ──────────────────────────
+SELECT pg_ripple.load_rules_builtin('skos-transitive') > 0 AS skos_transitive_rules_loaded;
+ skos_transitive_rules_loaded 
+------------------------------
+ t
+(1 row)
+
+-- ─── SKOS-04: Prefix registration ────────────────────────────────────────────
+-- skos: prefix must be registered after loading the rule set.
+SELECT count(*) >= 1 AS skos_prefix_registered
+FROM _pg_ripple.prefixes
+WHERE prefix = 'skos';
+ skos_prefix_registered 
+------------------------
+ t
+(1 row)
+
+-- skosxl: prefix must be registered.
+SELECT count(*) >= 1 AS skosxl_prefix_registered
+FROM _pg_ripple.prefixes
+WHERE prefix = 'skosxl';
+ skosxl_prefix_registered 
+--------------------------
+ t
+(1 row)
+
+-- ─── RB-01: load_datalog_bundle ──────────────────────────────────────────────
+-- load_datalog_bundle('skos') must succeed.
+SELECT pg_ripple.load_datalog_bundle('skos') IS NOT DISTINCT FROM NULL AS bundle_loaded;
+ bundle_loaded 
+---------------
+ f
+(1 row)
+
+-- Bundle must appear in active_datalog_bundles view.
+SELECT count(*) >= 1 AS bundle_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'skos';
+ bundle_in_catalog 
+-------------------
+ t
+(1 row)
+
+-- ─── RB-01: load_shape_bundle ────────────────────────────────────────────────
+-- load_shape_bundle('skos-integrity') must automatically activate skos-transitive.
+SELECT pg_ripple.load_shape_bundle('skos-integrity') IS NOT DISTINCT FROM NULL AS shape_bundle_loaded;
+INFO:  load_shape_bundle('skos-integrity'): implicitly activating 'skos-transitive' Datalog bundle
+ shape_bundle_loaded 
+---------------------
+ f
+(1 row)
+
+-- skos-integrity and skos-transitive must both appear in the catalog.
+SELECT count(*) >= 1 AS integrity_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'skos-integrity';
+ integrity_in_catalog 
+----------------------
+ t
+(1 row)
+
+SELECT count(*) >= 1 AS transitive_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'skos-transitive';
+ transitive_in_catalog 
+-----------------------
+ t
+(1 row)
+
+-- ─── RB-01: active_datalog_bundles view ──────────────────────────────────────
+-- View must be queryable.
+SELECT count(*) >= 0 AS view_queryable
+FROM pg_ripple.active_datalog_bundles;
+ view_queryable 
+----------------
+ t
+(1 row)
+
+-- ─── RB-03: federation_endpoints table ───────────────────────────────────────
+-- Table must exist.
+SELECT count(*) >= 0 AS federation_endpoints_exists
+FROM pg_ripple.federation_endpoints;
+ federation_endpoints_exists 
+-----------------------------
+ t
+(1 row)
+
+-- Insert and select an endpoint.
+INSERT INTO pg_ripple.federation_endpoints (name, endpoint_url, min_confidence)
+VALUES ('test-endpoint', 'https://sparql.example.org/query', 0.7);
+SELECT name, endpoint_url, min_confidence >= 0.0 AS conf_non_negative
+FROM pg_ripple.federation_endpoints
+WHERE name = 'test-endpoint';
+     name      |           endpoint_url           | conf_non_negative 
+---------------+----------------------------------+-------------------
+ test-endpoint | https://sparql.example.org/query | t
+(1 row)
+
+-- Cleanup.
+DELETE FROM pg_ripple.federation_endpoints WHERE name = 'test-endpoint';
+-- ─── RB-03: allow_unregistered_service_endpoints GUC ─────────────────────────
+-- GUC must exist with default value 'off'.
+SHOW pg_ripple.allow_unregistered_service_endpoints;
+ pg_ripple.allow_unregistered_service_endpoints 
+------------------------------------------------
+ off
+(1 row)
+
+-- Can be enabled.
+SET pg_ripple.allow_unregistered_service_endpoints = on;
+SHOW pg_ripple.allow_unregistered_service_endpoints;
+ pg_ripple.allow_unregistered_service_endpoints 
+------------------------------------------------
+ on
+(1 row)
+
+-- Reset.
+RESET pg_ripple.allow_unregistered_service_endpoints;
+SHOW pg_ripple.allow_unregistered_service_endpoints;
+ pg_ripple.allow_unregistered_service_endpoints 
+------------------------------------------------
+ off
+(1 row)
+
+-- ─── SKOS-05: SQL helpers callable ───────────────────────────────────────────
+-- skos_ancestors must be callable (may return empty for unknown IRI).
+SELECT count(*) >= 0 AS ancestors_callable
+FROM pg_ripple.skos_ancestors('http://skos.test/unknown');
+ ancestors_callable 
+--------------------
+ t
+(1 row)
+
+-- skos_descendants must be callable.
+SELECT count(*) >= 0 AS descendants_callable
+FROM pg_ripple.skos_descendants('http://skos.test/unknown');
+ descendants_callable 
+----------------------
+ t
+(1 row)
+
+-- skos_label must return NULL for unknown concept.
+SELECT pg_ripple.skos_label('http://skos.test/unknown') IS NULL AS label_null_for_unknown;
+ label_null_for_unknown 
+------------------------
+ t
+(1 row)
+
+-- skos_related must be callable.
+SELECT count(*) >= 0 AS related_callable
+FROM pg_ripple.skos_related('http://skos.test/unknown');
+ related_callable 
+------------------
+ t
+(1 row)
+
+-- skos_siblings must be callable.
+SELECT count(*) >= 0 AS siblings_callable
+FROM pg_ripple.skos_siblings('http://skos.test/unknown');
+ siblings_callable 
+-------------------
+ t
+(1 row)
+
+-- ─── RB-02: explain_contradiction callable ────────────────────────────────────
+-- explain_contradiction must return 0 rows for an unknown subject.
+SELECT count(*) = 0 AS no_contradictions_for_unknown
+FROM pg_ripple.explain_contradiction('http://skos.test/unknown');
+ no_contradictions_for_unknown 
+-------------------------------
+ t
+(1 row)
+
+-- explain_contradiction_json must return an empty array for unknown subject.
+SELECT pg_ripple.explain_contradiction_json('http://skos.test/unknown') = '[]'::jsonb
+    AS json_empty_for_unknown;
+ json_empty_for_unknown 
+------------------------
+ t
+(1 row)
+
+-- ─── RB-04: coverage_map callable ────────────────────────────────────────────
+-- coverage_map must be callable (may return empty without SKOS data).
+SELECT count(*) >= 0 AS coverage_map_callable
+FROM pg_ripple.coverage_map();
+ coverage_map_callable 
+-----------------------
+ t
+(1 row)
+
+-- ─── validate_skos callable ──────────────────────────────────────────────────
+-- validate_skos must return 0 violations against empty graph.
+SELECT count(*) = 0 AS no_violations_on_empty
+FROM pg_ripple.validate_skos();
+ no_violations_on_empty 
+------------------------
+ t
+(1 row)
+
+-- ─── Version check ───────────────────────────────────────────────────────────
+-- compiled_version must be 0.98.0.
+SELECT value = '0.98.0' AS version_is_0_98_0
+FROM pg_ripple.diagnostic_report()
+WHERE key = 'compiled_version';
+ version_is_0_98_0 
+-------------------
+ t
+(1 row)
+
+-- ─── Cleanup ─────────────────────────────────────────────────────────────────
+SELECT pg_ripple.drop_rules('skos') >= 0 AS skos_cleanup_ok;
+ skos_cleanup_ok 
+-----------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('skosxl') >= 0 AS skosxl_cleanup_ok;
+ skosxl_cleanup_ok 
+-------------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('skos-transitive') >= 0 AS transitive_cleanup_ok;
+ transitive_cleanup_ok 
+-----------------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('skos-integrity') >= 0 AS integrity_cleanup_ok;
+ integrity_cleanup_ok 
+----------------------
+ t
+(1 row)
+
+DELETE FROM _pg_ripple.datalog_bundles;

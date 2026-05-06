@@ -76,6 +76,7 @@
 - [LLM Workflow — NL to Knowledge Graph Answer](cookbook/llm-workflow.md)
 - [Federation with Wikidata and DBpedia](cookbook/federation-wikidata.md)
 - [SHACL + Datalog Data Quality Pipeline](cookbook/shacl-datalog-quality.md)
+- [SKOS Thesaurus Management](cookbook/skos-thesaurus.md)
 
 ---
 

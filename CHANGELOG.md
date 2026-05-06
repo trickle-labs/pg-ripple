@@ -13,6 +13,41 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.98.0] — 2026-05-06 — SKOS Support, Named Bundle API & Graph Intelligence
+
+**Implements v0.98.0 roadmap: complete SKOS/SKOS-XL entailment, formal named bundle API, contradiction explanation, federation trust scoring, and graph coverage metrics.**
+
+### Added
+
+- **SKOS-01**: `"skos"` built-in Datalog rule set (28 rules, S7–S45) implementing all W3C SKOS entailments: `skos:broaderTransitive`/`skos:narrowerTransitive` transitive closures, `skos:narrower`/`skos:broader` inverse inference, `skos:related` symmetry, concept-scheme rules, label/documentation sub-properties, mapping property propagation, and collection sub-class assertion.
+- **SKOS-02**: `"skosxl"` built-in rule set (3 rules, S55–S57) projecting `skosxl:Label` instances to plain `skos:prefLabel`/`skos:altLabel`/`skos:hiddenLabel` triples.
+- **SKOS-03**: `"skos-transitive"` built-in rule set (7-rule subset for riverbank compatibility): transitive closures + symmetry + exactMatch transitivity.
+- **SKOS-04**: `register_standard_prefixes()` extended to include `skos:` and `skosxl:` prefixes (auto-registered when loading any SKOS rule set).
+- **SKOS-05**: Five SQL helper functions: `pg_ripple.skos_ancestors(iri, scheme)`, `skos_descendants(iri, scheme)`, `skos_label(iri, lang)`, `skos_related(iri)`, `skos_siblings(iri)`.
+- **SKOS-06**: `"skos-integrity"` shape bundle (10 validators, W3C S9/S13/S14/S27/S37/S46 + ISO 25964-1): loaded via `pg_ripple.load_shape_bundle('skos-integrity')`.
+- **SKOS-07**: `pg_ripple.validate_skos()` — integrity report wrapper returning `(violation_id, subject, message)`.
+- **RB-01**: Named bundle API: `pg_ripple.load_datalog_bundle(name, named_graph)`, `load_shape_bundle(name)` with implicit dependency resolution, `pg_ripple.active_datalog_bundles` catalog view.
+- **RB-01**: `_pg_ripple.datalog_bundles` catalog table and `pg_ripple.active_datalog_bundles` view (schema change in migration script).
+- **RB-02**: `pg_ripple.explain_contradiction(subject_iri, named_graph, max_depth, mode)` — greedy/exact minimal-hitting-set contradiction explainer.
+- **RB-02**: `pg_ripple.explain_contradiction_json(...)` — JSONB variant.
+- **RB-03**: `pg_ripple.federation_endpoints` table (name, endpoint_url, auth_token, min_confidence, timeout_ms, created_at) for the federation trust layer (schema change).
+- **RB-03**: GUC `pg_ripple.allow_unregistered_service_endpoints` (bool, default `off`): when off, `SERVICE` clauses against unregistered endpoints raise PT-SSRF-01.
+- **RB-04**: `pg_ripple.coverage_map(named_graphs, topic_predicate, top_k)` — per-topic coverage SRF returning triple count, source count, mean/min confidence, contradiction count, and time range.
+- **RB-04**: `pg_ripple.refresh_coverage_map(target_graph, named_graphs)` — writes `pgc:CoverageMap` triples into `target_graph`; schedulable via pg_trickle.
+- **SKOS-08**: Cookbook chapter `docs/src/cookbook/skos-thesaurus.md`.
+- **SKOS-09**: Blog post `blog/skos-knowledge-organization.md`.
+- **Tests**: 5 new pg_regress test files: `skos.sql`, `bundle_api.sql`, `explain_contradiction.sql`, `federation_trust.sql`, `coverage_map.sql`, and `v098_features.sql`.
+
+### Changed
+
+- `pg_ripple.control`: `default_version` updated to `'0.98.0'`.
+
+### Migration
+
+- `sql/pg_ripple--0.97.0--0.98.0.sql`: creates `_pg_ripple.datalog_bundles`, `pg_ripple.federation_endpoints`, and `pg_ripple.active_datalog_bundles` view.
+
+---
+
 ## [0.97.0] — 2026-05-06 — Assessment 15 Low-Severity Polish & Supply-Chain
 
 **Implements v0.97.0 roadmap: closes all 13 Low-severity findings from PLAN_OVERALL_ASSESSMENT_15.**

@@ -93,3 +93,11 @@ pub static FEDERATION_CIRCUIT_BREAKER_RESET_SECONDS: pgrx::GucSetting<i32> =
 /// immediately rejected.  Default 10 s (shorter than the 30 s query timeout).
 pub static FEDERATION_CONNECT_TIMEOUT_SECS: pgrx::GucSetting<i32> =
     pgrx::GucSetting::<i32>::new(10);
+
+// ─── v0.98.0 federation GUCs — unregistered SERVICE endpoint policy ──────────
+
+/// GUC: when `off` (default), executing a `SERVICE` clause against an endpoint
+/// not registered in `pg_ripple.federation_endpoints` raises PT-SSRF-01.
+/// Set to `on` to allow ad-hoc federation (not recommended in production).
+pub static FEDERATION_ALLOW_UNREGISTERED_SERVICE_ENDPOINTS: pgrx::GucSetting<bool> =
+    pgrx::GucSetting::<bool>::new(false);

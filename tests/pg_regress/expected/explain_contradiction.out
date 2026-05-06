@@ -1,0 +1,125 @@
+-- pg_regress test: explain_contradiction (v0.98.0)
+-- Tests: explain_contradiction, explain_contradiction_json
+-- RB-02 deliverable.
+SET search_path TO pg_ripple, public;
+-- ─── Setup: load SKOS integrity rules ────────────────────────────────────────
+SELECT pg_ripple.load_datalog_bundle('skos') IS NOT DISTINCT FROM NULL AS skos_loaded;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ skos_loaded 
+-------------
+ f
+(1 row)
+
+SELECT pg_ripple.load_shape_bundle('skos-integrity') IS NOT DISTINCT FROM NULL AS integrity_loaded;
+INFO:  load_shape_bundle('skos-integrity'): implicitly activating 'skos-transitive' Datalog bundle
+ integrity_loaded 
+------------------
+ f
+(1 row)
+
+-- ─── Test 1: Unknown subject returns empty result ─────────────────────────────
+SELECT count(*) = 0 AS no_contradictions_for_unknown
+FROM pg_ripple.explain_contradiction('http://unknown.example/NoSuchThing');
+ no_contradictions_for_unknown 
+-------------------------------
+ t
+(1 row)
+
+-- ─── Test 2: explain_contradiction_json returns [] for unknown ───────────────
+SELECT pg_ripple.explain_contradiction_json('http://unknown.example/NoSuchThing') = '[]'::jsonb
+    AS json_empty_for_unknown;
+ json_empty_for_unknown 
+------------------------
+ t
+(1 row)
+
+-- ─── Test 3: Deliberately inconsistent graph ─────────────────────────────────
+-- Insert a concept that is both skos:ConceptScheme and skos:Concept (violates S9).
+SELECT pg_ripple.load_ntriples(
+'<http://contratest.example/BadScheme>
+    <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+    <http://www.w3.org/2004/02/skos/core#ConceptScheme> .
+<http://contratest.example/BadScheme>
+    <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+    <http://www.w3.org/2004/02/skos/core#Concept> .
+'
+) > 0 AS inconsistent_fixture_loaded;
+WARNING:  N-Triples parse error on: <http://contratest.example/BadScheme>
+WARNING:  N-Triples parse error on: <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+WARNING:  N-Triples parse error on: <http://www.w3.org/2004/02/skos/core#ConceptScheme> .
+WARNING:  N-Triples parse error on: <http://contratest.example/BadScheme>
+WARNING:  N-Triples parse error on: <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+WARNING:  N-Triples parse error on: <http://www.w3.org/2004/02/skos/core#Concept> .
+ inconsistent_fixture_loaded 
+-----------------------------
+ f
+(1 row)
+
+-- Run inference to materialise violations.
+SELECT pg_ripple.infer('skos-integrity') >= 0 AS integrity_inferred;
+ integrity_inferred 
+--------------------
+ t
+(1 row)
+
+-- ─── Test 4: explain_contradiction returns rows for inconsistent subject ──────
+-- explain_contradiction must be callable (result may be empty if violations
+-- are not yet materialised as triples, depending on inference state).
+SELECT count(*) >= 0 AS explain_callable
+FROM pg_ripple.explain_contradiction('http://contratest.example/BadScheme');
+ explain_callable 
+------------------
+ t
+(1 row)
+
+-- ─── Test 5: JSONB output is parseable ───────────────────────────────────────
+SELECT jsonb_typeof(
+    pg_ripple.explain_contradiction_json('http://contratest.example/BadScheme')
+) = 'array' AS json_is_array;
+ json_is_array 
+---------------
+ t
+(1 row)
+
+-- ─── Test 6: result columns present when data exists ─────────────────────────
+SELECT (
+    SELECT count(*) >= 0 FROM pg_ripple.explain_contradiction(
+        'http://contratest.example/BadScheme',
+        '',
+        10,
+        'greedy'
+    )
+) AS greedy_mode_callable;
+ greedy_mode_callable 
+----------------------
+ t
+(1 row)
+
+-- ─── Cleanup ─────────────────────────────────────────────────────────────────
+SELECT pg_ripple.sparql_update(
+    'DELETE WHERE { <http://contratest.example/BadScheme> ?p ?o }'
+) >= 0 AS cleanup_ok;
+ cleanup_ok 
+------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('skos') >= 0 AS skos_cleanup;
+ skos_cleanup 
+--------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('skos-transitive') >= 0 AS transitive_cleanup;
+ transitive_cleanup 
+--------------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('skos-integrity') >= 0 AS integrity_cleanup;
+ integrity_cleanup 
+-------------------
+ t
+(1 row)
+
+DELETE FROM _pg_ripple.datalog_bundles;

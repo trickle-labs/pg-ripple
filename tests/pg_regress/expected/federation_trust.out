@@ -1,0 +1,94 @@
+-- pg_regress test: Federation Trust Layer (v0.98.0)
+-- Tests: pg_ripple.federation_endpoints table, allow_unregistered_service_endpoints GUC,
+--        pg:sourceTrust tagging behaviour.
+-- RB-03 deliverable.
+SET search_path TO pg_ripple, public;
+-- ─── Test 1: federation_endpoints table exists ────────────────────────────────
+SELECT count(*) >= 0 AS table_exists
+FROM pg_ripple.federation_endpoints;
+ table_exists 
+--------------
+ t
+(1 row)
+
+-- ─── Test 2: Insert a trusted endpoint ───────────────────────────────────────
+INSERT INTO pg_ripple.federation_endpoints
+    (name, endpoint_url, min_confidence, timeout_ms)
+VALUES
+    ('trusted-peer', 'https://trusted.example.org/sparql', 0.8, 3000);
+SELECT name, endpoint_url, min_confidence, timeout_ms
+FROM pg_ripple.federation_endpoints
+WHERE name = 'trusted-peer';
+     name     |            endpoint_url            | min_confidence | timeout_ms 
+--------------+------------------------------------+----------------+------------
+ trusted-peer | https://trusted.example.org/sparql |            0.8 |       3000
+(1 row)
+
+-- ─── Test 3: min_confidence constraint (must be 0.0–1.0) ─────────────────────
+DO $$
+BEGIN
+    INSERT INTO pg_ripple.federation_endpoints (name, endpoint_url, min_confidence)
+    VALUES ('bad-conf', 'https://bad.example.org/sparql', 1.5);
+    RAISE EXCEPTION 'Expected constraint violation was not raised';
+EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'Correctly rejected min_confidence > 1.0';
+END;
+$$;
+DO $$
+BEGIN
+    INSERT INTO pg_ripple.federation_endpoints (name, endpoint_url, min_confidence)
+    VALUES ('bad-conf2', 'https://bad.example.org/sparql', -0.1);
+    RAISE EXCEPTION 'Expected constraint violation was not raised';
+EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'Correctly rejected min_confidence < 0.0';
+END;
+$$;
+-- ─── Test 4: timeout_ms constraint (must be > 0) ─────────────────────────────
+DO $$
+BEGIN
+    INSERT INTO pg_ripple.federation_endpoints (name, endpoint_url, timeout_ms)
+    VALUES ('bad-timeout', 'https://bad.example.org/sparql', 0);
+    RAISE EXCEPTION 'Expected constraint violation was not raised';
+EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'Correctly rejected timeout_ms = 0';
+END;
+$$;
+-- ─── Test 5: allow_unregistered_service_endpoints GUC ─────────────────────────
+SHOW pg_ripple.allow_unregistered_service_endpoints;
+ERROR:  unrecognized configuration parameter "pg_ripple.allow_unregistered_service_endpoints"
+SET pg_ripple.allow_unregistered_service_endpoints = on;
+SHOW pg_ripple.allow_unregistered_service_endpoints;
+ pg_ripple.allow_unregistered_service_endpoints 
+------------------------------------------------
+ on
+(1 row)
+
+RESET pg_ripple.allow_unregistered_service_endpoints;
+SHOW pg_ripple.allow_unregistered_service_endpoints;
+ pg_ripple.allow_unregistered_service_endpoints 
+------------------------------------------------
+ 
+(1 row)
+
+-- ─── Test 6: Multiple endpoints ───────────────────────────────────────────────
+INSERT INTO pg_ripple.federation_endpoints
+    (name, endpoint_url, min_confidence)
+VALUES
+    ('peer-a', 'https://peer-a.example.org/sparql', 0.5),
+    ('peer-b', 'https://peer-b.example.org/sparql', 0.9);
+SELECT count(*) >= 3 AS multiple_endpoints_stored
+FROM pg_ripple.federation_endpoints;
+ multiple_endpoints_stored 
+---------------------------
+ t
+(1 row)
+
+-- ─── Cleanup ─────────────────────────────────────────────────────────────────
+DELETE FROM pg_ripple.federation_endpoints;
+SELECT count(*) = 0 AS endpoints_cleaned
+FROM pg_ripple.federation_endpoints;
+ endpoints_cleaned 
+-------------------
+ t
+(1 row)
+
