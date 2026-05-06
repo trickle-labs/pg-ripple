@@ -52,9 +52,11 @@ curl -G http://localhost:7878/sparql \
 
 | Extension | Version | Notes |
 |-----------|---------|-------|
-| pg_ripple | 0.98.0 | This release |
-| PostGIS | 3.4.3 | Geospatial support |
-| pgvector | 0.7.4 | Vector index (HNSW / IVFFlat) |
+| pg_ripple | 0.98.0 | RDF triple store with native SPARQL |
+| PostGIS | 3.5.6 | Geospatial queries via GeoSPARQL |
+| pgvector | 0.8.2 | Vector similarity search for hybrid SPARQL + semantic |
+| pg_trickle | 0.46.0 | Incremental materialised SPARQL views |
+| pg_tide | 0.4.0 | Relay, outbox, and inbox for CDC |
 
 ## Environment Variables
 
