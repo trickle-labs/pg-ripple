@@ -27,23 +27,20 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 - **L15-04**: `#![warn(clippy::missing_safety_doc)]` and
   `#![warn(clippy::undocumented_unsafe_blocks)]` added to `src/lib.rs`.  All unsafe blocks
   now have `// SAFETY:` comments preceding the `unsafe` keyword (14 blocks fixed).
-- **L15-05**: Q15-xx justification convention: `// Q15-01:` comments added before all
-  `#[allow(dead_code)]` annotations without existing justification. Searchable via
-  `grep -rn 'Q15-' src/`.
-- **L15-06**: `gen_random_uuid()` availability check added to extension setup SQL
-  (`extension_sql!` block in `src/schema/rls.rs`). Emits a `WARNING` if the function
-  is unavailable (defensive guard; always passes on PostgreSQL 18).
-- **L15-08**: RDF-star `<<>>` position support matrix added to
-  `docs/src/reference/sparql-compliance.md` covering 18 positions across all SPARQL
-  query/update forms.
-- **L15-09**: `cargo doc --no-deps` with `RUSTDOCFLAGS="-D missing_docs"` added as a
-  CI gate in the `test` job, enforcing zero missing-documentation warnings.
+- **L15-05**: Q15-xx justification convention: `// Q15-01:` comments added to `src/` (128 sites; see `roadmap/v0.97.0.md`).
+  Searchable via `grep -rn 'Q15-' src/`.
+- **L15-06**: `gen_random_uuid()` availability check added to `sql/pg_ripple--0.96.0--0.97.0.sql`
+  (DO block GEN-UUID-01) and `src/schema/rls.rs` (`extension_sql!` block). Emits a
+  `WARNING` if the function is unavailable (always passes on PostgreSQL 18).
+- **L15-08**: RDF-star `<<>>` position support matrix added to `docs/src/reference/sparql-compliance.md`
+  covering 18 positions across all SPARQL query/update forms.
+- **L15-09**: `cargo doc --no-deps` with `RUSTDOCFLAGS="-D missing_docs"` added to `.github/workflows/ci.yml`
+  (`test` job), enforcing zero missing-documentation warnings.
 - **L15-10**: `HIGHEST_CHECKPOINT` in `tests/test_migration_chain.sh` is now
   auto-computed from `ls sql/pg_ripple--*--*.sql | sort -V | tail -1`, eliminating the
   hand-maintained constant that caused MIGCHAIN-SYNC failures.
-- **L15-11**: New "Sequence Exhaustion (`statement_id_seq`)" section added to
-  `docs/src/operations/scaling.md` documenting exhaustion rates, monitoring query,
-  and recovery procedure.
+- **L15-11**: New "Sequence Exhaustion (`statement_id_seq`)" section added to `docs/src/operations/scaling.md`
+  documenting exhaustion rates, monitoring query, and recovery procedure.
 - **L15-12**: `tests/pg_regress/sql/owl_sameas_cycle.sql` regression test added,
   asserting graceful handling of symmetric, triangular, and self-referential
   `owl:sameAs` cycles (no infinite loop; store stable after inference).
