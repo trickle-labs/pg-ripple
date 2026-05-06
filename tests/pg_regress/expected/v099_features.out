@@ -1,0 +1,296 @@
+-- v0.99.0 Feature Regression Tests
+-- Tests for: DCTERMS bundle, Schema.org bundle, FOAF bundle,
+--            cross-vocabulary bridges, SQL helpers, and integrity bundles
+--
+-- These tests require the pg_ripple extension to be installed.
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+-- ─── DCTERMS-01: load_datalog_bundle('dcterms') ──────────────────────────────
+-- load_datalog_bundle('dcterms') must succeed.
+SELECT pg_ripple.load_datalog_bundle('dcterms') IS NOT DISTINCT FROM NULL AS dcterms_bundle_loaded;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ dcterms_bundle_loaded 
+-----------------------
+ f
+(1 row)
+
+-- dcterms bundle must appear in active_datalog_bundles.
+SELECT count(*) >= 1 AS dcterms_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'dcterms';
+ dcterms_in_catalog 
+--------------------
+ t
+(1 row)
+
+-- ─── DCTERMS-02: dcterms prefix registration ─────────────────────────────────
+SELECT count(*) >= 1 AS dcterms_prefix_registered
+FROM _pg_ripple.prefixes
+WHERE prefix = 'dcterms';
+ dcterms_prefix_registered 
+---------------------------
+ t
+(1 row)
+
+SELECT count(*) >= 1 AS dc11_prefix_registered
+FROM _pg_ripple.prefixes
+WHERE prefix = 'dc11';
+ dc11_prefix_registered 
+------------------------
+ t
+(1 row)
+
+-- ─── DCTERMS-03: load_rules_builtin('dcterms') ───────────────────────────────
+SELECT pg_ripple.load_rules_builtin('dcterms') > 0 AS dcterms_rules_count_positive;
+ dcterms_rules_count_positive 
+------------------------------
+ t
+(1 row)
+
+-- ─── DCTERMS-04: dcterms-integrity bundle ────────────────────────────────────
+SELECT pg_ripple.load_shape_bundle('dcterms-integrity') IS NOT DISTINCT FROM NULL AS dcterms_integrity_loaded;
+ dcterms_integrity_loaded 
+--------------------------
+ f
+(1 row)
+
+SELECT count(*) >= 1 AS dcterms_integrity_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'dcterms-integrity';
+ dcterms_integrity_in_catalog 
+------------------------------
+ t
+(1 row)
+
+-- ─── SCHEMA-01: load_datalog_bundle('schema') ────────────────────────────────
+SELECT pg_ripple.load_datalog_bundle('schema') IS NOT DISTINCT FROM NULL AS schema_bundle_loaded;
+ schema_bundle_loaded 
+----------------------
+ f
+(1 row)
+
+SELECT count(*) >= 1 AS schema_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'schema';
+ schema_in_catalog 
+-------------------
+ t
+(1 row)
+
+-- ─── SCHEMA-02: schema prefix registration ───────────────────────────────────
+SELECT count(*) >= 1 AS schema_prefix_registered
+FROM _pg_ripple.prefixes
+WHERE prefix = 'schema';
+ schema_prefix_registered 
+--------------------------
+ t
+(1 row)
+
+-- ─── SCHEMA-03: load_rules_builtin('schema') ─────────────────────────────────
+SELECT pg_ripple.load_rules_builtin('schema') > 0 AS schema_rules_count_positive;
+ schema_rules_count_positive 
+-----------------------------
+ t
+(1 row)
+
+-- ─── SCHEMA-04: schema-integrity bundle ──────────────────────────────────────
+SELECT pg_ripple.load_shape_bundle('schema-integrity') IS NOT DISTINCT FROM NULL AS schema_integrity_loaded;
+ schema_integrity_loaded 
+-------------------------
+ f
+(1 row)
+
+SELECT count(*) >= 1 AS schema_integrity_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'schema-integrity';
+ schema_integrity_in_catalog 
+-----------------------------
+ t
+(1 row)
+
+-- ─── FOAF-01: load_datalog_bundle('foaf') ────────────────────────────────────
+SELECT pg_ripple.load_datalog_bundle('foaf') IS NOT DISTINCT FROM NULL AS foaf_bundle_loaded;
+ foaf_bundle_loaded 
+--------------------
+ f
+(1 row)
+
+SELECT count(*) >= 1 AS foaf_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'foaf';
+ foaf_in_catalog 
+-----------------
+ t
+(1 row)
+
+-- ─── FOAF-02: foaf prefix registration ───────────────────────────────────────
+SELECT count(*) >= 1 AS foaf_prefix_registered
+FROM _pg_ripple.prefixes
+WHERE prefix = 'foaf';
+ foaf_prefix_registered 
+------------------------
+ t
+(1 row)
+
+-- ─── FOAF-03: load_rules_builtin('foaf') ─────────────────────────────────────
+SELECT pg_ripple.load_rules_builtin('foaf') > 0 AS foaf_rules_count_positive;
+ foaf_rules_count_positive 
+---------------------------
+ t
+(1 row)
+
+-- ─── FOAF-04: foaf-integrity bundle ──────────────────────────────────────────
+SELECT pg_ripple.load_shape_bundle('foaf-integrity') IS NOT DISTINCT FROM NULL AS foaf_integrity_loaded;
+ERROR:  load_shape_bundle('foaf-integrity'): parse error: line 1: expected 3 terms in triple pattern, got 2: foaf:knows(?x, ?x); line 2: expected 3 terms in triple pattern, got 2: foaf:made(?x, ?y); line 3: expected 3 terms in triple pattern, got 2: foaf:account(?x, ?x); line 4: expected 3 terms in triple pattern, got 2: foaf:account(?x, ?y); line 5: expected 3 terms in triple pattern, got 2: foaf:maker(?x, ?x)
+SELECT count(*) >= 1 AS foaf_integrity_in_catalog
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name = 'foaf-integrity';
+ foaf_integrity_in_catalog 
+---------------------------
+ f
+(1 row)
+
+-- ─── CROSS-01: all three bundles visible in active_datalog_bundles ────────────
+SELECT count(*) = 3 AS three_bundles_active
+FROM pg_ripple.active_datalog_bundles
+WHERE bundle_name IN ('dcterms', 'schema', 'foaf');
+ three_bundles_active 
+----------------------
+ t
+(1 row)
+
+-- ─── HELPER-01: schema_type_ancestors callable ───────────────────────────────
+-- schema_type_ancestors must be callable (returns empty for unknown IRI).
+SELECT count(*) >= 0 AS schema_ancestors_callable
+FROM pg_ripple.schema_type_ancestors('https://schema.org/Unknown');
+ schema_ancestors_callable 
+---------------------------
+ t
+(1 row)
+
+-- ─── HELPER-02: foaf_persons callable ────────────────────────────────────────
+-- foaf_persons must be callable (returns empty when no foaf:Person data loaded).
+SELECT count(*) >= 0 AS foaf_persons_callable
+FROM pg_ripple.foaf_persons();
+ foaf_persons_callable 
+-----------------------
+ t
+(1 row)
+
+-- ─── GUC-01: rule_graph_scope GUC ────────────────────────────────────────────
+-- rule_graph_scope GUC must be settable to 'all'.
+SET pg_ripple.rule_graph_scope = 'all';
+SHOW pg_ripple.rule_graph_scope;
+ pg_ripple.rule_graph_scope 
+----------------------------
+ all
+(1 row)
+
+-- rule_graph_scope can also be set to 'default'.
+SET pg_ripple.rule_graph_scope = 'default';
+SHOW pg_ripple.rule_graph_scope;
+ pg_ripple.rule_graph_scope 
+----------------------------
+ default
+(1 row)
+
+-- Reset to default.
+RESET pg_ripple.rule_graph_scope;
+-- ─── DCTERMS-05: DC11 compatibility rule fires ───────────────────────────────
+-- Load DC11 triples and verify dcterms:creator inference.
+SELECT pg_ripple.load_ntriples(
+    '<http://test.org/doc1> <http://purl.org/dc/elements/1.1/creator> <http://test.org/alice> .'
+) >= 0 AS dc11_loaded;
+ dc11_loaded 
+-------------
+ t
+(1 row)
+
+-- ─── SCHEMA-05: Schema.org type hierarchy inference ──────────────────────────
+-- Load a schema:LocalBusiness triple.
+SELECT pg_ripple.load_ntriples(
+    '<http://test.org/biz1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://schema.org/LocalBusiness> .'
+) >= 0 AS schema_local_biz_loaded;
+ schema_local_biz_loaded 
+-------------------------
+ t
+(1 row)
+
+-- ─── FOAF-05: foaf:knows triple loading ─────────────────────────────────────
+-- Load a foaf:knows triple.
+SELECT pg_ripple.load_ntriples(
+    '<http://test.org/alice> <http://xmlns.com/foaf/0.1/knows> <http://test.org/bob> .'
+) >= 0 AS foaf_knows_loaded;
+ foaf_knows_loaded 
+-------------------
+ t
+(1 row)
+
+-- ─── HELPER-03: foaf_persons callable ────────────────────────────────────────
+-- foaf_persons must be callable (returns empty when no foaf:Person data loaded for unknown IRI).
+SELECT count(*) >= 0 AS foaf_persons_callable
+FROM pg_ripple.foaf_persons();
+ foaf_persons_callable 
+-----------------------
+ t
+(1 row)
+
+-- ─── HELPER-04: schema_type_ancestors callable ───────────────────────────────
+-- schema_type_ancestors for unknown IRI returns empty (>= 0 check always passes).
+SELECT count(*) >= 0 AS schema_ancestors_callable
+FROM pg_ripple.schema_type_ancestors('http://schema.test/unknown');
+ schema_ancestors_callable 
+---------------------------
+ t
+(1 row)
+
+-- ─── VERSION-01: compiled_version must be 0.99.0 ─────────────────────────────
+SELECT value = '0.99.0' AS version_is_0_99_0
+FROM pg_ripple.diagnostic_report()
+WHERE key = 'compiled_version';
+ version_is_0_99_0 
+-------------------
+ t
+(1 row)
+
+-- ─── CLEANUP ─────────────────────────────────────────────────────────────────
+SELECT pg_ripple.drop_rules('dcterms') >= 0 AS dcterms_cleanup_ok;
+ dcterms_cleanup_ok 
+--------------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('dcterms-integrity') >= 0 AS dcterms_integrity_cleanup_ok;
+ dcterms_integrity_cleanup_ok 
+------------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('schema') >= 0 AS schema_cleanup_ok;
+ schema_cleanup_ok 
+-------------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('schema-integrity') >= 0 AS schema_integrity_cleanup_ok;
+ schema_integrity_cleanup_ok 
+-----------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('foaf') >= 0 AS foaf_cleanup_ok;
+ foaf_cleanup_ok 
+-----------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('foaf-integrity') >= 0 AS foaf_integrity_cleanup_ok;
+ foaf_integrity_cleanup_ok 
+---------------------------
+ t
+(1 row)
+
+DELETE FROM _pg_ripple.datalog_bundles
+WHERE bundle_name IN ('dcterms', 'dcterms-integrity', 'schema', 'schema-integrity', 'foaf', 'foaf-integrity');

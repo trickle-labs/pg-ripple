@@ -46,7 +46,7 @@ kubectl exec -it <pod-name> -- psql -U postgres \
 | Key | Default | Description |
 |-----|---------|-------------|
 | `replicaCount` | `1` | Number of PostgreSQL Pods |
-| `image.repository` | `ghcr.io/grove/pg_ripple` | Image repository |
+| `image.repository` | `ghcr.io/grove/pg-ripple` | Image repository |
 | `image.tag` | `0.54.0` | Image tag |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy |
 | `postgres.password` | `ripple` | Superuser password (use a Secret in production) |

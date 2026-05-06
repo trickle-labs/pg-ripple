@@ -213,7 +213,7 @@ bump-version NEW_VERSION COMPAT_MIN="":
        sed -i '' "s/COMPATIBLE_EXTENSION_MIN: \&str = \"$$OLD_COMPAT\"/COMPATIBLE_EXTENSION_MIN: \&str = \"{{COMPAT_MIN}}\"/" pg_ripple_http/src/main.rs; \
        echo "Updated COMPATIBLE_EXTENSION_MIN: $$OLD_COMPAT → {{COMPAT_MIN}}"; \
      fi; \
-     sed -i '' "s|ghcr.io/grove/pg_ripple:$$OLD_VERSION|ghcr.io/grove/pg_ripple:{{NEW_VERSION}}|g" docker-compose.yml; \
+     sed -i '' "s|ghcr.io/grove/pg-ripple:$$OLD_VERSION|ghcr.io/grove/pg-ripple:{{NEW_VERSION}}|g" docker-compose.yml; \
      MIGRATION_FILE="sql/pg_ripple--$$OLD_VERSION--{{NEW_VERSION}}.sql"; \
      if [ ! -f "$$MIGRATION_FILE" ]; then \
        printf -- "-- Migration $$OLD_VERSION → {{NEW_VERSION}}\n-- Schema changes: TODO\n" > "$$MIGRATION_FILE"; \
@@ -247,7 +247,7 @@ bump-version-dry NEW_VERSION:
      echo "[pg_ripple_http/Cargo.toml] version = \"{{NEW_VERSION}}\""; \
      echo "[pg_ripple.control]   default_version = '{{NEW_VERSION}}'"; \
      echo "[pg_ripple_http/src/main.rs] COMPATIBLE_EXTENSION_MIN = \"{{NEW_VERSION}}\""; \
-     echo "[docker-compose.yml]  ghcr.io/grove/pg_ripple:{{NEW_VERSION}}"; \
+     echo "[docker-compose.yml]  ghcr.io/grove/pg-ripple:{{NEW_VERSION}}"; \
      MIGRATION_FILE="sql/pg_ripple--$$OLD_VERSION--{{NEW_VERSION}}.sql"; \
      if [ -f "$$MIGRATION_FILE" ]; then \
        echo "[migration]           $$MIGRATION_FILE (already exists)"; \
@@ -280,7 +280,7 @@ check-version-sync:
      HTTP_VER=$(grep '^version = ' pg_ripple_http/Cargo.toml | head -1 | grep -oP '"\K[^"]+'); \
      CTRL_VER=$(grep '^default_version' pg_ripple.control | grep -oP "'\K[^']+"); \
      COMPAT_VER=$(grep 'COMPATIBLE_EXTENSION_MIN' pg_ripple_http/src/main.rs | grep -oP '"\K[0-9]+\.[0-9]+\.[0-9]+' | head -1); \
-     DC_VER=$(grep 'ghcr.io/grove/pg_ripple:' docker-compose.yml | grep -oP ':\K[0-9.]+' | head -1); \
+     DC_VER=$(grep 'ghcr.io/grove/pg-ripple:' docker-compose.yml | grep -oP ':\K[0-9.]+' | head -1); \
      FAIL=0; \
      echo "Cargo.toml:              $$CARGO_VER"; \
      echo "pg_ripple_http:          $$HTTP_VER"; \

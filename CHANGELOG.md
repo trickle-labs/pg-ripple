@@ -2202,9 +2202,9 @@ The `sql/pg_ripple--0.54.0--0.55.0.sql` migration script:
 
 - **`_pg_ripple.replication_status` catalog table**: Created by the migration script; tracks pending N-Triples batches delivered by the logical replication slot for the apply worker to consume.
 
-- **Batteries-included Docker image** (`docker/Dockerfile.batteries`): Builds `ghcr.io/grove/pg_ripple:<version>` with pg_ripple, PostGIS 3.4.3, and pgvector 0.7.4 pre-installed. All four extensions load without conflicts. Published to GHCR on every release via GitHub Actions.
+- **Batteries-included Docker image** (`docker/Dockerfile.batteries`): Builds `ghcr.io/grove/pg-ripple:<version>` with pg_ripple, PostGIS 3.4.3, and pgvector 0.7.4 pre-installed. All four extensions load without conflicts. Published to GHCR on every release via GitHub Actions.
 
-- **CloudNativePG extension image** (`docker/Dockerfile.cnpg`): Publishes `ghcr.io/grove/pg_ripple:<version>-cnpg` — a minimal image containing compiled `.so` and SQL files at `/var/lib/postgresql/extension-files/` for use with CloudNativePG operator ≥ 1.24. No custom PostgreSQL image build required.
+- **CloudNativePG extension image** (`docker/Dockerfile.cnpg`): Publishes `ghcr.io/grove/pg-ripple:<version>-cnpg` — a minimal image containing compiled `.so` and SQL files at `/var/lib/postgresql/extension-files/` for use with CloudNativePG operator ≥ 1.24. No custom PostgreSQL image build required.
 
 - **CloudNativePG `Cluster` manifest example** (`examples/cloudnativepg_cluster.yaml`): Annotated manifest referencing `spec.postgresql.extensionImages` for zero-build CNP deployment.
 

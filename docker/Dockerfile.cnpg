@@ -10,11 +10,11 @@
 #   spec:
 #     postgresql:
 #       extensionImages:
-#         - ghcr.io/grove/pg_ripple:0.98.0-cnpg
+#         - ghcr.io/grove/pg-ripple:0.98.0-cnpg
 #
 # See docs/src/operations/cloudnativepg.md for the full walkthrough.
 #
-# Published as: ghcr.io/grove/pg_ripple:0.98.0-cnpg
+# Published as: ghcr.io/grove/pg-ripple:0.98.0-cnpg
 
 # ── Build stage ───────────────────────────────────────────────────────────────
 FROM rust:1-bookworm AS builder
