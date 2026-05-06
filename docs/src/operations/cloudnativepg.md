@@ -1,7 +1,7 @@
 # CloudNativePG Deployment
 
 [CloudNativePG (CNP)](https://cloudnative-pg.io) is a Kubernetes operator for
-managing PostgreSQL clusters.  pg_ripple v0.54.0 ships a pre-built extension
+managing PostgreSQL clusters.  pg_ripple v0.98.0 ships a pre-built extension
 image for CNP ≥ 1.24, allowing operators to install pg_ripple into a managed
 cluster with **no custom PostgreSQL container image** and no custom build step.
 
@@ -52,7 +52,7 @@ spec:
   postgresql:
     extensionImages:
       - name: pg-ripple-ext
-        image: ghcr.io/grove/pg_ripple:0.54.0-cnpg   # ← extension volume
+        image: ghcr.io/grove/pg_ripple:0.98.0-cnpg   # ← extension volume
     parameters:
       allow_system_table_mods: "on"
       shared_preload_libraries: "pg_ripple"
@@ -104,8 +104,8 @@ Expected output:
 ```
   extname  | extversion
 -----------+------------
- pg_ripple | 0.54.0
- vector    | 0.7.4
+ pg_ripple | 0.98.0
+ vector    | 0.8.2
 ```
 
 Load a test triple and run a SPARQL query:
@@ -125,14 +125,14 @@ extension image tag and apply:
 
 ```bash
 # Edit the manifest to change the image tag
-sed -i 's/pg_ripple:0.54.0-cnpg/pg_ripple:0.55.0-cnpg/' \
+sed -i 's/pg_ripple:0.97.0-cnpg/pg_ripple:0.98.0-cnpg/' \
   examples/cloudnativepg_cluster.yaml
 
 kubectl apply -f examples/cloudnativepg_cluster.yaml
 
 # Once the rolling restart completes, run the migration
 kubectl exec -it pg-ripple-cluster-1 -- psql -U postgres \
-  -c "ALTER EXTENSION pg_ripple UPDATE TO '0.55.0';"
+  -c "ALTER EXTENSION pg_ripple UPDATE TO '0.98.0';"
 ```
 
 CNP handles the rolling restart automatically, ensuring zero downtime.

@@ -917,7 +917,7 @@ services:
     # pg_ripple, pg_trickle, pg_tide, PostGIS, and pgvector all pre-installed
 
   relay:
-    image: ghcr.io/trickle-labs/pg-tide-relay:0.4.0
+    image: ghcr.io/trickle-labs/pg-tide-relay:0.15.0
     environment:
       PG_TIDE_RELAY_POSTGRES_URL: postgres://relay:pw@postgres/hub
       # All pipeline config (topics, subjects, poll intervals) lives in the DB.
