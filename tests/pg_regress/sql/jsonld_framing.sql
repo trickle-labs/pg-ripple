@@ -180,4 +180,7 @@ SELECT pg_ripple.export_jsonld_framed(
 
 -- ── Cleanup ───────────────────────────────────────────────────────────────────
 -- Remove test triples so they do not affect later tests' row-count assertions.
+-- Suppress any spurious shared_preload_libraries WARNINGs from the cleanup call.
+SET client_min_messages = error;
 SELECT pg_ripple.sparql_update('DELETE WHERE { ?s ?p ?o }') >= 0 AS cleanup_done;
+SET client_min_messages = DEFAULT;

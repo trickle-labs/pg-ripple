@@ -1,6 +1,6 @@
 //! Built-in rule sets for the Datalog reasoning engine.
 //!
-//! Ships seven pre-packaged rule sets:
+//! Ships rule sets for well-known vocabularies:
 //!
 //! - `"rdfs"` — W3C RDFS entailment (13 rules)
 //! - `"owl-rl"` — W3C OWL 2 RL profile (~30 core rules, stratifiable subset)
@@ -9,9 +9,16 @@
 //! - `"skos"` — W3C SKOS entailment rules (28 rules, S7–S45)
 //! - `"skos-transitive"` — SKOS transitive-closure subset (7 rules, for riverbank)
 //! - `"skosxl"` — SKOS-XL label dumb-down chains (3 rules, S55–S57)
+//! - `"dcterms"` — Dublin Core Terms property-hierarchy and dc11 aliases (11 rules, v0.99.0)
+//! - `"dcterms-integrity"` — SHACL-style DCTERMS validators (8 rules, v0.99.0)
+//! - `"schema"` — Schema.org type-hierarchy closure and inverse pairs (15 rules, v0.99.0)
+//! - `"schema-integrity"` — SHACL-style Schema.org validators (6 rules, v0.99.0)
+//! - `"foaf"` — FOAF symmetry, subsumption, and inverse properties (8 rules, v0.99.0)
+//! - `"foaf-integrity"` — SHACL-style FOAF validators (5 rules, v0.99.0)
 //!
-//! Rule text uses well-known prefixes (rdf:, rdfs:, owl:, skos:, skosxl:) that
-//! must be pre-registered in `_pg_ripple.prefixes` before loading.
+//! Rule text uses well-known prefixes (rdf:, rdfs:, owl:, skos:, skosxl:,
+//! dcterms:, dc11:, schema:, foaf:) that must be pre-registered in
+//! `_pg_ripple.prefixes` before loading.
 
 /// Ensure that the well-known standard prefixes are registered.
 /// Called before loading any built-in rule set.
@@ -25,6 +32,12 @@ pub fn register_standard_prefixes() {
         ("xsd", "http://www.w3.org/2001/XMLSchema#"),
         ("skos", "http://www.w3.org/2004/02/skos/core#"),
         ("skosxl", "http://www.w3.org/2008/05/skos-xl#"),
+        // v0.99.0 vocabularies
+        ("dcterms", "http://purl.org/dc/terms/"),
+        ("dc11", "http://purl.org/dc/elements/1.1/"),
+        ("schema", "https://schema.org/"),
+        ("foaf", "http://xmlns.com/foaf/0.1/"),
+        ("dcat", "http://www.w3.org/ns/dcat#"),
     ];
 
     for (prefix, expansion) in &prefixes {
@@ -43,7 +56,10 @@ pub fn register_standard_prefixes() {
 /// Return the Datalog text for the named built-in rule set.
 ///
 /// Supported names: `"rdfs"`, `"owl-rl"`, `"owl-el"`, `"owl-ql"`,
-///                  `"skos"`, `"skos-transitive"`, `"skosxl"`.
+///                  `"skos"`, `"skos-transitive"`, `"skosxl"`,
+///                  `"dcterms"`, `"dcterms-integrity"`,
+///                  `"schema"`, `"schema-integrity"`,
+///                  `"foaf"`, `"foaf-integrity"`.
 pub fn get_builtin_rules(name: &str) -> Result<&'static str, String> {
     match name {
         "rdfs" => Ok(RDFS_RULES),
@@ -53,8 +69,17 @@ pub fn get_builtin_rules(name: &str) -> Result<&'static str, String> {
         "skos" => Ok(SKOS_RULES),
         "skos-transitive" => Ok(SKOS_TRANSITIVE_RULES),
         "skosxl" => Ok(SKOSXL_RULES),
+        // v0.99.0 vocabulary bundles
+        "dcterms" => Ok(DCTERMS_RULES),
+        "dcterms-integrity" => Ok(DCTERMS_INTEGRITY_RULES),
+        "schema" => Ok(SCHEMA_RULES),
+        "schema-integrity" => Ok(SCHEMA_INTEGRITY_RULES),
+        "foaf" => Ok(FOAF_RULES),
+        "foaf-integrity" => Ok(FOAF_INTEGRITY_RULES),
         _ => Err(format!(
-            "unknown built-in rule set '{name}'; valid values: rdfs, owl-rl, owl-el, owl-ql, skos, skos-transitive, skosxl"
+            "unknown built-in rule set '{name}'; valid values: rdfs, owl-rl, owl-el, owl-ql, \
+             skos, skos-transitive, skosxl, dcterms, dcterms-integrity, schema, schema-integrity, \
+             foaf, foaf-integrity"
         )),
     }
 }
@@ -493,6 +518,192 @@ const SKOSXL_RULES: &str = r#"
 ?x skos:hiddenLabel ?l :- ?x skosxl:hiddenLabel ?xl, ?xl skosxl:literalForm ?l .
 "#;
 
+// ─── Dublin Core Terms (DCTERMS) Rules — v0.99.0 ─────────────────────────────
+//
+// 11 rules covering dc11 backward-compatibility aliases and structural
+// inverse relations (hasPart/isPartOf, hasVersion/isVersionOf, etc.).
+//
+// Prefixes: dcterms: dc11: skos: (registered by register_standard_prefixes).
+
+const DCTERMS_RULES: &str = r#"
+# DC11 backwards compatibility: map old dc: namespace to dcterms:
+?s dcterms:subject ?o     :- ?s dc11:subject ?o .
+?s dcterms:creator ?o     :- ?s dc11:creator ?o .
+?s dcterms:title ?o       :- ?s dc11:title ?o .
+?s dcterms:description ?o :- ?s dc11:description ?o .
+?s dcterms:date ?o        :- ?s dc11:date ?o .
+
+# Inverse structural relations
+?part dcterms:isPartOf ?whole  :- ?whole dcterms:hasPart ?part .
+?whole dcterms:hasPart ?part   :- ?part dcterms:isPartOf ?whole .
+?v dcterms:isVersionOf ?base   :- ?base dcterms:hasVersion ?v .
+?base dcterms:hasVersion ?v    :- ?v dcterms:isVersionOf ?base .
+?old dcterms:isReplacedBy ?new :- ?new dcterms:replaces ?old .
+
+# DC-SKOS-01: dcterms:subject nodes typed as skos:Concept when in SKOS scheme
+?subject rdf:type skos:Concept :- ?doc dcterms:subject ?subject,
+                                   ?subject skos:inScheme ?scheme .
+"#;
+
+// ─── DCTERMS Integrity Constraints — v0.99.0 ─────────────────────────────────
+//
+// 8 SHACL-style validator rules for Dublin Core Terms.
+// Violations are emitted as dcterms:ic_violation triples.
+
+const DCTERMS_INTEGRITY_RULES: &str = r#"
+# DCTERMS-IC-01: hasPart no self-reference
+?x dcterms:ic_violation "DCTERMS-IC-01: a resource cannot be its own part (dcterms:hasPart)" :-
+    ?x dcterms:hasPart ?x .
+
+# DCTERMS-IC-02: isPartOf no self-reference
+?x dcterms:ic_violation "DCTERMS-IC-02: a resource cannot be part of itself (dcterms:isPartOf)" :-
+    ?x dcterms:isPartOf ?x .
+
+# DCTERMS-IC-03: isVersionOf no self-reference
+?x dcterms:ic_violation "DCTERMS-IC-03: a resource cannot be a version of itself" :-
+    ?x dcterms:isVersionOf ?x .
+
+# DCTERMS-IC-04: replaces no self-reference
+?x dcterms:ic_violation "DCTERMS-IC-04: a resource cannot replace itself" :-
+    ?x dcterms:replaces ?x .
+
+# DCTERMS-IC-05: isReplacedBy and replaces cannot both hold
+?x dcterms:ic_violation "DCTERMS-IC-05: circular replacement: resource replaces and is replaced by same target" :-
+    ?x dcterms:replaces ?y,
+    ?x dcterms:isReplacedBy ?y .
+
+# DCTERMS-IC-06: dc11 creator and dcterms creator simultaneously
+?x dcterms:ic_violation "DCTERMS-IC-06: redundant creator: dc11:creator and dcterms:creator both present" :-
+    ?x dc11:creator ?a,
+    ?x dcterms:creator ?a .
+
+# DCTERMS-IC-07: hasPart transitivity violation check (direct vs inferred)
+?x dcterms:ic_violation "DCTERMS-IC-07: asymmetric hasPart: both x hasPart y and y hasPart x" :-
+    ?x dcterms:hasPart ?y,
+    ?y dcterms:hasPart ?x .
+
+# DCTERMS-IC-08: isVersionOf antisymmetry
+?x dcterms:ic_violation "DCTERMS-IC-08: asymmetric isVersionOf: both x and y are versions of each other" :-
+    ?x dcterms:isVersionOf ?y,
+    ?y dcterms:isVersionOf ?x .
+"#;
+
+// ─── Schema.org Rules — v0.99.0 ──────────────────────────────────────────────
+//
+// 15 rules: type-hierarchy shortcuts, inverse property pairs, and
+// cross-vocabulary bridges (SCHEMA-FOAF-01, SCHEMA-DC-01, SCHEMA-DCAT-01).
+//
+// Prefixes: schema: foaf: dcterms: dcat: rdf: (all registered).
+
+const SCHEMA_RULES: &str = r#"
+# Inverse property pairs
+?part schema:isPartOf ?whole       :- ?whole schema:hasPart ?part .
+?whole schema:hasPart ?part        :- ?part schema:isPartOf ?whole .
+?person schema:memberOf ?org       :- ?org schema:member ?person .
+?thing schema:subjectOf ?creative  :- ?creative schema:about ?thing .
+
+# Type hierarchy shortcuts (most common inheritance chains)
+?x rdf:type schema:Thing           :- ?x rdf:type schema:Person .
+?x rdf:type schema:Thing           :- ?x rdf:type schema:Organization .
+?x rdf:type schema:Thing           :- ?x rdf:type schema:Product .
+?x rdf:type schema:Organization    :- ?x rdf:type schema:LocalBusiness .
+?x rdf:type schema:Organization    :- ?x rdf:type schema:EducationalOrganization .
+?x rdf:type schema:CreativeWork    :- ?x rdf:type schema:Article .
+?x rdf:type schema:CreativeWork    :- ?x rdf:type schema:Dataset .
+?x rdf:type schema:Event           :- ?x rdf:type schema:SocialEvent .
+
+# Cross-vocabulary bridges
+?thing foaf:maker ?person          :- ?thing schema:author ?person .
+?thing dcterms:creator ?p          :- ?thing schema:author ?p .
+?x rdf:type schema:Dataset         :- ?x rdf:type dcat:Dataset .
+"#;
+
+// ─── Schema.org Integrity Constraints — v0.99.0 ──────────────────────────────
+//
+// 6 SHACL-style validator rules for Schema.org (positive constraints only).
+
+const SCHEMA_INTEGRITY_RULES: &str = r#"
+# SCHEMA-IC-01: schema:isPartOf self-reference
+?x schema:ic_violation "SCHEMA-IC-01: a resource cannot be part of itself (schema:isPartOf)" :-
+    ?x schema:isPartOf ?x .
+
+# SCHEMA-IC-02: schema:hasPart mutual reference (cycle between two resources)
+?x schema:ic_violation "SCHEMA-IC-02: circular part relation: both x hasPart y and y hasPart x" :-
+    ?x schema:hasPart ?y,
+    ?y schema:hasPart ?x .
+
+# SCHEMA-IC-03: schema:member and schema:memberOf mutual (x is member of org and org is member of x)
+?x schema:ic_violation "SCHEMA-IC-03: circular membership: x is both member and memberOf same org" :-
+    ?x schema:member ?y,
+    ?y schema:member ?x .
+
+# SCHEMA-IC-04: schema:about and schema:subjectOf circularity
+?x schema:ic_violation "SCHEMA-IC-04: circular about/subjectOf: x about y and y about x" :-
+    ?x schema:about ?y,
+    ?y schema:about ?x .
+
+# SCHEMA-IC-05: schema:hasPart self-reference
+?x schema:ic_violation "SCHEMA-IC-05: a resource cannot have itself as a part (schema:hasPart)" :-
+    ?x schema:hasPart ?x .
+
+# SCHEMA-IC-06: schema:member self-reference
+?x schema:ic_violation "SCHEMA-IC-06: a resource cannot be a member of itself (schema:member)" :-
+    ?x schema:member ?x .
+"#;
+
+// ─── FOAF Rules — v0.99.0 ────────────────────────────────────────────────────
+//
+// 8 rules: foaf:knows symmetry, type subsumption, inverse properties,
+// and the DC-FOAF-01 bridge rule.
+//
+// Prefixes: foaf: dcterms: rdf: (all registered).
+
+const FOAF_RULES: &str = r#"
+# Symmetric relations
+?b foaf:knows ?a         :- ?a foaf:knows ?b .
+
+# Type subsumption
+?x rdf:type foaf:Agent   :- ?x rdf:type foaf:Person .
+?x rdf:type foaf:Agent   :- ?x rdf:type foaf:Organization .
+?x rdf:type foaf:Agent   :- ?x rdf:type foaf:Group .
+
+# Inverse properties
+?acct foaf:accountFor ?agent :- ?agent foaf:account ?acct .
+?agent foaf:made ?thing      :- ?thing foaf:maker ?agent .
+?thing foaf:maker ?agent     :- ?agent foaf:made ?thing .
+
+# DC-FOAF-01: dcterms:creator → foaf:maker bridge
+?thing foaf:maker ?agent :- ?thing dcterms:creator ?agent .
+"#;
+
+// ─── FOAF Integrity Constraints — v0.99.0 ────────────────────────────────────
+//
+// 5 SHACL-style validator rules for FOAF (positive constraints only).
+
+const FOAF_INTEGRITY_RULES: &str = r#"
+# FOAF-IC-01: foaf:knows self-reference
+?x foaf:ic_violation "FOAF-IC-01: a person cannot know themselves (foaf:knows self-loop)" :-
+    foaf:knows(?x, ?x) .
+
+# FOAF-IC-02: foaf:made mutual reference (x made y and y made x)
+?x foaf:ic_violation "FOAF-IC-02: circular foaf:made: x made y and y made x" :-
+    foaf:made(?x, ?y),
+    foaf:made(?y, ?x) .
+
+# FOAF-IC-03: foaf:account self-reference
+?x foaf:ic_violation "FOAF-IC-03: an agent cannot have itself as an account" :-
+    foaf:account(?x, ?x) .
+
+# FOAF-IC-04: foaf:accountFor and foaf:account self-reference (inverse of same pair)
+?x foaf:ic_violation "FOAF-IC-04: circular foaf:account/accountFor on same pair" :-
+    foaf:account(?x, ?y),
+    foaf:account(?y, ?x) .
+
+# FOAF-IC-05: foaf:maker self-reference
+?x foaf:ic_violation "FOAF-IC-05: a resource cannot be its own maker (foaf:maker self-loop)" :-
+    foaf:maker(?x, ?x) .
+"#;
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -567,5 +778,62 @@ mod tests {
         // The actual DB-side registration is covered by pg_regress.
         let skos_rules = get_builtin_rules("skos").unwrap();
         assert!(skos_rules.contains("skos:"));
+    }
+
+    // v0.99.0: DCTERMS, Schema.org, FOAF rule sets
+
+    #[test]
+    fn test_dcterms_rules_not_empty() {
+        let rules = get_builtin_rules("dcterms").unwrap();
+        assert!(!rules.is_empty());
+        assert!(rules.contains("dcterms:isPartOf"));
+        assert!(rules.contains("dc11:creator"));
+    }
+
+    #[test]
+    fn test_dcterms_integrity_rules_not_empty() {
+        let rules = get_builtin_rules("dcterms-integrity").unwrap();
+        assert!(!rules.is_empty());
+        assert!(rules.contains("DCTERMS-IC-01"));
+    }
+
+    #[test]
+    fn test_schema_rules_not_empty() {
+        let rules = get_builtin_rules("schema").unwrap();
+        assert!(!rules.is_empty());
+        assert!(rules.contains("schema:Organization"));
+        assert!(rules.contains("schema:hasPart"));
+    }
+
+    #[test]
+    fn test_schema_integrity_rules_not_empty() {
+        let rules = get_builtin_rules("schema-integrity").unwrap();
+        assert!(!rules.is_empty());
+        assert!(rules.contains("SCHEMA-IC-01"));
+    }
+
+    #[test]
+    fn test_foaf_rules_not_empty() {
+        let rules = get_builtin_rules("foaf").unwrap();
+        assert!(!rules.is_empty());
+        assert!(rules.contains("foaf:knows"));
+        assert!(rules.contains("foaf:Agent"));
+    }
+
+    #[test]
+    fn test_foaf_integrity_rules_not_empty() {
+        let rules = get_builtin_rules("foaf-integrity").unwrap();
+        assert!(!rules.is_empty());
+        assert!(rules.contains("FOAF-IC-01"));
+    }
+
+    #[test]
+    fn test_unknown_rule_set_updated_message() {
+        let result = get_builtin_rules("nonexistent");
+        assert!(result.is_err());
+        let msg = result.unwrap_err();
+        assert!(msg.contains("unknown built-in rule set"));
+        assert!(msg.contains("dcterms"));
+        assert!(msg.contains("foaf"));
     }
 }

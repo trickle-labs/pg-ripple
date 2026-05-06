@@ -13,6 +13,37 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.99.0] — 2026-05-06 — DCTERMS, Schema.org & FOAF Vocabulary Bundles
+
+**Implements v0.99.0 roadmap: native Datalog rule sets and SHACL integrity bundles for Dublin Core Terms, Schema.org, and FOAF — completing the "Big 5" vocabulary suite together with SKOS (v0.98.0). Evidence: `src/datalog/builtins.rs`, `src/skos.rs`, `tests/pg_regress/sql/v099_features.sql`, `docs/src/cookbook/common-vocabularies.md`, `sql/pg_ripple--0.98.0--0.99.0.sql`.**
+
+### Added
+
+- **DCTERMS-01**: `load_datalog_bundle('dcterms')` — 11 Datalog rules: five `dc11:` compatibility aliases (`dc11:creator` → `dcterms:creator`, etc.), four structural inverse pairs (`hasPart`/`isPartOf`, `hasVersion`/`isVersionOf`, `replaces`/`isReplacedBy` + reverse `hasVersion`), DC-SKOS-01 bridge (resources whose `dcterms:subject` is in a SKOS scheme receive a `skos:Concept` type assertion).
+- **DCTERMS-02**: `load_shape_bundle('dcterms-integrity')` — 8 integrity validators: self-referential creator/contributor/relation checks, cycle detection in `hasPart`/`isPartOf` hierarchies, date range consistency.
+- **SCHEMA-01**: `load_datalog_bundle('schema')` — 15 Datalog rules: four inverse pairs (`subjectOf`/`about`, `hasPart`/`isPartOf`, `workExample`/`exampleOfWork`, `member`/`memberOf`), eight type-hierarchy shortcuts connecting `LocalBusiness`, `Organization`, `Person`, `Product`, `Event`, `CreativeWork`, `Place`, `Action` to `schema:Thing`, three cross-vocabulary bridges (SCHEMA-FOAF-01, SCHEMA-DC-01, SCHEMA-DCAT-01).
+- **SCHEMA-02**: `load_shape_bundle('schema-integrity')` — 6 integrity validators: required-name self-reference, self-contained price range cycles, schema-type self-reference constraints.
+- **FOAF-01**: `load_datalog_bundle('foaf')` — 8 Datalog rules: `foaf:knows` symmetry, `foaf:Person`/`foaf:Organization`/`foaf:Group` → `foaf:Agent` type subsumption, `foaf:account`/`foaf:accountFor` inverse, `foaf:made`/`foaf:maker` inverse, DC-FOAF-01 bridge (`dcterms:creator` → `foaf:maker`).
+- **FOAF-02**: `load_shape_bundle('foaf-integrity')` — 5 integrity validators: `foaf:knows` self-reference, knows-chain cycle detection, account-of self-reference.
+- **CROSS-01**: Cross-vocabulary Datalog bridges: DC-FOAF-01 (`dcterms:creator` → `foaf:maker`), SCHEMA-FOAF-01 (`schema:author` → `foaf:maker`), SCHEMA-DC-01 (`schema:name` → `dcterms:title`), DC-SKOS-01.
+- **HELPER-01**: `pg_ripple.schema_type_ancestors(iri TEXT)` — returns all Schema.org type ancestors visible in the current graph for the given IRI.
+- **HELPER-02**: `pg_ripple.foaf_persons()` — returns all `foaf:Person` IRIs and their `foaf:name` labels from the current graph.
+- **GUC-01**: `pg_ripple.rule_graph_scope` default updated to `'all'` (was `'default'`); ontology-level reasoning across all named graphs is now the default behavior.
+- **DOCS-01**: Cookbook chapter `docs/src/cookbook/common-vocabularies.md` with runnable examples for all three bundles.
+- **DOCS-02**: Blog post `blog/dcterms-schema-foaf-bundles.md`.
+- **TEST-01**: `tests/pg_regress/sql/v099_features.sql` — 45+ new tests covering all bundle loading, prefix registration, rule counts, cross-vocab bridges, SQL helpers, and integrity bundles.
+
+### Changed
+
+- `pg_ripple.rule_graph_scope` GUC description updated to reflect the new `'all'` default.
+
+### Migration
+
+- No schema changes; all new functionality is compiled from Rust.
+- Migration script: `sql/pg_ripple--0.98.0--0.99.0.sql` (comment-only).
+
+---
+
 ## [0.98.0] — 2026-05-06 — SKOS Support, Named Bundle API & Graph Intelligence
 
 **Implements v0.98.0 roadmap: full SKOS/SKOS-XL entailment stack, formal named bundle API, contradiction explanation, federation trust scoring, and graph coverage metrics. Evidence: `src/skos.rs`, `tests/pg_regress/sql/v098_features.sql`, `docs/src/cookbook/skos-thesaurus.md`, `sql/pg_ripple--0.97.0--0.98.0.sql`.**

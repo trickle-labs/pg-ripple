@@ -77,6 +77,7 @@
 - [Federation with Wikidata and DBpedia](cookbook/federation-wikidata.md)
 - [SHACL + Datalog Data Quality Pipeline](cookbook/shacl-datalog-quality.md)
 - [SKOS Thesaurus Management](cookbook/skos-thesaurus.md)
+- [Common Vocabulary Bundles: DCTERMS, Schema.org, FOAF](cookbook/common-vocabularies.md)
 
 ---
 

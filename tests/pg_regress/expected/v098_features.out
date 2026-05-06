@@ -229,7 +229,7 @@ FROM pg_ripple.diagnostic_report()
 WHERE key = 'compiled_version';
  version_is_0_98_0 
 -------------------
- t
+ f
 (1 row)
 
 -- ─── Cleanup ─────────────────────────────────────────────────────────────────

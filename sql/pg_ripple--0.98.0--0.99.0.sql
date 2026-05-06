@@ -1,0 +1,22 @@
+-- Migration 0.98.0 → 0.99.0: DCTERMS, Schema.org & FOAF vocabulary bundles
+--
+-- New Rust-compiled SQL functions added in this release:
+--   pg_ripple.load_datalog_bundle('dcterms')       — 11 DC Terms rules
+--   pg_ripple.load_datalog_bundle('dcterms-integrity') — 8 validators
+--   pg_ripple.load_datalog_bundle('schema')        — 15 Schema.org rules
+--   pg_ripple.load_datalog_bundle('schema-integrity')  — 6 validators
+--   pg_ripple.load_datalog_bundle('foaf')          — 8 FOAF rules
+--   pg_ripple.load_datalog_bundle('foaf-integrity') — 5 validators
+--   pg_ripple.load_shape_bundle('dcterms-integrity')
+--   pg_ripple.load_shape_bundle('schema-integrity')
+--   pg_ripple.load_shape_bundle('foaf-integrity')
+--   pg_ripple.schema_type_ancestors(iri TEXT)      — Schema.org type closure
+--   pg_ripple.foaf_persons()                       — foaf:Person IRI + name
+--
+-- GUC change:
+--   pg_ripple.rule_graph_scope: default is now 'all' (was 'default' implicitly)
+--   This is a no-op for schema; the description already reflected this.
+--
+-- Schema changes: None.
+-- The datalog_bundles catalog table was introduced in v0.98.0.
+-- New bundles register themselves via load_datalog_bundle() at runtime.
