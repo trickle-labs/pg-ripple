@@ -19,8 +19,51 @@
 
 use pgrx::bgworkers::*;
 use pgrx::prelude::*;
+use std::any::Any;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
+
+/// Extract a human-readable description from a `catch_unwind` panic payload.
+///
+/// pgrx panics via `pgrx::error!` and `Spi::run_with_args` carry the
+/// PostgreSQL error as a `CaughtError` or `ErrorReportWithLevel` inside the
+/// `Box<dyn Any>`.  Plain `{e:?}` prints `Any { .. }` for these, which is
+/// useless for diagnosing recurring merge-worker failures.  This helper tries
+/// the known pgrx downcasts in order of specificity before falling back.
+fn describe_panic(e: &Box<dyn Any + Send>) -> String {
+    use pgrx::pg_sys::panic::{CaughtError, ErrorReport, ErrorReportWithLevel};
+
+    // Rethrown pgrx CaughtError (the most common case from pgrx::error! /
+    // Spi errors inside a BackgroundWorker::transaction()).
+    if let Some(caught) = e.downcast_ref::<CaughtError>() {
+        return match caught {
+            CaughtError::PostgresError(r) | CaughtError::ErrorReport(r) => {
+                format!("[{}] {}", r.sql_error_code() as u32, r.message())
+            }
+            CaughtError::RustPanic { ereport, .. } => {
+                format!("RustPanic: {}", ereport.message())
+            }
+        };
+    }
+    // Direct ErrorReportWithLevel panic_any().
+    if let Some(r) = e.downcast_ref::<ErrorReportWithLevel>() {
+        return format!("[{}] {}", r.sql_error_code() as u32, r.message());
+    }
+    // Direct ErrorReport panic_any().
+    if let Some(r) = e.downcast_ref::<ErrorReport>() {
+        return r.message().to_string();
+    }
+    // Plain Rust panic!("...") — String or &str payload.
+    if let Some(s) = e.downcast_ref::<String>() {
+        return s.clone();
+    }
+    if let Some(s) = e.downcast_ref::<&str>() {
+        return s.to_string();
+    }
+    // Unknown type — the actual error was already emitted to the PG log
+    // by the PostgreSQL error-reporting machinery before the unwind.
+    "unknown panic payload (see preceding PostgreSQL ERROR log entries)".to_string()
+}
 
 // ─── Thread-local predicate cache (MERGE-PRED-01, v0.82.0) ───────────────────
 
@@ -235,8 +278,9 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
                 pg_sys::FlushErrorState();
             }
 
+            let err_msg = describe_panic(&e);
             pgrx::log!(
-                "pg_ripple merge worker: merge cycle panicked ({consecutive_errors}): {e:?}"
+                "pg_ripple merge worker: merge cycle panicked ({consecutive_errors}): {err_msg}"
             );
 
             // MERGE-BACKOFF-01 (v0.83.0): exponential backoff capped at
@@ -252,12 +296,10 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
                 interval_secs
             };
 
-            if consecutive_errors >= 5 {
-                pgrx::log!(
-                    "pg_ripple merge worker: {consecutive_errors} consecutive errors, \
-                     backing off for {backoff_secs}s (max {max_backoff}s)"
-                );
-            }
+            pgrx::log!(
+                "pg_ripple merge worker: {consecutive_errors} consecutive errors, \
+                 backing off for {backoff_secs}s (max {max_backoff}s)"
+            );
 
             // v0.51.0: use wait_latch for correct SIGTERM response during backoff (S1-3).
             // If SIGTERM is received, wait_latch returns false and the outer while loop exits.
