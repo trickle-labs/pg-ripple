@@ -590,21 +590,12 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           if [ -f tests/conformance/report.json ]; then
-            pass=$(python3 -c "
-import json, sys
-try:
-    r = json.load(open('tests/conformance/report.json'))
-    total = r.get('total', 0)
-    passed = r.get('passed', 0)
-    pct = int(passed * 100 / total) if total > 0 else 0
-    color = 'brightgreen' if pct >= 95 else ('yellow' if pct >= 80 else 'red')
-    print(f'{pct}%25 pass {color}')
-except Exception as e:
-    print('unknown red')
-")
-            rate=$(echo $pass | awk '{print $1}')
-            color=$(echo $pass | awk '{print $2}')
-            echo "{\"schemaVersion\":1,\"label\":\"Jena\",\"message\":\"${rate} pass\",\"color\":\"${color}\"}" \
+            pct=$(python3 -c "import json; r=json.load(open('tests/conformance/report.json')); total=r.get('total',0); passed=r.get('passed',0); print(int(passed*100/total) if total>0 else 0)")
+            color=red
+            [ "$pct" -ge 80 ] && color=yellow
+            [ "$pct" -ge 95 ] && color=brightgreen
+            mkdir -p results
+            echo "{\"schemaVersion\":1,\"label\":\"Jena\",\"message\":\"${pct}%25 pass\",\"color\":\"${color}\"}" \
               > results/jena-badge.json
           fi
 
@@ -910,21 +901,12 @@ except Exception as e:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           if [ -f tests/conformance/report.json ]; then
-            pass=$(python3 -c "
-import json
-try:
-    r = json.load(open('tests/conformance/report.json'))
-    total = r.get('total', 0)
-    passed = r.get('passed', 0)
-    pct = int(passed * 100 / total) if total > 0 else 0
-    color = 'brightgreen' if pct >= 95 else ('yellow' if pct >= 80 else 'red')
-    print(str(pct) + ' ' + color)
-except Exception:
-    print('unknown red')
-")
-            rate=$(echo $pass | awk '{print $1}')
-            color=$(echo $pass | awk '{print $2}')
-            echo "{\"schemaVersion\":1,\"label\":\"OWL 2 RL\",\"message\":\"${rate}%25 pass\",\"color\":\"${color}\"}" \
+            pct=$(python3 -c "import json; r=json.load(open('tests/conformance/report.json')); total=r.get('total',0); passed=r.get('passed',0); print(int(passed*100/total) if total>0 else 0)")
+            color=red
+            [ "$pct" -ge 80 ] && color=yellow
+            [ "$pct" -ge 95 ] && color=brightgreen
+            mkdir -p results
+            echo "{\"schemaVersion\":1,\"label\":\"OWL 2 RL\",\"message\":\"${pct}%25 pass\",\"color\":\"${color}\"}" \
               > results/owl2rl-badge.json
           fi
 
