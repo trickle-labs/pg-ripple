@@ -13,9 +13,9 @@ keywords:
   - sparql
   - triplestore
   - knowledge-graph
-home: https://github.com/grove/pg-ripple
+home: https://github.com/trickle-labs/pg-ripple
 sources:
-  - https://github.com/grove/pg-ripple
+  - https://github.com/trickle-labs/pg-ripple
 maintainers:
-  - name: grove
-    url: https://github.com/grove
+  - name: trickle-labs
+    url: https://github.com/trickle-labs

@@ -1,7 +1,7 @@
 # pg-ripple × pg-trickle Relay — Hub-and-Spoke Integration
 
 > **Status**: Exploration (2026-04-23)
-> **Related**: [pg-trickle relay plan](https://github.com/grove/pg-trickle/blob/main/plans/relay/PLAN_RELAY_CLI.md) · [pg-ripple ROADMAP](../ROADMAP.md)
+> **Related**: [pg-trickle relay plan](https://github.com/trickle-labs/pg-trickle/blob/main/plans/relay/PLAN_RELAY_CLI.md) · [pg-ripple ROADMAP](../ROADMAP.md)
 
 > **⚠ Migration Note (v0.93.0)**: This document describes the relay integration as implemented in
 > pg_ripple ≤ v0.92.0 using pg-trickle ≤ v0.45.0. Starting from pg-trickle v0.46.0, the relay,
@@ -612,14 +612,14 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   relay-inbound:
-    image: grove/pgtrickle-relay:0.25.0
+    image: trickle-labs/pgtrickle-relay:0.25.0
     environment:
       PGTRICKLE_RELAY_POSTGRES_URL: postgres://relay:pw@postgres/hub
       KAFKA_BROKERS: kafka:9092
     # Handles all reverse pipelines
 
   relay-outbound:
-    image: grove/pgtrickle-relay:0.25.0
+    image: trickle-labs/pgtrickle-relay:0.25.0
     environment:
       PGTRICKLE_RELAY_POSTGRES_URL: postgres://relay:pw@postgres/hub
     # Handles all forward pipelines

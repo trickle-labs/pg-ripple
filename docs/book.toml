@@ -14,8 +14,8 @@ assets_version = "3.0.2"
 [output.html]
 default-theme = "navy"
 preferred-dark-theme = "navy"
-git-repository-url = "https://github.com/grove/pg-ripple"
-edit-url-template = "https://github.com/grove/pg-ripple/edit/main/docs/src/{path}"
+git-repository-url = "https://github.com/trickle-labs/pg-ripple"
+edit-url-template = "https://github.com/trickle-labs/pg-ripple/edit/main/docs/src/{path}"
 
 [output.html.search]
 enable = true

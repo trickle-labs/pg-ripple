@@ -10,7 +10,7 @@ A SPARQL CONSTRUCT view materializes a derived graph. Every time the source data
 
 pg_ripple solves this with **Incremental View Maintenance (IVM)** — only the triples that need to change are recomputed. A single new source triple produces at most a handful of derived triple insertions or deletions. The view stays live with millisecond latency.
 
-The IVM engine is [pg_trickle](https://github.com/grove/pg-trickle).
+The IVM engine is [pg_trickle](https://github.com/trickle-labs/pg-trickle).
 
 ---
 

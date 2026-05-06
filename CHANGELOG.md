@@ -1873,7 +1873,7 @@ None — all v0.67.0 changes are implemented using already-present dependencies.
 
 - **GitHub Actions SHA pinning** (TRUTH-03): All third-party `uses:` references in `.github/workflows/` are now pinned to full 40-character commit SHAs with the human-readable tag as a comment. New CI step `scripts/check_github_actions_pinned.sh` rejects mutable refs (`@v6`, `@stable`, branch names) — zero mutable refs permitted.
 
-- **Docker release digest integrity** (TRUTH-04): Removed `continue-on-error: true` from Docker build/push. Release job now captures the immutable image digest from the build step, fails if no digest is produced, and scans `ghcr.io/grove/pg-ripple@sha256:...` (the immutable digest) instead of a mutable tag.
+- **Docker release digest integrity** (TRUTH-04): Removed `continue-on-error: true` from Docker build/push. Release job now captures the immutable image digest from the build step, fails if no digest is produced, and scans `ghcr.io/trickle-labs/pg-ripple@sha256:...` (the immutable digest) instead of a mutable tag.
 
 - **Documentation truth pass** (TRUTH-05): Corrected `plans/implementation_plan.md` pgrx 0.17 → 0.18 throughout. Updated README "What works today" to reflect v0.63.0. Added "Known limitations in v0.63.0" section to README covering Arrow Flight, WCOJ, SHACL rules, CONSTRUCT writeback, Citus pruning, and optional dependencies.
 
@@ -2259,9 +2259,9 @@ The `sql/pg_ripple--0.54.0--0.55.0.sql` migration script:
 
 - **`_pg_ripple.replication_status` catalog table**: Created by the migration script; tracks pending N-Triples batches delivered by the logical replication slot for the apply worker to consume.
 
-- **Batteries-included Docker image** (`docker/Dockerfile.batteries`): Builds `ghcr.io/grove/pg-ripple:<version>` with pg_ripple, PostGIS 3.4.3, and pgvector 0.7.4 pre-installed. All four extensions load without conflicts. Published to GHCR on every release via GitHub Actions.
+- **Batteries-included Docker image** (`docker/Dockerfile.batteries`): Builds `ghcr.io/trickle-labs/pg-ripple:<version>` with pg_ripple, PostGIS 3.4.3, and pgvector 0.7.4 pre-installed. All four extensions load without conflicts. Published to GHCR on every release via GitHub Actions.
 
-- **CloudNativePG extension image** (`docker/Dockerfile.cnpg`): Publishes `ghcr.io/grove/pg-ripple:<version>-cnpg` — a minimal image containing compiled `.so` and SQL files at `/var/lib/postgresql/extension-files/` for use with CloudNativePG operator ≥ 1.24. No custom PostgreSQL image build required.
+- **CloudNativePG extension image** (`docker/Dockerfile.cnpg`): Publishes `ghcr.io/trickle-labs/pg-ripple:<version>-cnpg` — a minimal image containing compiled `.so` and SQL files at `/var/lib/postgresql/extension-files/` for use with CloudNativePG operator ≥ 1.24. No custom PostgreSQL image build required.
 
 - **CloudNativePG `Cluster` manifest example** (`examples/cloudnativepg_cluster.yaml`): Annotated manifest referencing `spec.postgresql.extensionImages` for zero-build CNP deployment.
 
@@ -3974,7 +3974,7 @@ When `DELETE/INSERT WHERE` runs, the WHERE clause is compiled through the existi
 
 ## [0.11.0] — 2026-04-16 — SPARQL & Datalog Views
 
-This release adds always-fresh, incrementally-maintained stream tables for SPARQL and Datalog queries, plus Extended Vertical Partitioning (ExtVP) semi-join tables for multi-predicate star-pattern acceleration. All three features are built on top of [pg_trickle](https://github.com/grove/pg-trickle) and are soft-gated — pg_ripple loads and operates normally without pg_trickle; the new functions detect its absence at call time and return a clear error with an install hint.
+This release adds always-fresh, incrementally-maintained stream tables for SPARQL and Datalog queries, plus Extended Vertical Partitioning (ExtVP) semi-join tables for multi-predicate star-pattern acceleration. All three features are built on top of [pg_trickle](https://github.com/trickle-labs/pg-trickle) and are soft-gated — pg_ripple loads and operates normally without pg_trickle; the new functions detect its absence at call time and return a clear error with an install hint.
 
 **New in this release:** Compile any SPARQL SELECT query into a pg_trickle stream table with `create_sparql_view()`. Bundle a Datalog rule set with a goal pattern into a self-refreshing view with `create_datalog_view()`. Pre-compute semi-joins between frequently co-joined predicate pairs with `create_extvp()` to give 2–10× star-pattern speedups.
 

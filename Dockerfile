@@ -13,7 +13,7 @@
 #
 # The resulting image is published to ghcr.io as part of each release:
 #   docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=ripple \
-#     ghcr.io/grove/pg-ripple:latest
+#     ghcr.io/trickle-labs/pg-ripple:latest
 #
 # Authentication:
 #   The container is configured for development/testing with trust authentication
@@ -98,7 +98,7 @@ RUN cargo build --release -p pg_ripple_http
 
 # ── Build pg_trickle ──────────────────────────────────────────────────────────
 RUN git clone --depth 1 --branch "v${PG_TRICKLE_VERSION}" \
-      https://github.com/grove/pg-trickle.git /tmp/pg_trickle \
+      https://github.com/trickle-labs/pg-trickle.git /tmp/pg_trickle \
     && cd /tmp/pg_trickle \
     && cargo pgrx package \
          --pg-config /usr/lib/postgresql/18/bin/pg_config \
@@ -134,7 +134,7 @@ RUN curl -fsSL \
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM postgres:18-bookworm
 
-LABEL org.opencontainers.image.source="https://github.com/grove/pg-ripple"
+LABEL org.opencontainers.image.source="https://github.com/trickle-labs/pg-ripple"
 LABEL org.opencontainers.image.description="PostgreSQL 18 with pg_ripple, pg_trickle, pg_tide, PostGIS, pgvector"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 

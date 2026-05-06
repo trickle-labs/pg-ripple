@@ -46,7 +46,7 @@ SELECT pg_ripple.create_framing_view(
     'test_view',
     '{"@type": "https://schema.org/Person", "https://schema.org/name": {}}'::jsonb
 ) IS NULL AS create_framing_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is required for framing views — install pg_trickle and add it to shared_preload_libraries, then retry; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is required for framing views — install pg_trickle and add it to shared_preload_libraries, then retry; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- drop_framing_view should raise an error when pg_trickle is not installed.
 SELECT pg_ripple.drop_framing_view('test_view') IS NULL AS drop_framing_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is not installed — framing views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — framing views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle

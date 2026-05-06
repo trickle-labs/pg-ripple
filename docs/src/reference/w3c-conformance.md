@@ -2,7 +2,7 @@
 
 This page summarises pg_ripple's conformance status against the W3C SPARQL 1.1, Apache Jena, SHACL Core, WatDiv, and LUBM test suites.
 
-As of v0.41.0, conformance is measured by integrated test harnesses that run in CI on every push to `main`. Pass rates are published as the `conformance_report` artifact on the [Actions page](https://github.com/grove/pg-ripple/actions).
+As of v0.41.0, conformance is measured by integrated test harnesses that run in CI on every push to `main`. Pass rates are published as the `conformance_report` artifact on the [Actions page](https://github.com/trickle-labs/pg-ripple/actions).
 
 ## Test suites
 

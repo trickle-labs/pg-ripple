@@ -4,7 +4,7 @@ Two features cover the *push* side of pg_ripple — getting data **out** as it c
 
 | Feature | Best for | Backed by |
 |---|---|---|
-| **Materialized SPARQL / Datalog views** | Always-fresh dashboards, denormalised tables | [pg_trickle](https://github.com/grove/pg-trickle) |
+| **Materialized SPARQL / Datalog views** | Always-fresh dashboards, denormalised tables | [pg_trickle](https://github.com/trickle-labs/pg-trickle) |
 | **CDC subscriptions** | Streaming events to applications, Kafka, WebSocket clients | PostgreSQL `LISTEN/NOTIFY` |
 
 If you want a snapshot of *what is true now*, use a view. If you want a stream of *what changed since I last looked*, use CDC.
@@ -15,7 +15,7 @@ If you want a snapshot of *what is true now*, use a view. If you want a stream o
 
 A SPARQL view compiles a SPARQL `SELECT` (or a Datalog goal) into a pg_trickle stream table that is incrementally maintained as triples change. The view always reflects the latest data without you running the query yourself.
 
-> Requires the optional [`pg_trickle`](https://github.com/grove/pg-trickle) extension. pg_ripple loads and runs without it; view functions detect its absence at call time and return a clear error with an install hint.
+> Requires the optional [`pg_trickle`](https://github.com/trickle-labs/pg-trickle) extension. pg_ripple loads and runs without it; view functions detect its absence at call time and return a clear error with an install hint.
 
 ```sql
 -- Check availability before using.

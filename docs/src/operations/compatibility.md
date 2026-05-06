@@ -124,7 +124,7 @@ pg_ripple integrates with two companion PostgreSQL extensions:
 
 ```sql
 CREATE EXTENSION pg_tide;      -- relay, outbox, inbox (trickle-labs/pg-tide ≥ 0.4.0)
-CREATE EXTENSION pg_trickle;   -- IVM (grove/pg-trickle ≥ 0.46.0)
+CREATE EXTENSION pg_trickle;   -- IVM (trickle-labs/pg-trickle ≥ 0.46.0)
 CREATE EXTENSION pg_ripple;    -- RDF triple store (≥ 0.93.0)
 ```
 

@@ -44,10 +44,10 @@ SELECT pg_ripple.create_describe_view(
     'test_dv',
     'DESCRIBE <https://example.org/resource>'
 ) IS NULL AS create_describe_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is not installed — DESCRIBE views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — DESCRIBE views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- ── pg_trickle absent: drop_describe_view raises descriptive error ────────────
 SELECT pg_ripple.drop_describe_view('test_dv') IS NULL AS drop_describe_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is not installed — DESCRIBE views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — DESCRIBE views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- ── Wrong query form: SELECT query rejected ───────────────────────────────────
 SELECT pg_ripple.create_describe_view(
     'bad_dv',

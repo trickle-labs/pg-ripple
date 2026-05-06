@@ -135,7 +135,7 @@ ex:MyShape a sh:NodeShape ;
 > extension** to the W3C SHACL Core specification. It is not defined by
 > <https://www.w3.org/TR/shacl/>. A community submission to the
 > [W3C SHACL Community Group](https://www.w3.org/community/shacl/) is being considered;
-> see [GitHub discussion](https://github.com/grove/pg-ripple/discussions) for progress.
+> see [GitHub discussion](https://github.com/trickle-labs/pg-ripple/discussions) for progress.
 > The annotation is stable for the pg_ripple 1.x API line.
 
 Score history is logged to `_pg_ripple.shacl_score_log`:

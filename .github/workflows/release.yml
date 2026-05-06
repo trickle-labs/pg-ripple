@@ -416,7 +416,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf  # v6.0.0
         with:
-          images: ghcr.io/grove/pg-ripple
+          images: ghcr.io/trickle-labs/pg-ripple
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -424,9 +424,9 @@ jobs:
           labels: |
             org.opencontainers.image.title=pg_ripple
             org.opencontainers.image.description=PostgreSQL 18 RDF triple store with native SPARQL, SHACL, Datalog, and HTAP
-            org.opencontainers.image.vendor=grove
+            org.opencontainers.image.vendor=trickle-labs
             org.opencontainers.image.licenses=Apache-2.0
-            org.opencontainers.image.documentation=https://github.com/grove/pg-ripple/blob/main/README.md
+            org.opencontainers.image.documentation=https://github.com/trickle-labs/pg-ripple/blob/main/README.md
 
       - name: Build and push
         id: docker_push
@@ -442,7 +442,7 @@ jobs:
           # enabling free storage/bandwidth for open-source packages.
           outputs: >-
             type=image,
-            annotation-index.org.opencontainers.image.source=https://github.com/grove/pg-ripple,
+            annotation-index.org.opencontainers.image.source=https://github.com/trickle-labs/pg-ripple,
             annotation-index.org.opencontainers.image.description=PostgreSQL 18 RDF triple store with native SPARQL SHACL Datalog and HTAP,
             annotation-index.org.opencontainers.image.licenses=Apache-2.0
           # Cache layers between releases to speed up builds
@@ -470,7 +470,7 @@ jobs:
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
-          image-ref: ghcr.io/grove/pg-ripple@${{ steps.digest.outputs.digest }}
+          image-ref: ghcr.io/trickle-labs/pg-ripple@${{ steps.digest.outputs.digest }}
           format: table
           exit-code: '1'
           severity: HIGH,CRITICAL
@@ -503,7 +503,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf  # v6.0.0
         with:
-          images: ghcr.io/grove/pg-ripple-http
+          images: ghcr.io/trickle-labs/pg-ripple-http
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -511,9 +511,9 @@ jobs:
           labels: |
             org.opencontainers.image.title=pg_ripple_http
             org.opencontainers.image.description=SPARQL 1.1 Protocol HTTP endpoint for pg_ripple — connects PostgreSQL 18 RDF triple store to the web
-            org.opencontainers.image.vendor=grove
+            org.opencontainers.image.vendor=trickle-labs
             org.opencontainers.image.licenses=Apache-2.0
-            org.opencontainers.image.documentation=https://github.com/grove/pg-ripple/blob/main/pg_ripple_http/README.md
+            org.opencontainers.image.documentation=https://github.com/trickle-labs/pg-ripple/blob/main/pg_ripple_http/README.md
 
       - name: Build and push
         id: docker_push
@@ -526,7 +526,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           outputs: >-
             type=image,
-            annotation-index.org.opencontainers.image.source=https://github.com/grove/pg-ripple,
+            annotation-index.org.opencontainers.image.source=https://github.com/trickle-labs/pg-ripple,
             annotation-index.org.opencontainers.image.description=SPARQL 1.1 Protocol HTTP endpoint for pg_ripple,
             annotation-index.org.opencontainers.image.licenses=Apache-2.0
           cache-from: type=gha
@@ -548,7 +548,7 @@ jobs:
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
-          image-ref: ghcr.io/grove/pg-ripple-http@${{ steps.digest.outputs.digest }}
+          image-ref: ghcr.io/trickle-labs/pg-ripple-http@${{ steps.digest.outputs.digest }}
           format: table
           exit-code: '1'
           severity: HIGH,CRITICAL

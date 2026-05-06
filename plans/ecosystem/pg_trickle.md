@@ -2,7 +2,7 @@
 
 ## 1. What Is pg_trickle?
 
-[pg_trickle](https://github.com/grove/pg-trickle) is a PostgreSQL 18 extension (Rust/pgrx 0.17) that provides **declarative, automatically-refreshing materialized views** — called *stream tables* — powered by Incremental View Maintenance (IVM). When a base table changes, pg_trickle computes only the delta (changed rows), not the full result set. It supports the full SQL surface: JOINs, aggregates, window functions, CTEs (including `WITH RECURSIVE`), subqueries, LATERAL, and TopK.
+[pg_trickle](https://github.com/trickle-labs/pg-trickle) is a PostgreSQL 18 extension (Rust/pgrx 0.17) that provides **declarative, automatically-refreshing materialized views** — called *stream tables* — powered by Incremental View Maintenance (IVM). When a base table changes, pg_trickle computes only the delta (changed rows), not the full result set. It supports the full SQL surface: JOINs, aggregates, window functions, CTEs (including `WITH RECURSIVE`), subqueries, LATERAL, and TopK.
 
 Key capabilities relevant to pg_ripple:
 
@@ -843,10 +843,10 @@ spec:
     extensions:
       - name: pg-trickle
         image:
-          reference: ghcr.io/grove/pg_trickle-ext:0.17.0
+          reference: ghcr.io/trickle-labs/pg_trickle-ext:0.17.0
       - name: pg-ripple
         image:
-          reference: ghcr.io/grove/pg-ripple-ext:1.0.0
+          reference: ghcr.io/trickle-labs/pg-ripple-ext:1.0.0
 ```
 
 ---

@@ -1,7 +1,7 @@
 # pg-ripple
 
-[![CI](https://github.com/grove/pg-ripple/actions/workflows/ci.yml/badge.svg)](https://github.com/grove/pg-ripple/actions/workflows/ci.yml)
-[![Release](https://github.com/grove/pg-ripple/actions/workflows/release.yml/badge.svg)](https://github.com/grove/pg-ripple/actions/workflows/release.yml)
+[![CI](https://github.com/trickle-labs/pg-ripple/actions/workflows/ci.yml/badge.svg)](https://github.com/trickle-labs/pg-ripple/actions/workflows/ci.yml)
+[![Release](https://github.com/trickle-labs/pg-ripple/actions/workflows/release.yml/badge.svg)](https://github.com/trickle-labs/pg-ripple/actions/workflows/release.yml)
 [![Roadmap](https://img.shields.io/badge/Roadmap-view-informational)](ROADMAP.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![PostgreSQL 18](https://img.shields.io/badge/PostgreSQL-18-blue?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -10,7 +10,7 @@
 [![LUBM conformance](https://img.shields.io/badge/LUBM-14%2F14%20pass-brightgreen)](docs/src/reference/lubm-results.md)
 [![Jena conformance](https://img.shields.io/badge/Jena-%E2%89%A595%25%20pass-brightgreen)](docs/src/reference/jena-results.md)
 [![OWL 2 RL conformance](https://img.shields.io/badge/OWL%202%20RL-%E2%89%A595%25%20pass-brightgreen)](docs/src/reference/owl2rl-results.md)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/grove/pg-ripple)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/trickle-labs/pg-ripple)
 
 **A knowledge graph engine built into PostgreSQL.**
 
@@ -287,7 +287,7 @@ pg_ripple is built from the ground up for performance inside PostgreSQL.
 | HTTP server | [axum](https://crates.io/crates/axum) (built on [tokio](https://tokio.rs/)) — SPARQL Protocol HTTP endpoint (`pg_ripple_http` binary) |
 | PG client (HTTP service) | [tokio-postgres](https://crates.io/crates/tokio-postgres) + [deadpool-postgres](https://crates.io/crates/deadpool-postgres) — async connection pool from HTTP service to PostgreSQL |
 | HTTP client (federation) | [ureq](https://crates.io/crates/ureq) 2.12 — outbound calls to remote SPARQL endpoints (`SERVICE` keyword); connection-pooled `Agent` per backend session |
-| IVM / stream tables | [pg_trickle](https://github.com/grove/pg-trickle) *(optional companion extension)* — incremental SPARQL views, ExtVP, live statistics |
+| IVM / stream tables | [pg_trickle](https://github.com/trickle-labs/pg-trickle) *(optional companion extension)* — incremental SPARQL views, ExtVP, live statistics |
 | Dictionary cache | [lru](https://crates.io/crates/lru) — backend-local LRU cache (v0.1.0–v0.5.1); replaced by sharded shared-memory map in v0.6.0 |
 | Error handling | [thiserror](https://crates.io/crates/thiserror) — typed error enums with PT error code constants (PT001–PT799) |
 | Testing | pgrx `#[pg_test]`, `cargo pgrx regress`, [proptest](https://crates.io/crates/proptest), [cargo-fuzz](https://crates.io/crates/cargo-fuzz) |
@@ -296,7 +296,7 @@ pg_ripple is built from the ground up for performance inside PostgreSQL.
 
 ## pg_trickle dependency matrix
 
-[pg_trickle](https://github.com/grove/pg-trickle) is an optional companion extension.
+[pg_trickle](https://github.com/trickle-labs/pg-trickle) is an optional companion extension.
 The table below shows which pg_ripple features require pg_trickle and which ship standalone.
 
 | Feature | Ships standalone | Requires pg_trickle |
@@ -333,7 +333,7 @@ The table below shows which pg_ripple features require pg_trickle and which ship
 ### Build and install
 
 ```bash
-git clone https://github.com/grove/pg-ripple.git
+git clone https://github.com/trickle-labs/pg-ripple.git
 cd pg-ripple
 
 # Initialise pgrx for PostgreSQL 18

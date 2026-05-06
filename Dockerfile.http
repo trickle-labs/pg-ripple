@@ -13,7 +13,7 @@
 # The resulting image is published to ghcr.io as part of each release:
 #   docker run --rm -p 7878:7878 \
 #     -e PG_RIPPLE_HTTP_PG_URL="postgresql://user:pass@postgres:5432/mydb" \
-#     ghcr.io/grove/pg-ripple-http:latest
+#     ghcr.io/trickle-labs/pg-ripple-http:latest
 #
 # Environment variables:
 #   PG_RIPPLE_HTTP_PG_URL              PostgreSQL connection URL (required)
@@ -68,7 +68,7 @@ RUN cargo build --release -p pg_ripple_http
 # variant sets uid/gid 65532 ("nonroot") as the default user.
 FROM gcr.io/distroless/cc-debian12:nonroot
 
-LABEL org.opencontainers.image.source="https://github.com/grove/pg-ripple"
+LABEL org.opencontainers.image.source="https://github.com/trickle-labs/pg-ripple"
 LABEL org.opencontainers.image.description="SPARQL 1.1 Protocol HTTP endpoint for pg_ripple — connects PostgreSQL 18 RDF triple store to the web"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 

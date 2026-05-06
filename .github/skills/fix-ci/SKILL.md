@@ -1,7 +1,7 @@
 ---
 name: fix-ci
 description: 'Fix CI workflow failures for pg_ripple. Use when: a GitHub Actions run fails, a test panics, cargo pgrx errors appear, PostgreSQL build deps are missing, argument-passing errors occur, or deadlocks appear in the test suite. Covers pgrx 0.17 + PostgreSQL 18 specific patterns and all known failure modes encountered in this project.'
-argument-hint: 'Optionally provide the failing run URL or ID, e.g. https://github.com/grove/pg-ripple/actions/runs/12345'
+argument-hint: 'Optionally provide the failing run URL or ID, e.g. https://github.com/trickle-labs/pg-ripple/actions/runs/12345'
 ---
 
 # Fix CI Workflow Failures

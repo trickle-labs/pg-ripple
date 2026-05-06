@@ -121,7 +121,7 @@ gh pr edit <number> --body-file /tmp/pr_<slug>.md
 
 Give the user the PR number and URL:
 ```
-PR #<N>: https://github.com/grove/pg-ripple/pull/<N>
+PR #<N>: https://github.com/trickle-labs/pg-ripple/pull/<N>
 ```
 
 ## Title Style
@@ -135,9 +135,9 @@ PR #<N>: https://github.com/grove/pg-ripple/pull/<N>
 
 Every PR targeting `main` requires review from a code owner (see [CODEOWNERS](../../../.github/CODEOWNERS)).
 
-- `@grove/pg-ripple-maintainers` must approve all changes
-- Rust source changes (`src/`) additionally require `@grove/pg-ripple-rust`
-- CI/workflow changes (`.github/`) additionally require `@grove/pg-ripple-infra`
+- `@trickle-labs/pg-ripple-maintainers` must approve all changes
+- Rust source changes (`src/`) additionally require `@trickle-labs/pg-ripple-rust`
+- CI/workflow changes (`.github/`) additionally require `@trickle-labs/pg-ripple-infra`
 
 ## Common Pitfalls
 

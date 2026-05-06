@@ -9,7 +9,7 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     reviewers:
-      - grove/pg-ripple-maintainers
+      - trickle-labs/pg-ripple-maintainers
     allow:
       - dependency-type: "direct"
     groups:
@@ -35,4 +35,4 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 5
     reviewers:
-      - grove/pg-ripple-maintainers
+      - trickle-labs/pg-ripple-maintainers
