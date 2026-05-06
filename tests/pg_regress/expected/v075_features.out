@@ -14,6 +14,7 @@ WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker,
 
 SET search_path TO pg_ripple, public;
 SET max_parallel_workers_per_gather = 0;
+SET client_min_messages = 'error';
 -- --- Part 1: FEATURE-STATUS-JOURNAL-01 -----------------------------------
 -- 1a. mutation_journal row is present with implemented status.
 SELECT status AS mutation_journal_status
