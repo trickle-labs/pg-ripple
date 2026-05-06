@@ -2,7 +2,7 @@
 
 ## Batteries-Included Image
 
-The `ghcr.io/grove/pg_ripple:<version>` image bundles four extensions in a
+The `ghcr.io/grove/pg_ripple:<version>` image bundles six extensions in a
 single container:
 
 | Extension | Purpose |
@@ -10,7 +10,8 @@ single container:
 | `pg_ripple` | RDF triple store with native SPARQL |
 | `PostGIS` | Geospatial queries via GeoSPARQL |
 | `pgvector` | Vector similarity search for hybrid SPARQL + semantic |
-| `pg_trickle` (optional) | Incremental materialised SPARQL views |
+| `pg_trickle` | Incremental materialised SPARQL views |
+| `pg_tide` | Relay, outbox, and inbox subsystem for change-data capture |
 
 No additional setup is needed — simply start the container and `CREATE EXTENSION`.
 
@@ -19,7 +20,7 @@ No additional setup is needed — simply start the container and `CREATE EXTENSI
 ```bash
 docker run --rm -p 5432:5432 \
   -e POSTGRES_PASSWORD=ripple \
-  ghcr.io/grove/pg_ripple:0.54.0
+  ghcr.io/grove/pg_ripple:0.98.0
 ```
 
 ```bash
@@ -51,7 +52,7 @@ curl -G http://localhost:7878/sparql \
 
 | Extension | Version | Notes |
 |-----------|---------|-------|
-| pg_ripple | 0.54.0 | This release |
+| pg_ripple | 0.98.0 | This release |
 | PostGIS | 3.4.3 | Geospatial support |
 | pgvector | 0.7.4 | Vector index (HNSW / IVFFlat) |
 
