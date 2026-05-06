@@ -8,6 +8,7 @@
 CREATE EXTENSION IF NOT EXISTS pg_ripple;
 SELECT pg_ripple.triple_count() >= 0 AS library_loaded;
 SET search_path TO pg_ripple, public;
+SET max_parallel_workers_per_gather = 0;
 
 -- --- Part 1: FEATURE-STATUS-JOURNAL-01 -----------------------------------
 
