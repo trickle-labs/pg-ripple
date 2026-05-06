@@ -220,4 +220,4 @@ USER postgres
 # of schemas whose names start with "pg_" unless allow_system_table_mods is on.
 # Passing it as a command argument ensures the flag is active both during init
 # (when the entrypoint runs the scripts above) and at every subsequent start.
-CMD ["postgres", "-c", "allow_system_table_mods=on", "-c", "shared_preload_libraries=pg_ripple"]
+CMD ["postgres", "-c", "allow_system_table_mods=on", "-c", "shared_preload_libraries=pg_ripple,pg_trickle"]
