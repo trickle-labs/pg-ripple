@@ -55,8 +55,8 @@ curl -G http://localhost:7878/sparql \
 | pg_ripple | 0.98.0 | RDF triple store with native SPARQL |
 | PostGIS | 3.5.6 | Geospatial queries via GeoSPARQL |
 | pgvector | 0.8.2 | Vector similarity search for hybrid SPARQL + semantic |
-| pg_trickle | 0.46.0 | Incremental materialised SPARQL views |
-| pg_tide | 0.4.0 | Relay, outbox, and inbox for CDC |
+| pg_trickle | 0.48.0 | Incremental materialised SPARQL views |
+| pg_tide | 0.15.0 | Relay, outbox, and inbox for CDC |
 
 ## Environment Variables
 
