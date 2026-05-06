@@ -1,9 +1,15 @@
 [workspace]
 members = [".", "pg_ripple_http"]
 
+# SUPPLY-CHAIN-01 (v0.97.0, M15-16): serde_cbor audit.
+# serde_cbor v0.11.2 is a TRANSITIVE dependency pulled in by pgrx 0.18.0.
+# pg_ripple does not use serde_cbor directly.
+# Action: tracked in deny.toml; no upgrade path until pgrx drops the dep.
+# Run `cargo tree -i serde_cbor` to verify the dep chain.
+
 [package]
 name = "pg_ripple"
-version = "0.96.0"
+version = "0.97.0"
 edition = "2024"
 description = "High-performance RDF triple store with native SPARQL query execution for PostgreSQL 18"
 license = "Apache-2.0"

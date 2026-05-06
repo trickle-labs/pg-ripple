@@ -13,6 +13,55 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.97.0] — 2026-05-06 — Assessment 15 Low-Severity Polish & Supply-Chain
+
+**Implements v0.97.0 roadmap: closes all 13 Low-severity findings from PLAN_OVERALL_ASSESSMENT_15.**
+
+### Added
+
+- **L15-02**: Three new example SQL files: `examples/arrow_flight_export.sql`,
+  `examples/pagerank_analysis.sql`, and `examples/bidi_relay_setup.sql` demonstrating
+  bulk export, PageRank computation, and bidirectional CDC relay setup.
+- **L15-03**: `examples/test_all.sh --live` wired in CI: pgrx PG18 instance started,
+  extension installed, examples run in transaction-rollback safety mode.
+- **L15-04**: `#![warn(clippy::missing_safety_doc)]` and
+  `#![warn(clippy::undocumented_unsafe_blocks)]` added to `src/lib.rs`.  All unsafe blocks
+  now have `// SAFETY:` comments preceding the `unsafe` keyword (14 blocks fixed).
+- **L15-05**: Q15-xx justification convention: `// Q15-01:` comments added before all
+  `#[allow(dead_code)]` annotations without existing justification. Searchable via
+  `grep -rn 'Q15-' src/`.
+- **L15-06**: `gen_random_uuid()` availability check added to extension setup SQL
+  (`extension_sql!` block in `src/schema/rls.rs`). Emits a `WARNING` if the function
+  is unavailable (defensive guard; always passes on PostgreSQL 18).
+- **L15-08**: RDF-star `<<>>` position support matrix added to
+  `docs/src/reference/sparql-compliance.md` covering 18 positions across all SPARQL
+  query/update forms.
+- **L15-09**: `cargo doc --no-deps` with `RUSTDOCFLAGS="-D missing_docs"` added as a
+  CI gate in the `test` job, enforcing zero missing-documentation warnings.
+- **L15-10**: `HIGHEST_CHECKPOINT` in `tests/test_migration_chain.sh` is now
+  auto-computed from `ls sql/pg_ripple--*--*.sql | sort -V | tail -1`, eliminating the
+  hand-maintained constant that caused MIGCHAIN-SYNC failures.
+- **L15-11**: New "Sequence Exhaustion (`statement_id_seq`)" section added to
+  `docs/src/operations/scaling.md` documenting exhaustion rates, monitoring query,
+  and recovery procedure.
+- **L15-12**: `tests/pg_regress/sql/owl_sameas_cycle.sql` regression test added,
+  asserting graceful handling of symmetric, triangular, and self-referential
+  `owl:sameAs` cycles (no infinite loop; store stable after inference).
+- **L15-14**: Jena (≥95% pass) and OWL 2 RL (≥95% pass) conformance-suite badges
+  added to `README.md`. CI `jena-suite` and `owl2rl-suite` jobs update
+  `results/jena-badge.json` / `results/owl2rl-badge.json` on push to `main`.
+  New `docs/src/reference/jena-results.md` documents the Jena suite coverage.
+- **M15-16**: `serde_cbor` supply-chain audit documented: it is a transitive dep from
+  `pgrx 0.18.0`, not used directly. Documented in `Cargo.toml` comment and tracked in
+  `deny.toml`.
+
+### Fixed
+
+- **L15-01**: `CHANGELOG.md` entry for v0.90.0 had `2026-05-XX` as a date placeholder;
+  corrected to `2026-04-30`.
+
+---
+
 ## [0.96.0] — 2026-05-06 — Assessment 15 Medium: Performance, Code Quality, Test Coverage
 
 **Implements v0.96.0 roadmap (A15 medium quality pillars): HTAP tombstone-skip
@@ -366,7 +415,7 @@ bidi relay throughput benchmark wiring, and two new GUCs for CDC watermark contr
 
 ---
 
-## [0.90.0] — 2026-05-XX — Assessment 14 Medium Remediation
+## [0.90.0] — 2026-04-30 — Assessment 14 Medium Remediation
 
 **Implements v0.90.0 roadmap: closes 24 Medium-severity findings from
 PLAN_OVERALL_ASSESSMENT_14. Adds PageRank WCOJ integration, convergence norm GUC,
