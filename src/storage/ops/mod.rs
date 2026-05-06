@@ -431,10 +431,11 @@ pub fn delete_triple(s: &str, p: &str, o: &str, g: i64) -> i64 {
             )
             .unwrap_or_else(|e| pgrx::error!("tombstone insert SPI error: {e}"));
 
-            // M15-05 (v0.96.0): atomically increment tombstone_count for observability.
-            // The view is always tombstone-aware (LEFT JOIN); the tombstone-skip
-            // optimisation is only enabled by merge_predicate after a clean compact.
-            let _prev_count: i64 = Spi::get_one_with_args::<i64>(
+            // M15-05 (v0.96.0): atomically increment tombstone_count.
+            // If the prior count was 0 the view may be in tombstone-skip form
+            // (rebuilt by merge_predicate after a clean compact).  Switch it back
+            // to tombstone-aware (LEFT JOIN) so that new tombstones are honoured.
+            let prev_count: i64 = Spi::get_one_with_args::<i64>(
                 "UPDATE _pg_ripple.predicates \
                  SET tombstone_count = tombstone_count + 1 \
                  WHERE id = $1 \
@@ -443,6 +444,9 @@ pub fn delete_triple(s: &str, p: &str, o: &str, g: i64) -> i64 {
             )
             .unwrap_or(None)
             .unwrap_or(1);
+            if prev_count == 0 {
+                crate::storage::merge::rebuild_htap_view(p_id, true);
+            }
 
             // Check if the triple actually existed in main.
             let in_main = Spi::get_one_with_args::<i64>(

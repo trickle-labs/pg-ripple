@@ -344,10 +344,10 @@ pub fn clear_graph_by_id(g_id: i64) -> i64 {
             deleted += d;
         }
 
-        // M15-05 (v0.96.0): if tombstones were added to main, update tombstone_count
-        // for observability. The view rebuild is handled by merge_predicate.
+        // M15-05 (v0.96.0): if tombstones were added to main, update tombstone_count.
+        // If prior count was 0 the view may be in tombstone-skip form; switch back.
         if d_main > 0 {
-            let _prev_count: i64 = Spi::get_one_with_args::<i64>(
+            let prev_count: i64 = Spi::get_one_with_args::<i64>(
                 "UPDATE _pg_ripple.predicates \
                  SET tombstone_count = tombstone_count + $2 \
                  WHERE id = $1 \
@@ -356,6 +356,9 @@ pub fn clear_graph_by_id(g_id: i64) -> i64 {
             )
             .unwrap_or(None)
             .unwrap_or(1);
+            if prev_count == 0 {
+                crate::storage::merge::rebuild_htap_view(p_id, true);
+            }
         }
     }
 
@@ -750,10 +753,9 @@ pub(crate) fn delete_triple_by_ids(s_id: i64, p_id: i64, o_id: i64, g_id: i64) -
             )
             .unwrap_or_else(|e| pgrx::error!("tombstone insert SPI error: {e}"));
 
-            // M15-05 (v0.96.0): update tombstone_count for observability.
-            // The view rebuild (tombstone-skip ↔ tombstone-aware) is handled
-            // by merge_predicate after a compact cycle clears all tombstones.
-            let _prev_count: i64 = Spi::get_one_with_args::<i64>(
+            // M15-05 (v0.96.0): update tombstone_count.
+            // If prior count was 0 the view may be in tombstone-skip form; switch back.
+            let prev_count: i64 = Spi::get_one_with_args::<i64>(
                 "UPDATE _pg_ripple.predicates \
                  SET tombstone_count = tombstone_count + 1 \
                  WHERE id = $1 \
@@ -762,6 +764,9 @@ pub(crate) fn delete_triple_by_ids(s_id: i64, p_id: i64, o_id: i64, g_id: i64) -
             )
             .unwrap_or(None)
             .unwrap_or(1);
+            if prev_count == 0 {
+                crate::storage::merge::rebuild_htap_view(p_id, true);
+            }
 
             let in_main = Spi::get_one_with_args::<i64>(
                 &format!(
