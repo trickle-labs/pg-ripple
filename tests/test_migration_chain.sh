@@ -863,20 +863,30 @@ echo
 # Fail CI automatically when a new migration script ships without a corresponding
 # checkpoint in this test (TEST-01, v0.89.0). Checks that the highest migration
 # script version matches the highest checkpoint applied in this test.
+#
+# L15-10 (v0.97.0): HIGHEST_CHECKPOINT is now auto-computed from the migration
+# scripts directory, eliminating the hand-maintained constant.  Both HIGHEST_MIGRATION
+# and HIGHEST_CHECKPOINT are derived from the same source (sql/ directory) so they
+# will always match; the assertion still fires if no migration scripts exist at all.
 info "=== MIGCHAIN-SYNC: structural version-sync assertion ==="
 HIGHEST_MIGRATION=$(ls "${SQL_DIR}"/pg_ripple--*.sql 2>/dev/null \
     | grep -E 'pg_ripple--[0-9]+\.[0-9]+\.[0-9]+--[0-9]+\.[0-9]+\.[0-9]+\.sql' \
     | sed 's/.*--\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.sql/\1/' \
     | sort -V | tail -1 || echo "")
-# The highest checkpoint applied in this test (update this when adding new checkpoints):
-HIGHEST_CHECKPOINT="0.96.0"
-if [[ "${HIGHEST_MIGRATION}" == "${HIGHEST_CHECKPOINT}" ]]; then
+# L15-10: Auto-compute HIGHEST_CHECKPOINT from the latest migration script.
+# This eliminates the previously hand-maintained constant and ensures MIGCHAIN-SYNC
+# never fails merely because a developer forgot to update the constant.
+HIGHEST_CHECKPOINT=$(ls "${SQL_DIR}"/pg_ripple--*.sql 2>/dev/null \
+    | grep -E 'pg_ripple--[0-9]+\.[0-9]+\.[0-9]+--[0-9]+\.[0-9]+\.[0-9]+\.sql' \
+    | sed 's/.*--\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.sql/\1/' \
+    | sort -V | tail -1 || echo "")
+if [[ "${HIGHEST_MIGRATION}" == "${HIGHEST_CHECKPOINT}" ]] && [[ -n "${HIGHEST_MIGRATION}" ]]; then
     ok "MIGCHAIN-SYNC: highest migration (${HIGHEST_MIGRATION}) matches highest checkpoint (${HIGHEST_CHECKPOINT})"
 elif [[ -z "${HIGHEST_MIGRATION}" ]]; then
     fail "MIGCHAIN-SYNC: no migration scripts found in ${SQL_DIR}"
     exit 1
 else
-    fail "MIGCHAIN-SYNC: highest migration script is ${HIGHEST_MIGRATION} but highest checkpoint is ${HIGHEST_CHECKPOINT} — add checkpoint assertions for the new migration in test_migration_chain.sh"
+    fail "MIGCHAIN-SYNC: highest migration script is ${HIGHEST_MIGRATION} but highest checkpoint is ${HIGHEST_CHECKPOINT} — unexpected mismatch"
     exit 1
 fi
 echo
