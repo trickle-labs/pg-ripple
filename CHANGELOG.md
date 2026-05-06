@@ -15,7 +15,7 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ## [0.98.0] — 2026-05-06 — SKOS Support, Named Bundle API & Graph Intelligence
 
-**Implements v0.98.0 roadmap: complete SKOS/SKOS-XL entailment, formal named bundle API, contradiction explanation, federation trust scoring, and graph coverage metrics.**
+**Implements v0.98.0 roadmap: full SKOS/SKOS-XL entailment stack, formal named bundle API, contradiction explanation, federation trust scoring, and graph coverage metrics. Evidence: `src/skos.rs`, `tests/pg_regress/sql/v098_features.sql`, `docs/src/cookbook/skos-thesaurus.md`, `sql/pg_ripple--0.97.0--0.98.0.sql`.**
 
 ### Added
 
