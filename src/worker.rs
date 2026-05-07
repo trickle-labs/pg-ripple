@@ -204,7 +204,11 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
         "pg_ripple {} merge worker {} starting ({} build, database: {})",
         env!("CARGO_PKG_VERSION"),
         worker_idx,
-        if cfg!(debug_assertions) { "debug" } else { "release" },
+        if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        },
         db_name,
     );
 

@@ -124,7 +124,9 @@ mod pg_ripple {
         decode: default!(bool, false),
         immediate: default!(bool, false),
     ) -> i64 {
-        crate::views::create_datalog_view_from_rule_set(name, rule_set, goal, schedule, decode, immediate)
+        crate::views::create_datalog_view_from_rule_set(
+            name, rule_set, goal, schedule, decode, immediate,
+        )
     }
 
     /// Drop a Datalog view and its underlying pg_trickle stream table.
@@ -159,7 +161,14 @@ mod pg_ripple {
         output_format: default!(&str, "'jsonld'"),
         immediate: default!(bool, "false"),
     ) {
-        crate::views::create_framing_view(name, &frame.0, schedule, decode, output_format, immediate)
+        crate::views::create_framing_view(
+            name,
+            &frame.0,
+            schedule,
+            decode,
+            output_format,
+            immediate,
+        )
     }
 
     /// Drop a framing view stream table and its catalog entry.

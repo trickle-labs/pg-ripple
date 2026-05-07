@@ -176,7 +176,13 @@ pub(crate) fn pg_trickle_available() -> bool {
 ///   on top; when `true`, the stream table stores decoded `TEXT` values
 ///
 /// Returns the number of projected variables (columns) in the view.
-pub(crate) fn create_sparql_view(name: &str, sparql: &str, schedule: &str, decode: bool, immediate: bool) -> i64 {
+pub(crate) fn create_sparql_view(
+    name: &str,
+    sparql: &str,
+    schedule: &str,
+    decode: bool,
+    immediate: bool,
+) -> i64 {
     if !crate::has_pg_trickle() {
         pgrx::error!(
             "pg_trickle is not installed — SPARQL views require pg_trickle; hint: {}",
@@ -996,7 +1002,13 @@ fn compile_construct_for_view(query_text: &str) -> Result<(String, usize, usize)
 /// Requires pg_trickle. Raises a descriptive error when absent.
 ///
 /// Returns the number of template triples registered.
-pub(crate) fn create_construct_view(name: &str, sparql: &str, schedule: &str, decode: bool, immediate: bool) -> i64 {
+pub(crate) fn create_construct_view(
+    name: &str,
+    sparql: &str,
+    schedule: &str,
+    decode: bool,
+    immediate: bool,
+) -> i64 {
     if let Err(e) = validate_name(name) {
         pgrx::error!("invalid view name: {e}");
     }
@@ -1178,7 +1190,13 @@ fn compile_describe_for_view(query_text: &str, strategy: &str) -> Result<String,
 /// the CBD of the described resources.
 ///
 /// Requires pg_trickle. Raises a descriptive error when absent.
-pub(crate) fn create_describe_view(name: &str, sparql: &str, schedule: &str, decode: bool, immediate: bool) {
+pub(crate) fn create_describe_view(
+    name: &str,
+    sparql: &str,
+    schedule: &str,
+    decode: bool,
+    immediate: bool,
+) {
     if let Err(e) = validate_name(name) {
         pgrx::error!("invalid view name: {e}");
     }
