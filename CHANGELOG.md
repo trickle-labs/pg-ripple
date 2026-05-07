@@ -27,6 +27,7 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 ### Added
 
 - **VIEW-IMMEDIATE-01** (issue #82): `immediate` boolean parameter added to `create_sparql_view`, `create_datalog_view`, `create_datalog_view_from_rule_set`, `create_framing_view`, `create_construct_view`, `create_describe_view`, and `create_ask_view`. When `immediate := true`, the underlying `pgtrickle.create_stream_table()` call includes `refresh_mode => 'IMMEDIATE'`, enabling constraint-style in-transaction refresh. Defaults to `false`; all existing call sites are unaffected.
+- **BUILD-INFO-01** (issue #77): `pg_ripple.build_info()` SQL function returns a JSONB object with compile-time metadata: `version`, `profile` (`"debug"` or `"release"`), `built` (RFC-3339 timestamp), and `git_sha` (short SHA). Useful for diagnostics: `SELECT pg_ripple.build_info();`.
 
 ### Migration
 
