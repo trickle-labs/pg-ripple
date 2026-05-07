@@ -81,7 +81,7 @@ SELECT pg_ripple.list_datalog_views() = '[]'::jsonb AS cleaned_up;
 -- _pg_ripple.rules.  After the second call the count must equal the first.
 
 SELECT pg_ripple.load_rules(
-    ':- triple(?s, <https://example.org/knows>, ?o).',
+    '?s <https://example.org/indirectKnows> ?o :- ?s <https://example.org/knows> ?o .',
     'idempotent_test_rs'
 ) AS first_load;
 
@@ -89,7 +89,7 @@ SELECT COUNT(*) AS rule_count_after_first
 FROM _pg_ripple.rules WHERE rule_set = 'idempotent_test_rs';
 
 SELECT pg_ripple.load_rules(
-    ':- triple(?s, <https://example.org/knows>, ?o).',
+    '?s <https://example.org/indirectKnows> ?o :- ?s <https://example.org/knows> ?o .',
     'idempotent_test_rs'
 ) AS second_load;
 

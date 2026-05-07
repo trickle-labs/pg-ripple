@@ -216,7 +216,6 @@ SELECT pg_ripple.load_rules(
 -- (not crash); the aggregate_derived should be 0 (aggregate was skipped).
 SELECT jsonb_typeof(pg_ripple.infer_agg('agg_cycle_test')) = 'object'
     AS cycle_infer_returns_object;
-WARNING:  infer_agg: aggregation stratification violation (PT510): PT510: aggregation-stratification violation: a derived predicate depends on another predicate via aggregation, but that predicate is also derived through positive rules; this creates a cycle through aggregation; ensure the aggregated predicate is fully computed before the aggregate rule runs; aggregate rules will be skipped
  cycle_infer_returns_object 
 ----------------------------
  t
