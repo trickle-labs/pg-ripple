@@ -8,11 +8,11 @@
 //! # Public SQL functions
 //!
 //! - `pg_ripple.pg_trickle_available()` — check whether pg_trickle is installed
-//! - `pg_ripple.create_sparql_view(name, sparql, schedule, decode)` — create an always-fresh SPARQL result table
+//! - `pg_ripple.create_sparql_view(name, sparql, schedule, decode, immediate)` — create an always-fresh SPARQL result table
 //! - `pg_ripple.drop_sparql_view(name)` — drop a SPARQL view
 //! - `pg_ripple.list_sparql_views()` — list all registered SPARQL views
-//! - `pg_ripple.create_datalog_view(name, rules, goal, schedule, decode)` — create a Datalog-backed live view
-//! - `pg_ripple.create_datalog_view(name, rule_set, goal, schedule, decode)` — same using a named rule set
+//! - `pg_ripple.create_datalog_view(name, rules, goal, schedule, decode, immediate)` — create a Datalog-backed live view
+//! - `pg_ripple.create_datalog_view(name, rule_set, goal, schedule, decode, immediate)` — same using a named rule set
 //! - `pg_ripple.drop_datalog_view(name)` — drop a Datalog view
 //! - `pg_ripple.list_datalog_views()` — list all registered Datalog views
 //! - `pg_ripple.create_extvp(name, pred1_iri, pred2_iri, schedule)` — create an ExtVP semi-join stream table
@@ -176,7 +176,7 @@ pub(crate) fn pg_trickle_available() -> bool {
 ///   on top; when `true`, the stream table stores decoded `TEXT` values
 ///
 /// Returns the number of projected variables (columns) in the view.
-pub(crate) fn create_sparql_view(name: &str, sparql: &str, schedule: &str, decode: bool) -> i64 {
+pub(crate) fn create_sparql_view(name: &str, sparql: &str, schedule: &str, decode: bool, immediate: bool) -> i64 {
     if !crate::has_pg_trickle() {
         pgrx::error!(
             "pg_trickle is not installed — SPARQL views require pg_trickle; hint: {}",
@@ -227,11 +227,17 @@ pub(crate) fn create_sparql_view(name: &str, sparql: &str, schedule: &str, decod
     // IVM can diff rows via integer comparison (fix for issue #81).
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+    let refresh_mode_clause = if immediate {
+        ", refresh_mode => 'IMMEDIATE'"
+    } else {
+        ""
+    };
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
             query => $__pgrst_q${view_sql}$__pgrst_q$, \
             schedule => '{escaped_schedule}'\
+            {refresh_mode_clause}\
         )"
     );
     Spi::run(&pgt_sql)
@@ -321,6 +327,7 @@ pub(crate) fn create_datalog_view_from_rules(
     goal: &str,
     schedule: &str,
     decode: bool,
+    immediate: bool,
 ) -> i64 {
     if !crate::has_pg_trickle() {
         pgrx::error!(
@@ -376,11 +383,17 @@ pub(crate) fn create_datalog_view_from_rules(
     // Create the pg_trickle stream table.
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+    let refresh_mode_clause = if immediate {
+        ", refresh_mode => 'IMMEDIATE'"
+    } else {
+        ""
+    };
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
             query => $__pgrdl_q${goal_sql}$__pgrdl_q$, \
             schedule => '{escaped_schedule}'\
+            {refresh_mode_clause}\
         )"
     );
     Spi::run(&pgt_sql)
@@ -414,6 +427,7 @@ pub(crate) fn create_datalog_view_from_rule_set(
     goal: &str,
     schedule: &str,
     decode: bool,
+    immediate: bool,
 ) -> i64 {
     if !crate::has_pg_trickle() {
         pgrx::error!(
@@ -477,11 +491,17 @@ pub(crate) fn create_datalog_view_from_rule_set(
     // Create the pg_trickle stream table.
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+    let refresh_mode_clause = if immediate {
+        ", refresh_mode => 'IMMEDIATE'"
+    } else {
+        ""
+    };
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
             query => $__pgrdl_q${goal_sql}$__pgrdl_q$, \
             schedule => '{escaped_schedule}'\
+            {refresh_mode_clause}\
         )"
     );
     Spi::run(&pgt_sql)
@@ -681,6 +701,7 @@ pub(crate) fn create_framing_view(
     schedule: &str,
     decode: bool,
     output_format: &str,
+    immediate: bool,
 ) {
     if !crate::has_pg_trickle() {
         pgrx::error!(
@@ -739,11 +760,17 @@ pub(crate) fn create_framing_view(
     .unwrap_or_else(|e| pgrx::error!("failed to register framing view: {e}"));
 
     // Create the pg_trickle stream table.
+    let refresh_mode_clause = if immediate {
+        ", refresh_mode => 'IMMEDIATE'"
+    } else {
+        ""
+    };
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
             query => $__fv_q${stream_sql}$__fv_q$, \
             schedule => '{escaped_schedule}'\
+            {refresh_mode_clause}\
         )"
     );
     Spi::run(&pgt_sql)
@@ -969,7 +996,7 @@ fn compile_construct_for_view(query_text: &str) -> Result<(String, usize, usize)
 /// Requires pg_trickle. Raises a descriptive error when absent.
 ///
 /// Returns the number of template triples registered.
-pub(crate) fn create_construct_view(name: &str, sparql: &str, schedule: &str, decode: bool) -> i64 {
+pub(crate) fn create_construct_view(name: &str, sparql: &str, schedule: &str, decode: bool, immediate: bool) -> i64 {
     if let Err(e) = validate_name(name) {
         pgrx::error!("invalid view name: {e}");
     }
@@ -1023,11 +1050,17 @@ pub(crate) fn create_construct_view(name: &str, sparql: &str, schedule: &str, de
     // Create the pg_trickle stream table.
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+    let refresh_mode_clause = if immediate {
+        ", refresh_mode => 'IMMEDIATE'"
+    } else {
+        ""
+    };
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
             query => $__cv_q${view_sql}$__cv_q$, \
             schedule => '{escaped_schedule}'\
+            {refresh_mode_clause}\
         )"
     );
     Spi::run(&pgt_sql)
@@ -1145,7 +1178,7 @@ fn compile_describe_for_view(query_text: &str, strategy: &str) -> Result<String,
 /// the CBD of the described resources.
 ///
 /// Requires pg_trickle. Raises a descriptive error when absent.
-pub(crate) fn create_describe_view(name: &str, sparql: &str, schedule: &str, decode: bool) {
+pub(crate) fn create_describe_view(name: &str, sparql: &str, schedule: &str, decode: bool, immediate: bool) {
     if let Err(e) = validate_name(name) {
         pgrx::error!("invalid view name: {e}");
     }
@@ -1204,11 +1237,17 @@ pub(crate) fn create_describe_view(name: &str, sparql: &str, schedule: &str, dec
     .unwrap_or_else(|e| pgrx::error!("failed to register DESCRIBE view: {e}"));
 
     // Create the pg_trickle stream table.
+    let refresh_mode_clause = if immediate {
+        ", refresh_mode => 'IMMEDIATE'"
+    } else {
+        ""
+    };
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
             query => $__dv_q${view_sql}$__dv_q$, \
             schedule => '{escaped_schedule}'\
+            {refresh_mode_clause}\
         )"
     );
     Spi::run(&pgt_sql)
@@ -1292,7 +1331,7 @@ fn compile_ask_for_view(query_text: &str) -> Result<String, String> {
 /// whose `result` column flips whenever the underlying pattern's satisfiability changes.
 ///
 /// Requires pg_trickle. Raises a descriptive error when absent.
-pub(crate) fn create_ask_view(name: &str, sparql: &str, schedule: &str) {
+pub(crate) fn create_ask_view(name: &str, sparql: &str, schedule: &str, immediate: bool) {
     if let Err(e) = validate_name(name) {
         pgrx::error!("invalid view name: {e}");
     }
@@ -1336,11 +1375,17 @@ pub(crate) fn create_ask_view(name: &str, sparql: &str, schedule: &str) {
     .unwrap_or_else(|e| pgrx::error!("failed to register ASK view: {e}"));
 
     // Create the pg_trickle stream table.
+    let refresh_mode_clause = if immediate {
+        ", refresh_mode => 'IMMEDIATE'"
+    } else {
+        ""
+    };
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
             query => $__av_q${view_sql}$__av_q$, \
             schedule => '{escaped_schedule}'\
+            {refresh_mode_clause}\
         )"
     );
     Spi::run(&pgt_sql)

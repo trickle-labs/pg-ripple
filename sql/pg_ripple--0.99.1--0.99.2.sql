@@ -1,0 +1,18 @@
+-- Migration 0.99.1 → 0.99.2: IMMEDIATE mode support for all view creation functions (issue #82)
+--
+-- Added parameter: immediate BOOLEAN DEFAULT false
+--
+-- The following SQL functions now accept an optional `immediate` boolean parameter
+-- that maps to `refresh_mode => 'IMMEDIATE'` in the underlying
+-- pgtrickle.create_stream_table() call, enabling in-transaction constraint-style refresh:
+--
+--   pg_ripple.create_sparql_view(name, sparql, schedule, decode, immediate)
+--   pg_ripple.create_datalog_view(name, rules, goal, rule_set_name, schedule, decode, immediate)
+--   pg_ripple.create_datalog_view_from_rule_set(name, rule_set, goal, schedule, decode, immediate)
+--   pg_ripple.create_framing_view(name, frame, schedule, decode, output_format, immediate)
+--   pg_ripple.create_construct_view(name, sparql, schedule, decode, immediate)
+--   pg_ripple.create_describe_view(name, sparql, schedule, decode, immediate)
+--   pg_ripple.create_ask_view(name, sparql, schedule, immediate)
+--
+-- The parameter defaults to false, so all existing call sites are unaffected.
+-- No schema changes (catalog tables unchanged).

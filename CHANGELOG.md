@@ -13,6 +13,21 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.99.2] — 2026-05-07 — IMMEDIATE mode support for all view creation functions (issue #82)
+
+**Patch release: adds `immediate BOOLEAN DEFAULT false` parameter to all seven view creation functions, wiring it to `refresh_mode => 'IMMEDIATE'` in the underlying `pgtrickle.create_stream_table()` call. No schema changes.**
+
+### Added
+
+- **VIEW-IMMEDIATE-01** (issue #82): `immediate` boolean parameter added to `create_sparql_view`, `create_datalog_view`, `create_datalog_view_from_rule_set`, `create_framing_view`, `create_construct_view`, `create_describe_view`, and `create_ask_view`. When `immediate := true`, the underlying `pgtrickle.create_stream_table()` call includes `refresh_mode => 'IMMEDIATE'`, enabling constraint-style in-transaction refresh. Defaults to `false`; all existing call sites are unaffected.
+
+### Migration
+
+- No schema changes.
+- Migration script: `sql/pg_ripple--0.99.1--0.99.2.sql` (comment-only).
+
+---
+
 ## [0.99.1] — 2026-05-07 — pg_trickle & pg_tide version probe fix; SPARQL/Datalog view decode=true IVM fix
 
 **Patch release: aligns the pg_trickle compatibility probe with the deployed version and fixes `decode=true` on SPARQL/Datalog views to preserve BIGINT stream table columns for pg_trickle IVM correctness. No schema changes.**

@@ -57,8 +57,9 @@ mod pg_ripple {
         sparql: &str,
         schedule: default!(&str, "'1s'"),
         decode: default!(bool, false),
+        immediate: default!(bool, false),
     ) -> i64 {
-        crate::views::create_sparql_view(name, sparql, schedule, decode)
+        crate::views::create_sparql_view(name, sparql, schedule, decode, immediate)
     }
 
     /// Drop a SPARQL view and its underlying pg_trickle stream table.
@@ -97,6 +98,7 @@ mod pg_ripple {
         rule_set_name: default!(&str, "'custom'"),
         schedule: default!(&str, "'10s'"),
         decode: default!(bool, false),
+        immediate: default!(bool, false),
     ) -> i64 {
         crate::views::create_datalog_view_from_rules(
             name,
@@ -105,6 +107,7 @@ mod pg_ripple {
             goal,
             schedule,
             decode,
+            immediate,
         )
     }
 
@@ -119,8 +122,9 @@ mod pg_ripple {
         goal: &str,
         schedule: default!(&str, "'10s'"),
         decode: default!(bool, false),
+        immediate: default!(bool, false),
     ) -> i64 {
-        crate::views::create_datalog_view_from_rule_set(name, rule_set, goal, schedule, decode)
+        crate::views::create_datalog_view_from_rule_set(name, rule_set, goal, schedule, decode, immediate)
     }
 
     /// Drop a Datalog view and its underlying pg_trickle stream table.
@@ -153,8 +157,9 @@ mod pg_ripple {
         schedule: default!(&str, "'5s'"),
         decode: default!(bool, "false"),
         output_format: default!(&str, "'jsonld'"),
+        immediate: default!(bool, "false"),
     ) {
-        crate::views::create_framing_view(name, &frame.0, schedule, decode, output_format)
+        crate::views::create_framing_view(name, &frame.0, schedule, decode, output_format, immediate)
     }
 
     /// Drop a framing view stream table and its catalog entry.
@@ -190,8 +195,9 @@ mod pg_ripple {
         sparql: &str,
         schedule: default!(&str, "'1s'"),
         decode: default!(bool, "false"),
+        immediate: default!(bool, "false"),
     ) -> i64 {
-        crate::views::create_construct_view(name, sparql, schedule, decode)
+        crate::views::create_construct_view(name, sparql, schedule, decode, immediate)
     }
 
     /// Drop a CONSTRUCT view and its underlying pg_trickle stream table.
@@ -222,8 +228,9 @@ mod pg_ripple {
         sparql: &str,
         schedule: default!(&str, "'1s'"),
         decode: default!(bool, "false"),
+        immediate: default!(bool, "false"),
     ) {
-        crate::views::create_describe_view(name, sparql, schedule, decode)
+        crate::views::create_describe_view(name, sparql, schedule, decode, immediate)
     }
 
     /// Drop a DESCRIBE view and its underlying pg_trickle stream table.
@@ -244,8 +251,13 @@ mod pg_ripple {
     ///
     /// Errors if `sparql` is not an ASK query.
     #[pg_extern]
-    fn create_ask_view(name: &str, sparql: &str, schedule: default!(&str, "'1s'")) {
-        crate::views::create_ask_view(name, sparql, schedule)
+    fn create_ask_view(
+        name: &str,
+        sparql: &str,
+        schedule: default!(&str, "'1s'"),
+        immediate: default!(bool, false),
+    ) {
+        crate::views::create_ask_view(name, sparql, schedule, immediate)
     }
 
     /// Drop an ASK view and its underlying pg_trickle stream table.
