@@ -13,6 +13,23 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.99.1] — 2026-05-07 — pg_trickle & pg_tide version probe fix
+
+**Patch release: aligns the pg_trickle compatibility probe with the deployed version, eliminating spurious schema incompatibility warnings. No schema changes.**
+
+### Fixed
+
+- **TRICKLE-PROBE-01**: `PG_TRICKLE_TESTED_VERSION` constant in `src/lib.rs` corrected from `"0.3.0"` to `"0.49.0"`. The stale constant caused pg_ripple to emit a WARNING about pg_trickle being "newer than tested" on every startup when deployed with the Dockerfile-bundled pg_trickle, and in some configurations caused `create_datalog_view_from_rule_set` to fail with a column `s` mismatch in the compiled VP table query.
+- **DOCKER-01**: Dockerfile `PG_TRICKLE_VERSION` bumped from `0.48.0` to `0.49.0` to pick up upstream bug fixes.
+- **DOCKER-02**: Dockerfile `PG_TIDE_VERSION` bumped from `0.15.0` to `0.16.0`.
+
+### Migration
+
+- No schema changes.
+- Migration script: `sql/pg_ripple--0.99.0--0.99.1.sql` (comment-only).
+
+---
+
 ## [0.99.0] — 2026-05-06 — DCTERMS, Schema.org & FOAF Vocabulary Bundles
 
 **Implements v0.99.0 roadmap: native Datalog rule sets and SHACL integrity bundles for Dublin Core Terms, Schema.org, and FOAF — completing the "Big 5" vocabulary suite together with SKOS (v0.98.0). Evidence: `src/datalog/builtins.rs`, `src/skos.rs`, `tests/pg_regress/sql/v099_features.sql`, `docs/src/cookbook/common-vocabularies.md`, `sql/pg_ripple--0.98.0--0.99.0.sql`.**

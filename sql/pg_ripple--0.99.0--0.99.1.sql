@@ -1,0 +1,10 @@
+-- Migration 0.99.0 → 0.99.1: pg_trickle and pg_tide version probe fix
+--
+-- No schema changes. This patch release corrects the pg_trickle compatibility
+-- probe constant (PG_TRICKLE_TESTED_VERSION) which was stale at v0.3.0 while
+-- the Dockerfile deployed pg_trickle v0.48.0, causing a spurious schema
+-- incompatibility warning at startup. Version probe is now aligned to v0.49.0.
+--
+-- Dependency versions updated:
+--   pg_trickle: 0.48.0 → 0.49.0 (Dockerfile ARG + lib.rs probe constant)
+--   pg_tide:    0.15.0 → 0.16.0 (Dockerfile ARG)

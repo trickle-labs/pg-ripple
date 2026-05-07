@@ -93,7 +93,7 @@ pgrx::pg_module_magic!();
 // ─── pg_trickle runtime detection (v0.6.0) ───────────────────────────────────
 
 /// The pg_trickle version that pg_ripple was tested against (A-4, v0.25.0).
-const PG_TRICKLE_TESTED_VERSION: &str = "0.3.0";
+const PG_TRICKLE_TESTED_VERSION: &str = "0.49.0";
 
 // ─── RDF Patch N-Triples term parser (v0.25.0) ───────────────────────────────
 
