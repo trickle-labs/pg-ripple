@@ -1,4 +1,4 @@
--- Migration 0.99.0 → 0.99.1: pg_trickle/pg_tide version probe fix + SPARQL/Datalog view decode fix
+-- Migration 0.99.0 → 0.99.1: pg_trickle/pg_tide version probe fix + SPARQL/Datalog view decode fix + IMMEDIATE mode
 --
 -- No schema changes.
 --
@@ -11,3 +11,10 @@
 --   The stream table always stores BIGINT dictionary IDs for pg_trickle IVM correctness.
 --   When decode=true a companion VIEW {name}_decoded is created on top for TEXT access.
 --   drop_sparql_view/drop_datalog_view now also drop the _decoded companion view.
+--
+-- Fix 3 (VIEW-IMMEDIATE-01, issue #82): all seven view creation functions now accept
+--   an optional `immediate BOOLEAN DEFAULT false` parameter. When true, the underlying
+--   pgtrickle.create_stream_table() call includes `refresh_mode => 'IMMEDIATE'`,
+--   enabling constraint-style in-transaction refresh. Affected functions:
+--   create_sparql_view, create_datalog_view, create_datalog_view_from_rule_set,
+--   create_framing_view, create_construct_view, create_describe_view, create_ask_view.

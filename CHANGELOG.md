@@ -13,24 +13,9 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
-## [0.99.2] — 2026-05-07 — IMMEDIATE mode support for all view creation functions (issue #82)
+## [0.99.1] — 2026-05-07 — pg_trickle & pg_tide version probe fix; view decode=true IVM fix; IMMEDIATE mode
 
-**Patch release: adds `immediate BOOLEAN DEFAULT false` parameter to all seven view creation functions, wiring it to `refresh_mode => 'IMMEDIATE'` in the underlying `pgtrickle.create_stream_table()` call. No schema changes.**
-
-### Added
-
-- **VIEW-IMMEDIATE-01** (issue #82): `immediate` boolean parameter added to `create_sparql_view`, `create_datalog_view`, `create_datalog_view_from_rule_set`, `create_framing_view`, `create_construct_view`, `create_describe_view`, and `create_ask_view`. When `immediate := true`, the underlying `pgtrickle.create_stream_table()` call includes `refresh_mode => 'IMMEDIATE'`, enabling constraint-style in-transaction refresh. Defaults to `false`; all existing call sites are unaffected.
-
-### Migration
-
-- No schema changes.
-- Migration script: `sql/pg_ripple--0.99.1--0.99.2.sql` (comment-only).
-
----
-
-## [0.99.1] — 2026-05-07 — pg_trickle & pg_tide version probe fix; SPARQL/Datalog view decode=true IVM fix
-
-**Patch release: aligns the pg_trickle compatibility probe with the deployed version and fixes `decode=true` on SPARQL/Datalog views to preserve BIGINT stream table columns for pg_trickle IVM correctness. No schema changes.**
+**Patch release: aligns the pg_trickle compatibility probe with the deployed version, fixes `decode=true` on SPARQL/Datalog views to preserve BIGINT stream table columns for pg_trickle IVM correctness, and adds `immediate` mode support to all view creation functions. No schema changes.**
 
 ### Fixed
 
@@ -38,6 +23,10 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 - **DOCKER-01**: Dockerfile `PG_TRICKLE_VERSION` bumped from `0.48.0` to `0.49.0` to pick up upstream bug fixes.
 - **DOCKER-02**: Dockerfile `PG_TIDE_VERSION` bumped from `0.15.0` to `0.16.0`.
 - **VIEW-DECODE-01** (issue #81): `create_sparql_view` and `create_datalog_view` with `decode = true` no longer wrap the stream table query with dictionary decode subqueries. The stream table always stores `BIGINT` dictionary IDs; when `decode = true`, a separate companion VIEW `{name}_decoded` is created that performs dictionary lookups at read time (e.g. `pg_ripple.people_names_decoded`). `drop_sparql_view` and `drop_datalog_view` now also drop the `_decoded` companion view. This mirrors the existing behaviour of `create_construct_view` and `create_framing_view`.
+
+### Added
+
+- **VIEW-IMMEDIATE-01** (issue #82): `immediate` boolean parameter added to `create_sparql_view`, `create_datalog_view`, `create_datalog_view_from_rule_set`, `create_framing_view`, `create_construct_view`, `create_describe_view`, and `create_ask_view`. When `immediate := true`, the underlying `pgtrickle.create_stream_table()` call includes `refresh_mode => 'IMMEDIATE'`, enabling constraint-style in-transaction refresh. Defaults to `false`; all existing call sites are unaffected.
 
 ### Migration
 
