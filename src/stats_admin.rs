@@ -114,7 +114,10 @@ mod pg_ripple {
         // IMMEDIATE mode — replaces the merge-worker GROUP BY polling for
         // VP promotion detection.
         // IDEMPOTENT-02 (issue #83): drop first so repeated calls don't warn.
-        pgrx::Spi::run("SELECT pg_trickle.drop_stream_table('_pg_ripple.rare_predicate_candidates')").ok();
+        pgrx::Spi::run(
+            "SELECT pg_trickle.drop_stream_table('_pg_ripple.rare_predicate_candidates')",
+        )
+        .ok();
         pgrx::Spi::run(
             "SELECT pg_trickle.create_stream_table(
                 '_pg_ripple.rare_predicate_candidates',
