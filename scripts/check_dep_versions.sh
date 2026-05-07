@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # scripts/check_dep_versions.sh — DEP-VER-01
 #
-# Verify that external dependency versions are consistent across three places:
+# Verify that external dependency versions are consistent across two places:
 #   1. .versions.toml      — the single source of truth
 #   2. Dockerfile ARG      — build-time pinning for the Docker image
-#   3. src/lib.rs constants — runtime probe constants (PG_TRICKLE_TESTED_VERSION, etc.)
 #
-# PostGIS and pgvector have no corresponding Rust runtime constants (they are
-# PostgreSQL extensions not detected at runtime), so only Dockerfile ARGs are
-# checked for those.
+# NOTE: src/lib.rs constants (PG_TRICKLE_TESTED_VERSION, PG_TIDE_TESTED_VERSION)
+# are no longer checked here. build.rs injects them directly from .versions.toml
+# at compile time (DEP-VER-BUILD-01), so they can never drift.
 #
 # Usage:
 #   bash scripts/check_dep_versions.sh
@@ -86,11 +85,6 @@ check \
     "${CANONICAL_TRICKLE}" \
     "$(dockerfile_get "PG_TRICKLE_VERSION")" \
     "Set 'ARG PG_TRICKLE_VERSION=${CANONICAL_TRICKLE}' in Dockerfile"
-check \
-    "src/lib.rs PG_TRICKLE_TESTED_VERSION" \
-    "${CANONICAL_TRICKLE}" \
-    "$(rust_const_get "PG_TRICKLE_TESTED_VERSION")" \
-    "Set 'const PG_TRICKLE_TESTED_VERSION: &str = \"${CANONICAL_TRICKLE}\";' in src/lib.rs"
 
 # pg_tide
 CANONICAL_TIDE=$(toml_get "pg_tide")
@@ -99,11 +93,6 @@ check \
     "${CANONICAL_TIDE}" \
     "$(dockerfile_get "PG_TIDE_VERSION")" \
     "Set 'ARG PG_TIDE_VERSION=${CANONICAL_TIDE}' in Dockerfile"
-check \
-    "src/lib.rs PG_TIDE_TESTED_VERSION" \
-    "${CANONICAL_TIDE}" \
-    "$(rust_const_get "PG_TIDE_TESTED_VERSION")" \
-    "Set 'const PG_TIDE_TESTED_VERSION: &str = \"${CANONICAL_TIDE}\";' in src/lib.rs"
 
 # PostGIS (Docker only — no runtime probe constant)
 CANONICAL_POSTGIS=$(toml_get "postgis")

@@ -94,18 +94,16 @@ pgrx::pg_module_magic!();
 
 /// The pg_trickle version that pg_ripple was tested against (A-4, v0.25.0).
 ///
-/// **MAINTENANCE REQUIREMENT**: Update this constant whenever:
-/// - A new version of pg_trickle is tested and integrated with pg_ripple
-/// - The `Dockerfile` updates `PG_TRICKLE_VERSION`
-/// - Major features in pg_trickle are adopted (e.g. new CDC/IVM capabilities)
+/// **MAINTENANCE**: To change this value, update `.versions.toml` (key: `pg_trickle`)
+/// and rebuild — `build.rs` injects it at compile time (DEP-VER-BUILD-01).
+/// Also update the corresponding Dockerfile `ARG PG_TRICKLE_VERSION`.
 ///
 /// If this constant is stale (older than the deployed pg_trickle version),
 /// users will see spurious warnings at every startup:
 /// > "pg_ripple: pg_trickle version X.Y.Z is newer than tested version A.B.C"
 ///
-/// Stale values also risk silently disabling features. Verify the constant
-/// matches the tested version during every release (see RELEASE.md).
-const PG_TRICKLE_TESTED_VERSION: &str = "0.49.0";
+/// Stale values also risk silently disabling features. See RELEASE.md.
+const PG_TRICKLE_TESTED_VERSION: &str = env!("PG_TRICKLE_TESTED_VERSION");
 
 // ─── RDF Patch N-Triples term parser (v0.25.0) ───────────────────────────────
 
@@ -269,15 +267,16 @@ pub(crate) fn has_live_statistics() -> bool {
 
 /// The pg_tide version that pg_ripple was tested against (TIDE-1, v0.93.0).
 ///
-/// **MAINTENANCE REQUIREMENT**: Update this constant whenever:
-/// - A new version of pg_tide is tested and integrated with pg_ripple
-/// - The `Dockerfile` updates `PG_TIDE_VERSION`
-/// - The relay/outbox/inbox API changes in a pg_tide release
+/// **MAINTENANCE**: To change this value, update `.versions.toml` (key: `pg_tide`)
+/// and rebuild — `build.rs` injects it at compile time (DEP-VER-BUILD-01).
+/// Also update the corresponding Dockerfile `ARG PG_TIDE_VERSION`.
 ///
 /// If this constant is stale, users will see spurious warnings at startup.
 /// Verify the constant matches the tested version during every release (see RELEASE.md).
-/// The `scripts/check_dep_versions.sh` CI script enforces consistency with `.versions.toml`.
-const PG_TIDE_TESTED_VERSION: &str = "0.16.0";
+///
+/// The value is injected at compile time from `.versions.toml` by `build.rs`
+/// (DEP-VER-BUILD-01) — update `.versions.toml` and rebuild to change it.
+const PG_TIDE_TESTED_VERSION: &str = env!("PG_TIDE_TESTED_VERSION");
 
 /// Returns `true` when the pg_tide extension is installed in the current database.
 ///
