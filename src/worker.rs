@@ -200,7 +200,13 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
     let db_name = get_worker_database();
     BackgroundWorker::connect_worker_to_spi(Some(&db_name), None);
 
-    pgrx::log!("pg_ripple merge worker {worker_idx} started (database: {db_name})");
+    pgrx::log!(
+        "pg_ripple {} merge worker {} starting ({} build, database: {})",
+        env!("CARGO_PKG_VERSION"),
+        worker_idx,
+        if cfg!(debug_assertions) { "debug" } else { "release" },
+        db_name,
+    );
 
     // PROMO-RECOVER-01: Worker 0 runs recover_interrupted_promotions() once at
     // startup to resume any VP promotions that were interrupted by an unclean

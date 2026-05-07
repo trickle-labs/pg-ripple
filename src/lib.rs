@@ -374,6 +374,32 @@ fn register_executor_end_hook() {
 #[allow(non_snake_case)]
 #[pg_guard]
 pub extern "C-unwind" fn _PG_init() {
+    // INIT-LOG-01 (v0.99.1): emit a single LOG line so operators can correlate
+    // a running PostgreSQL instance with the exact binary that loaded it.
+    // All values are compile-time constants — zero runtime overhead.
+    {
+        const BUILD_TIME: &str = match option_env!("BUILD_TIMESTAMP") {
+            Some(ts) => ts,
+            None => "unknown",
+        };
+        const GIT_SHA: &str = match option_env!("GIT_SHA") {
+            Some(sha) => sha,
+            None => "unknown",
+        };
+        const BUILD_PROFILE: &str = if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        };
+        pgrx::log!(
+            "pg_ripple {} loaded ({} build, built {}, git {})",
+            env!("CARGO_PKG_VERSION"),
+            BUILD_PROFILE,
+            BUILD_TIME,
+            GIT_SHA,
+        );
+    }
+
     // Register all GUC parameters (MOD-01: extracted to src/gucs/registration.rs).
     crate::gucs::registration::register_all_gucs();
 

@@ -80,4 +80,18 @@ fn main() {
             format!("build-version={}", env!("CARGO_PKG_VERSION"))
         });
     println!("cargo::rustc-env=BUILD_TIMESTAMP={ts}");
+
+    // BUILD-GIT-SHA-01 (v0.99.1): emit a short git SHA for build traceability.
+    // Prefer the GIT_SHA env var (set by CI), then fall back to `git rev-parse`.
+    let sha = std::env::var("GIT_SHA").ok().unwrap_or_else(|| {
+        std::process::Command::new("git")
+            .args(["rev-parse", "--short", "HEAD"])
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "unknown".to_string())
+    });
+    println!("cargo::rustc-env=GIT_SHA={sha}");
 }

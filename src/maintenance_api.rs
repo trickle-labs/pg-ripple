@@ -926,4 +926,39 @@ mod pg_ripple {
         }
         count
     }
+
+    /// Return build metadata as a JSON object.
+    ///
+    /// Fields: `version`, `profile` (`"debug"` or `"release"`), `built` (RFC-3339
+    /// timestamp or `"unknown"`), `git_sha` (short SHA or `"unknown"`).
+    ///
+    /// All values are compile-time constants — zero runtime overhead.
+    ///
+    /// ```sql
+    /// SELECT pg_ripple.build_info();
+    /// -- {"version":"0.99.1","profile":"release","built":"2026-05-07T12:00:00Z","git_sha":"a1b2c3d"}
+    /// ```
+    #[pg_extern]
+    fn build_info() -> pgrx::JsonB {
+        const BUILD_TIME: &str = match option_env!("BUILD_TIMESTAMP") {
+            Some(ts) => ts,
+            None => "unknown",
+        };
+        const GIT_SHA: &str = match option_env!("GIT_SHA") {
+            Some(sha) => sha,
+            None => "unknown",
+        };
+        const BUILD_PROFILE: &str = if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        };
+        let json = serde_json::json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "profile": BUILD_PROFILE,
+            "built": BUILD_TIME,
+            "git_sha": GIT_SHA,
+        });
+        pgrx::JsonB(json)
+    }
 }
