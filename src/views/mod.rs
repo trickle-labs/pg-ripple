@@ -74,14 +74,12 @@ pub(crate) const PGTIDE_HINT: &str = "pg_tide extension is not installed; \
 /// `{col} AS {varname}` (plain name, not `_v_{varname}`).  Column names are
 /// safe SPARQL variable names and therefore valid SQL identifiers.
 ///
-/// `decode = false` (Option B): the stream table stores raw `BIGINT` IDs;
-/// a thin decode view is created on top.
-/// `decode = true` (Option A): the stream table joins the dictionary to return
-/// decoded TEXT values — wider CDC surface, easier reads.
-fn compile_sparql_for_view(
-    query_text: &str,
-    decode: bool,
-) -> Result<(String, Vec<String>), String> {
+/// The stream table always stores raw `BIGINT` dictionary IDs.
+/// When the caller requests `decode = true`, a thin `_{name}_decoded` companion
+/// VIEW is created on top (the same pattern used by `create_construct_view`).
+/// This keeps the pg_trickle IVM delta path working on integer columns while
+/// still offering a convenient TEXT-decoded surface.
+fn compile_sparql_for_view(query_text: &str) -> Result<(String, Vec<String>), String> {
     let query = SparqlParser::new()
         .parse_query(query_text)
         .map_err(|e| format!("SPARQL parse error: {e}"))?;
@@ -97,30 +95,7 @@ fn compile_sparql_for_view(
     // plain variable names so the stream table schema is readable.
     let clean_sql = remap_view_columns(&trans.sql, &trans.variables);
 
-    if !decode {
-        return Ok((clean_sql, trans.variables));
-    }
-
-    // Option A: wrap with dictionary decode joins for each variable.
-    // Each variable col becomes: `(SELECT value FROM _pg_ripple.dictionary WHERE id = _inner.{var})`.
-    // This is applied only when decode = true; the stream table stores TEXT values.
-    let inner_alias = "_sv_inner";
-    let decode_cols: Vec<String> = trans
-        .variables
-        .iter()
-        .map(|v| {
-            format!(
-                "(SELECT d.value FROM _pg_ripple.dictionary d WHERE d.id = {inner_alias}.{v}) AS {v}"
-            )
-        })
-        .collect();
-    let decoded_sql = format!(
-        "SELECT {} FROM ({}) AS {}",
-        decode_cols.join(", "),
-        clean_sql,
-        inner_alias
-    );
-    Ok((decoded_sql, trans.variables))
+    Ok((clean_sql, trans.variables))
 }
 
 /// Re-map `_v_{var}` column aliases in a translated SQL to plain `{var}`.
@@ -212,7 +187,7 @@ pub(crate) fn create_sparql_view(name: &str, sparql: &str, schedule: &str, decod
         pgrx::error!("invalid view name: {e}");
     }
 
-    let (view_sql, variables) = compile_sparql_for_view(sparql, decode)
+    let (view_sql, variables) = compile_sparql_for_view(sparql)
         .unwrap_or_else(|e| pgrx::error!("SPARQL view compilation failed: {e}"));
 
     let var_count = variables.len() as i64;
@@ -248,6 +223,8 @@ pub(crate) fn create_sparql_view(name: &str, sparql: &str, schedule: &str, decod
     // Create the pg_trickle stream table.  The view SQL is passed via a
     // dollar-quoted literal so the schedule and stream_table name need their
     // own escaping for the function-call argument list.
+    // The stream table always stores BIGINT dictionary IDs so that pg_trickle
+    // IVM can diff rows via integer comparison (fix for issue #81).
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
     let pgt_sql = format!(
@@ -259,6 +236,26 @@ pub(crate) fn create_sparql_view(name: &str, sparql: &str, schedule: &str, decod
     );
     Spi::run(&pgt_sql)
         .unwrap_or_else(|e| pgrx::error!("failed to create pg_trickle stream table: {e}"));
+
+    // If decode = true, create a thin companion VIEW that decodes BIGINT IDs
+    // to TEXT strings.  This mirrors the pattern used by create_construct_view
+    // and keeps the stream table columns as BIGINT for IVM correctness.
+    if decode {
+        let decode_view = format!("pg_ripple.{name}_decoded");
+        let inner_alias = "_sv_";
+        let decode_cols: Vec<String> = variables
+            .iter()
+            .map(|v| {
+                format!("(SELECT d.value FROM _pg_ripple.dictionary d WHERE d.id = {inner_alias}.{v}) AS {v}")
+            })
+            .collect();
+        Spi::run(&format!(
+            "CREATE OR REPLACE VIEW {decode_view} AS \
+             SELECT {} FROM {stream_table} {inner_alias}",
+            decode_cols.join(", ")
+        ))
+        .unwrap_or_else(|e| pgrx::error!("failed to create SPARQL decode view: {e}"));
+    }
 
     var_count
 }
@@ -274,6 +271,10 @@ pub(crate) fn drop_sparql_view(name: &str) -> bool {
 
     let stream_table = format!("pg_ripple.{name}");
     let escaped_stream_table = stream_table.replace('\'', "''");
+    let decode_view = format!("pg_ripple.{name}_decoded");
+
+    // Drop the companion decode view if it was created (ignore error if absent).
+    let _ = Spi::run(&format!("DROP VIEW IF EXISTS {decode_view}"));
 
     // Drop the stream table (ignore error if already gone).
     let _ = Spi::run(&format!(
@@ -335,7 +336,8 @@ pub(crate) fn create_datalog_view_from_rules(
     crate::datalog::load_and_store_rules(rules, rule_set_name);
 
     // Compile the goal SPARQL to SQL.
-    let (goal_sql, variables) = compile_sparql_for_view(goal, decode)
+    // The stream table always stores BIGINT dictionary IDs (fix for issue #81).
+    let (goal_sql, variables) = compile_sparql_for_view(goal)
         .unwrap_or_else(|e| pgrx::error!("Datalog view goal compilation failed: {e}"));
 
     let var_count = variables.len() as i64;
@@ -384,6 +386,24 @@ pub(crate) fn create_datalog_view_from_rules(
     Spi::run(&pgt_sql)
         .unwrap_or_else(|e| pgrx::error!("failed to create Datalog view stream table: {e}"));
 
+    // If decode = true, create a thin companion VIEW for TEXT-decoded access.
+    if decode {
+        let decode_view = format!("pg_ripple.{name}_decoded");
+        let inner_alias = "_dl_";
+        let decode_cols: Vec<String> = variables
+            .iter()
+            .map(|v| {
+                format!("(SELECT d.value FROM _pg_ripple.dictionary d WHERE d.id = {inner_alias}.{v}) AS {v}")
+            })
+            .collect();
+        Spi::run(&format!(
+            "CREATE OR REPLACE VIEW {decode_view} AS \
+             SELECT {} FROM {stream_table} {inner_alias}",
+            decode_cols.join(", ")
+        ))
+        .unwrap_or_else(|e| pgrx::error!("failed to create Datalog decode view: {e}"));
+    }
+
     var_count
 }
 
@@ -418,7 +438,8 @@ pub(crate) fn create_datalog_view_from_rule_set(
     }
 
     // Compile the goal SPARQL to SQL.
-    let (goal_sql, variables) = compile_sparql_for_view(goal, decode)
+    // The stream table always stores BIGINT dictionary IDs (fix for issue #81).
+    let (goal_sql, variables) = compile_sparql_for_view(goal)
         .unwrap_or_else(|e| pgrx::error!("Datalog view goal compilation failed: {e}"));
 
     let var_count = variables.len() as i64;
@@ -466,6 +487,24 @@ pub(crate) fn create_datalog_view_from_rule_set(
     Spi::run(&pgt_sql)
         .unwrap_or_else(|e| pgrx::error!("failed to create Datalog view stream table: {e}"));
 
+    // If decode = true, create a thin companion VIEW for TEXT-decoded access.
+    if decode {
+        let decode_view = format!("pg_ripple.{name}_decoded");
+        let inner_alias = "_dl_";
+        let decode_cols: Vec<String> = variables
+            .iter()
+            .map(|v| {
+                format!("(SELECT d.value FROM _pg_ripple.dictionary d WHERE d.id = {inner_alias}.{v}) AS {v}")
+            })
+            .collect();
+        Spi::run(&format!(
+            "CREATE OR REPLACE VIEW {decode_view} AS \
+             SELECT {} FROM {stream_table} {inner_alias}",
+            decode_cols.join(", ")
+        ))
+        .unwrap_or_else(|e| pgrx::error!("failed to create Datalog decode view: {e}"));
+    }
+
     var_count
 }
 
@@ -480,6 +519,10 @@ pub(crate) fn drop_datalog_view(name: &str) -> bool {
 
     let stream_table = format!("pg_ripple.{name}");
     let escaped_stream_table = stream_table.replace('\'', "''");
+    let decode_view = format!("pg_ripple.{name}_decoded");
+
+    // Drop the companion decode view if it was created (ignore error if absent).
+    let _ = Spi::run(&format!("DROP VIEW IF EXISTS {decode_view}"));
 
     // Drop the stream table (ignore error if already gone).
     let _ = Spi::run(&format!(

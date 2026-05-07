@@ -22,21 +22,25 @@ A SPARQL view compiles a SPARQL `SELECT` (or a Datalog goal) into a pg_trickle s
 SELECT pg_ripple.pg_trickle_available();   -- true / false
 
 -- Create a view of all people and their names, refreshed every second.
+-- The stream table stores BIGINT dictionary IDs for IVM correctness.
 SELECT pg_ripple.create_sparql_view(
     name     := 'people_names',
     sparql   := 'SELECT ?p ?name WHERE { ?p <http://xmlns.com/foaf/0.1/name> ?name }',
     schedule := '1s',
-    decode   := true
+    decode   := true   -- also creates pg_ripple.people_names_decoded with TEXT columns
 );
 
--- Query the view as a regular table.
+-- Query the raw BIGINT view.
 SELECT * FROM pg_ripple.people_names;
 
--- Drop when you are done.
+-- Or use the auto-created decoded companion view for human-readable TEXT output.
+SELECT * FROM pg_ripple.people_names_decoded;
+
+-- Drop when you are done (also drops the _decoded companion view if present).
 SELECT pg_ripple.drop_sparql_view('people_names');
 ```
 
-The `decode` flag controls whether the stream table stores raw dictionary IDs (`BIGINT`, fastest) or decoded strings (`TEXT`, easiest to consume). Decoded views are a touch slower to refresh but trivial to point a BI tool at.
+The `decode` flag controls whether a `_{name}_decoded` companion VIEW is created on top of the stream table. The stream table itself **always stores raw `BIGINT` dictionary IDs** — this keeps pg_trickle's incremental view maintenance (IVM) working correctly, since IVM diffs rows using the integer columns of the underlying VP tables. When `decode = true`, a thin SQL VIEW named `{name}_decoded` is created alongside the stream table; it performs the dictionary lookups at read time and exposes `TEXT` columns. This is the same pattern used by `create_construct_view`.
 
 You can build the same kind of view from a Datalog goal:
 
