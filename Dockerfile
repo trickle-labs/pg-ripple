@@ -76,7 +76,7 @@ RUN cargo install cargo-pgrx --version "=${PGRX_VERSION}" --locked
 WORKDIR /build
 
 # Copy manifest files first so dependency layers are cached separately from src.
-COPY Cargo.toml Cargo.lock build.rs pg_ripple.control ./
+COPY Cargo.toml Cargo.lock build.rs pg_ripple.control .versions.toml ./
 COPY src/   ./src/
 COPY sql/   ./sql/
 COPY pg_ripple_http/ ./pg_ripple_http/
