@@ -24,6 +24,10 @@ Complete every item before starting the release process.
 - [ ] **`Cargo.toml` version field matches the release version**
   - e.g. `version = "0.2.0"` for a v0.2.0 release
 - [ ] **`pg_ripple.control` `default_version` matches the release version**
+- [ ] **Dependency version constants are up to date** — **CRITICAL**
+  - `PG_TRICKLE_TESTED_VERSION` in `src/lib.rs` (line 96) matches the pg_trickle version tested in this release
+  - Check `Dockerfile` — if `PG_TRICKLE_VERSION` or `PG_TIDE_VERSION` were updated, update the corresponding constant(s) in `src/lib.rs` and test them
+  - Rationale: stale version constants cause spurious "newer than tested" warnings and may silently disable features
 - [ ] **Extension migration script created** — **CRITICAL**
   - File: `sql/pg_ripple--X.(Y-1).Z--X.Y.Z.sql` where the previous version is X.(Y-1).Z
   - If there are schema changes (ALTER TABLE, CREATE INDEX, etc.), include them in the script

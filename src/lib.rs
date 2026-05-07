@@ -93,6 +93,18 @@ pgrx::pg_module_magic!();
 // ─── pg_trickle runtime detection (v0.6.0) ───────────────────────────────────
 
 /// The pg_trickle version that pg_ripple was tested against (A-4, v0.25.0).
+///
+/// **MAINTENANCE REQUIREMENT**: Update this constant whenever:
+/// - A new version of pg_trickle is tested and integrated with pg_ripple
+/// - The `Dockerfile` updates `PG_TRICKLE_VERSION`
+/// - Major features in pg_trickle are adopted (e.g. new CDC/IVM capabilities)
+///
+/// If this constant is stale (older than the deployed pg_trickle version),
+/// users will see spurious warnings at every startup:
+/// > "pg_ripple: pg_trickle version X.Y.Z is newer than tested version A.B.C"
+///
+/// Stale values also risk silently disabling features. Verify the constant
+/// matches the tested version during every release (see RELEASE.md).
 const PG_TRICKLE_TESTED_VERSION: &str = "0.49.0";
 
 // ─── RDF Patch N-Triples term parser (v0.25.0) ───────────────────────────────

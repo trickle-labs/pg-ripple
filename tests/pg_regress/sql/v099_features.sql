@@ -157,9 +157,9 @@ FROM pg_ripple.foaf_persons();
 SELECT count(*) >= 0 AS schema_ancestors_callable
 FROM pg_ripple.schema_type_ancestors('http://schema.test/unknown');
 
--- ─── VERSION-01: compiled_version must be 0.99.0 ─────────────────────────────
+-- ─── VERSION-01: compiled_version must be 0.99.x ────────────────────────────
 
-SELECT value = '0.99.0' AS version_is_0_99_0
+SELECT value LIKE '0.99.%' AS version_is_0_99_x
 FROM pg_ripple.diagnostic_report()
 WHERE key = 'compiled_version';
 

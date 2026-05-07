@@ -430,7 +430,11 @@ pub(crate) fn encode_shacl_in_value(val: &str) -> Option<i64> {
     if let Some(inner) = val.strip_prefix('"') {
         let close = inner.rfind('"')?;
         let str_val = &inner[..close];
-        let rest = if close + 1 < inner.len() { inner[close + 1..].trim() } else { "" };
+        let rest = if close + 1 < inner.len() {
+            inner[close + 1..].trim()
+        } else {
+            ""
+        };
         if let Some(dt_rest) = rest.strip_prefix("^^<") {
             let dt = dt_rest.trim_end_matches('>');
             Some(crate::dictionary::encode_typed_literal(str_val, dt))
