@@ -389,6 +389,13 @@ pub(crate) fn create_datalog_view_from_rules(
     // Create the pg_trickle stream table.
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
+
     let refresh_mode_clause = if immediate {
         ", refresh_mode => 'IMMEDIATE'"
     } else {
@@ -497,6 +504,13 @@ pub(crate) fn create_datalog_view_from_rule_set(
     // Create the pg_trickle stream table.
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
+
     let refresh_mode_clause = if immediate {
         ", refresh_mode => 'IMMEDIATE'"
     } else {

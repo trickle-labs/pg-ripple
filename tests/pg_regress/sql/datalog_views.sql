@@ -75,3 +75,28 @@ SELECT (pg_ripple.list_datalog_views()->0->>'rule_set') = 'rdfs' AS correct_rule
 DELETE FROM _pg_ripple.datalog_views WHERE name = 'test_dl_view';
 
 SELECT pg_ripple.list_datalog_views() = '[]'::jsonb AS cleaned_up;
+
+-- ── Idempotency: load_rules called twice (issue #83) ─────────────────────────
+-- Loading the same rule set a second time must not duplicate rules in
+-- _pg_ripple.rules.  After the second call the count must equal the first.
+
+SELECT pg_ripple.load_rules(
+    ':- triple(?s, <https://example.org/knows>, ?o).',
+    'idempotent_test_rs'
+) AS first_load;
+
+SELECT COUNT(*) AS rule_count_after_first
+FROM _pg_ripple.rules WHERE rule_set = 'idempotent_test_rs';
+
+SELECT pg_ripple.load_rules(
+    ':- triple(?s, <https://example.org/knows>, ?o).',
+    'idempotent_test_rs'
+) AS second_load;
+
+-- Must still be exactly 1 — no duplicate inserted.
+SELECT COUNT(*) = 1 AS no_duplicate_rules
+FROM _pg_ripple.rules WHERE rule_set = 'idempotent_test_rs';
+
+-- Cleanup
+DELETE FROM _pg_ripple.rules WHERE rule_set = 'idempotent_test_rs';
+DELETE FROM _pg_ripple.rule_sets WHERE name = 'idempotent_test_rs';

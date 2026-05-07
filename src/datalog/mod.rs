@@ -311,6 +311,14 @@ pub fn store_rules(rule_set: &str, rules: &[Rule]) -> i64 {
     )
     .unwrap_or_else(|e| pgrx::error!("rule_sets upsert error: {e}"));
 
+    // IDEMPOTENT-01 (issue #83): delete existing rules for this rule set before
+    // re-inserting so that repeated calls leave exactly one copy of each rule.
+    Spi::run_with_args(
+        "DELETE FROM _pg_ripple.rules WHERE rule_set = $1",
+        &[pgrx::datum::DatumWithOid::from(rule_set)],
+    )
+    .unwrap_or_else(|e| pgrx::error!("rule_set rules delete error: {e}"));
+
     let mut count = 0i64;
     for (stratum_idx, stratum) in stratified.strata.iter().enumerate() {
         for rule in &stratum.rules {
