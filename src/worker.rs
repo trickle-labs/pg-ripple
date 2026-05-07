@@ -86,16 +86,33 @@ impl PredicateCache {
     }
 
     /// Return the cached predicate IDs, refreshing if stale (> 60 s).
-    fn get_or_refresh(&mut self) -> &[i64] {
+    /// Returns `None` when the pg_ripple extension is not yet installed.
+    fn get_or_refresh(&mut self) -> Option<&[i64]> {
         let cache_ttl_secs = 60u64;
         if self.ids.is_empty() || self.loaded_at.elapsed().as_secs() >= cache_ttl_secs {
-            self.reload();
+            if !self.reload() {
+                return None;
+            }
         }
-        &self.ids
+        Some(&self.ids)
     }
 
     /// Reload predicate IDs from the database (inside an SPI transaction).
-    fn reload(&mut self) {
+    ///
+    /// Returns `false` when the pg_ripple extension is not installed, leaving
+    /// the cache empty and allowing the caller to skip quietly (issue #76, Bug 3).
+    fn reload(&mut self) -> bool {
+        // Guard: the _pg_ripple schema does not exist on a bare cluster.  Check
+        // pg_catalog first — this query is always safe regardless of extension state.
+        let installed: bool = Spi::get_one::<bool>(
+            "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'pg_ripple')",
+        )
+        .unwrap_or(None)
+        .unwrap_or(false);
+        if !installed {
+            return false;
+        }
+
         let ids: Vec<i64> = Spi::connect(|c| {
             c.select(
                 "SELECT id FROM _pg_ripple.predicates WHERE htap = true",
@@ -108,6 +125,7 @@ impl PredicateCache {
         });
         self.ids = ids;
         self.loaded_at = Instant::now();
+        true
     }
 
     /// Invalidate the cache (e.g. on SIGHUP).
@@ -201,10 +219,12 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
         });
         if let Err(e) = run_result {
             // SAFETY: `FlushErrorState` clears the PostgreSQL error stack after a caught
-            // panic. Calling it after `catch_unwind` returns `Err` is the correct pattern
-            // for discarding a non-fatal error in a background worker context.
+            // panic; `AbortCurrentTransaction` resets the transaction FSM back to idle
+            // so the next `BackgroundWorker::transaction()` call does not hit
+            // "StartTransactionCommand: unexpected state STARTED" (issue #76, Bug 2).
             unsafe {
                 pg_sys::FlushErrorState();
+                pg_sys::AbortCurrentTransaction();
             }
             pgrx::log!("pg_ripple merge worker 0: recovery startup failed (non-fatal): {e:?}");
         }
@@ -243,9 +263,11 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
             });
             if run_result.is_err() {
                 // SAFETY: `FlushErrorState` clears the PostgreSQL error stack after a
-                // caught panic — safe to call from background worker context.
+                // caught panic; `AbortCurrentTransaction` resets the transaction FSM
+                // back to idle (issue #76, Bug 2).
                 unsafe {
                     pg_sys::FlushErrorState();
+                    pg_sys::AbortCurrentTransaction();
                 }
             }
             last_heartbeat = Instant::now();
@@ -271,11 +293,15 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
         if let Err(e) = run_result {
             consecutive_errors += 1;
 
-            // SAFETY: FlushErrorState resets PostgreSQL's ERRORDATA stack after
-            // a caught panic, preventing ERRORDATA_STACK_SIZE overflow on
-            // subsequent iterations.
+            // SAFETY: FlushErrorState resets PostgreSQL's ERRORDATA stack after a
+            // caught panic, preventing ERRORDATA_STACK_SIZE overflow on subsequent
+            // iterations.  AbortCurrentTransaction resets the transaction FSM back
+            // to idle so the next cycle can start a fresh transaction without
+            // hitting "StartTransactionCommand: unexpected state STARTED" (issue #76,
+            // Bug 2).
             unsafe {
                 pg_sys::FlushErrorState();
+                pg_sys::AbortCurrentTransaction();
             }
 
             let err_msg = describe_panic(&e);
@@ -326,6 +352,18 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
 /// MERGE-HBEAT-01 (v0.82.0): emit a LOG-level heartbeat and update the
 /// `_pg_ripple.merge_worker_status` table.
 fn emit_merge_worker_heartbeat(worker_idx: u32) {
+    // Guard: the _pg_ripple schema does not exist on a bare cluster.
+    // Return silently so a missing extension does not trigger a panic that
+    // causes the dangling-transaction bug (issue #76, Bug 3).
+    let installed: bool = Spi::get_one::<bool>(
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'pg_ripple')",
+    )
+    .unwrap_or(None)
+    .unwrap_or(false);
+    if !installed {
+        return;
+    }
+
     // Count predicates and total delta rows for the heartbeat payload.
     let pred_count: i64 =
         Spi::get_one::<i64>("SELECT count(*)::bigint FROM _pg_ripple.predicates WHERE htap = true")
@@ -365,7 +403,12 @@ fn run_merge_cycle_for_worker_cached(
     pred_cache: &mut PredicateCache,
 ) {
     // Refresh cache if needed (inside SPI transaction).
-    let cached_ids = pred_cache.get_or_refresh().to_vec();
+    // Returns None when the extension is not installed yet — skip silently
+    // without error or backoff (issue #76, Bug 3).
+    let cached_ids = match pred_cache.get_or_refresh() {
+        Some(ids) => ids.to_vec(),
+        None => return,
+    };
     run_merge_cycle_for_worker_with_ids(worker_idx, n_workers, cached_ids);
 }
 
