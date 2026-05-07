@@ -1,0 +1,21 @@
+# .versions.toml — Single source of truth for external dependency versions
+#
+# This file tracks the exact versions of external extensions that are:
+#   1. Bundled in the Docker image  — Dockerfile ARG values must match
+#   2. Tested against pg_ripple     — src/lib.rs runtime constants must match
+#
+# When upgrading a dependency:
+#   1. Update the version here
+#   2. Update the corresponding Dockerfile ARG (e.g. ARG PG_TRICKLE_VERSION=...)
+#   3. Update the corresponding Rust constant in src/lib.rs
+#      (PG_TRICKLE_TESTED_VERSION, PG_TIDE_TESTED_VERSION)
+#   4. Test: cargo pgrx test pg18 && cargo pgrx regress pg18
+#   5. CI will enforce consistency via scripts/check_dep_versions.sh
+#
+# See RELEASE.md for the full release checklist.
+
+[extensions]
+pg_trickle = "0.49.0"
+pg_tide    = "0.16.0"
+postgis    = "3.5.6"
+pgvector   = "0.8.2"

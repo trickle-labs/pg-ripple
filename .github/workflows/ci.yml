@@ -118,6 +118,13 @@ jobs:
       - name: SECURITY DEFINER lint
         run: bash scripts/check_no_security_definer.sh
 
+      # DEP-VER-01: Verify .versions.toml, Dockerfile ARGs, and src/lib.rs
+      # runtime probe constants all agree on external dependency versions.
+      # Catches stale PG_TRICKLE_TESTED_VERSION / PG_TIDE_TESTED_VERSION before
+      # a build that would produce spurious runtime warnings.
+      - name: Dependency version consistency check
+        run: bash scripts/check_dep_versions.sh
+
       # H15-02 (v0.94.0): Verify all SECURITY DEFINER functions in src/ have
       # an explicit SET search_path clause to prevent search-path injection.
       - name: SECURITY DEFINER search_path lint

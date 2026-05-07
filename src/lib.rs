@@ -267,17 +267,51 @@ pub(crate) fn has_live_statistics() -> bool {
 
 // ─── pg_tide runtime detection (v0.93.0, TIDE-1) ─────────────────────────────
 
+/// The pg_tide version that pg_ripple was tested against (TIDE-1, v0.93.0).
+///
+/// **MAINTENANCE REQUIREMENT**: Update this constant whenever:
+/// - A new version of pg_tide is tested and integrated with pg_ripple
+/// - The `Dockerfile` updates `PG_TIDE_VERSION`
+/// - The relay/outbox/inbox API changes in a pg_tide release
+///
+/// If this constant is stale, users will see spurious warnings at startup.
+/// Verify the constant matches the tested version during every release (see RELEASE.md).
+/// The `scripts/check_dep_versions.sh` CI script enforces consistency with `.versions.toml`.
+const PG_TIDE_TESTED_VERSION: &str = "0.16.0";
+
 /// Returns `true` when the pg_tide extension is installed in the current database.
 ///
 /// pg_tide (trickle-labs/pg-tide) contains the relay, outbox, and inbox subsystem
 /// extracted from pg_trickle v0.46.0. All relay-dependent features gate on this
 /// check — pg_ripple core, IVM views, and CDC work without pg_tide.
+///
+/// Also emits a WARNING if the installed pg_tide version is newer than
+/// `PG_TIDE_TESTED_VERSION` (TIDE-1, v0.93.0).
 pub(crate) fn has_pg_tide() -> bool {
-    pgrx::Spi::get_one::<bool>(
+    let exists = pgrx::Spi::get_one::<bool>(
         "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'pg_tide')",
     )
     .unwrap_or(None)
-    .unwrap_or(false)
+    .unwrap_or(false);
+
+    if exists {
+        // Version-lock probe: warn if installed version is newer than tested.
+        if let Some(installed) = pgrx::Spi::get_one::<String>(
+            "SELECT extversion FROM pg_extension WHERE extname = 'pg_tide'",
+        )
+        .unwrap_or(None)
+            && installed.as_str() > PG_TIDE_TESTED_VERSION
+        {
+            pgrx::warning!(
+                "pg_ripple: pg_tide version {} is newer than tested version {}; \
+                 relay and outbox features may behave unexpectedly",
+                installed,
+                PG_TIDE_TESTED_VERSION
+            );
+        }
+    }
+
+    exists
 }
 
 // ─── ExecutorEnd hook (v0.6.0, updated v0.74.0 FLUSH-DEFER-01) ───────────────
