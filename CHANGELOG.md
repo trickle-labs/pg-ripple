@@ -13,30 +13,16 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
-## [0.99.2] — 2026-05-07 — SPARQL/Datalog view decode=true IVM fix
+## [0.99.1] — 2026-05-07 — pg_trickle & pg_tide version probe fix; SPARQL/Datalog view decode=true IVM fix
 
-**Patch release: `create_sparql_view` and `create_datalog_view` with `decode=true` now correctly store BIGINT dictionary IDs in the pg_trickle stream table and create a separate `_decoded` companion VIEW for TEXT access. Previously, `decode=true` baked correlated subqueries into the stream table SQL itself, changing column types to TEXT and breaking pg_trickle IVM. No schema changes.**
-
-### Fixed
-
-- **VIEW-DECODE-01** (issue #81): `create_sparql_view` and `create_datalog_view` with `decode = true` no longer wrap the stream table query with dictionary decode subqueries. The stream table always stores `BIGINT` dictionary IDs; when `decode = true`, a separate companion VIEW `{name}_decoded` is created that performs dictionary lookups at read time (e.g. `pg_ripple.people_names_decoded`). `drop_sparql_view` and `drop_datalog_view` now also drop the `_decoded` companion view. This mirrors the existing behaviour of `create_construct_view` and `create_framing_view`.
-
-### Migration
-
-- No schema changes.
-- Migration script: `sql/pg_ripple--0.99.1--0.99.2.sql` (comment-only).
-
----
-
-## [0.99.1] — 2026-05-07 — pg_trickle & pg_tide version probe fix
-
-**Patch release: aligns the pg_trickle compatibility probe with the deployed version, eliminating spurious schema incompatibility warnings. No schema changes.**
+**Patch release: aligns the pg_trickle compatibility probe with the deployed version and fixes `decode=true` on SPARQL/Datalog views to preserve BIGINT stream table columns for pg_trickle IVM correctness. No schema changes.**
 
 ### Fixed
 
 - **TRICKLE-PROBE-01**: `PG_TRICKLE_TESTED_VERSION` constant in `src/lib.rs` corrected from `"0.3.0"` to `"0.49.0"`. The stale constant caused pg_ripple to emit a WARNING about pg_trickle being "newer than tested" on every startup when deployed with the Dockerfile-bundled pg_trickle, and in some configurations caused `create_datalog_view_from_rule_set` to fail with a column `s` mismatch in the compiled VP table query.
 - **DOCKER-01**: Dockerfile `PG_TRICKLE_VERSION` bumped from `0.48.0` to `0.49.0` to pick up upstream bug fixes.
 - **DOCKER-02**: Dockerfile `PG_TIDE_VERSION` bumped from `0.15.0` to `0.16.0`.
+- **VIEW-DECODE-01** (issue #81): `create_sparql_view` and `create_datalog_view` with `decode = true` no longer wrap the stream table query with dictionary decode subqueries. The stream table always stores `BIGINT` dictionary IDs; when `decode = true`, a separate companion VIEW `{name}_decoded` is created that performs dictionary lookups at read time (e.g. `pg_ripple.people_names_decoded`). `drop_sparql_view` and `drop_datalog_view` now also drop the `_decoded` companion view. This mirrors the existing behaviour of `create_construct_view` and `create_framing_view`.
 
 ### Migration
 

@@ -1,10 +1,13 @@
--- Migration 0.99.0 → 0.99.1: pg_trickle and pg_tide version probe fix
+-- Migration 0.99.0 → 0.99.1: pg_trickle/pg_tide version probe fix + SPARQL/Datalog view decode fix
 --
--- No schema changes. This patch release corrects the pg_trickle compatibility
--- probe constant (PG_TRICKLE_TESTED_VERSION) which was stale at v0.3.0 while
--- the Dockerfile deployed pg_trickle v0.48.0, causing a spurious schema
--- incompatibility warning at startup. Version probe is now aligned to v0.49.0.
+-- No schema changes.
 --
--- Dependency versions updated:
---   pg_trickle: 0.48.0 → 0.49.0 (Dockerfile ARG + lib.rs probe constant)
---   pg_tide:    0.15.0 → 0.16.0 (Dockerfile ARG)
+-- Fix 1 (TRICKLE-PROBE-01): PG_TRICKLE_TESTED_VERSION corrected from "0.3.0" to "0.49.0".
+--   Eliminates spurious startup WARNING about pg_trickle being newer than tested.
+--   Dependency versions: pg_trickle 0.48.0 → 0.49.0, pg_tide 0.15.0 → 0.16.0.
+--
+-- Fix 2 (VIEW-DECODE-01, issue #81): create_sparql_view/create_datalog_view with
+--   decode=true no longer wraps the stream table SQL with dictionary decode subqueries.
+--   The stream table always stores BIGINT dictionary IDs for pg_trickle IVM correctness.
+--   When decode=true a companion VIEW {name}_decoded is created on top for TEXT access.
+--   drop_sparql_view/drop_datalog_view now also drop the _decoded companion view.
