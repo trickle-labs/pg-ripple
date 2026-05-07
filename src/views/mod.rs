@@ -233,6 +233,13 @@ pub(crate) fn create_sparql_view(
     // IVM can diff rows via integer comparison (fix for issue #81).
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
+
     let refresh_mode_clause = if immediate {
         ", refresh_mode => 'IMMEDIATE'"
     } else {
@@ -649,6 +656,11 @@ pub(crate) fn create_extvp(name: &str, pred1_iri: &str, pred2_iri: &str, schedul
     .unwrap_or_else(|e| pgrx::error!("failed to register ExtVP: {e}"));
 
     // Create the pg_trickle stream table.
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
     let pgt_sql = format!(
         "SELECT pgtrickle.create_stream_table(\
             name => '{escaped_stream_table}', \
@@ -780,6 +792,11 @@ pub(crate) fn create_framing_view(
     .unwrap_or_else(|e| pgrx::error!("failed to register framing view: {e}"));
 
     // Create the pg_trickle stream table.
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
     let refresh_mode_clause = if immediate {
         ", refresh_mode => 'IMMEDIATE'"
     } else {
@@ -1076,6 +1093,13 @@ pub(crate) fn create_construct_view(
     // Create the pg_trickle stream table.
     let escaped_stream_table = stream_table.replace('\'', "''");
     let escaped_schedule = schedule.replace('\'', "''");
+
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
+
     let refresh_mode_clause = if immediate {
         ", refresh_mode => 'IMMEDIATE'"
     } else {
@@ -1269,6 +1293,11 @@ pub(crate) fn create_describe_view(
     .unwrap_or_else(|e| pgrx::error!("failed to register DESCRIBE view: {e}"));
 
     // Create the pg_trickle stream table.
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
     let refresh_mode_clause = if immediate {
         ", refresh_mode => 'IMMEDIATE'"
     } else {
@@ -1407,6 +1436,11 @@ pub(crate) fn create_ask_view(name: &str, sparql: &str, schedule: &str, immediat
     .unwrap_or_else(|e| pgrx::error!("failed to register ASK view: {e}"));
 
     // Create the pg_trickle stream table.
+    // IDEMPOTENT-02 (issue #83): drop any pre-existing stream table so that a
+    // repeated call replaces the view cleanly instead of erroring.
+    let _ = Spi::run(&format!(
+        "SELECT pgtrickle.drop_stream_table(name => '{escaped_stream_table}')"
+    ));
     let refresh_mode_clause = if immediate {
         ", refresh_mode => 'IMMEDIATE'"
     } else {

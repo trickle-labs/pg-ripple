@@ -33,6 +33,8 @@ mod pg_ripple {
         // Create _pg_ripple.predicate_stats stream table via pg_trickle.
         // Refreshed every 5 seconds; reads from the predicates catalog +
         // dedicated VP table reltuples (fast, planner-statistics-based).
+        // IDEMPOTENT-02 (issue #83): drop first so repeated calls don't warn.
+        pgrx::Spi::run("SELECT pg_trickle.drop_stream_table('_pg_ripple.predicate_stats')").ok();
         pgrx::Spi::run(
             "SELECT pg_trickle.create_stream_table(
                 '_pg_ripple.predicate_stats',
@@ -59,6 +61,8 @@ mod pg_ripple {
 
         // Create _pg_ripple.graph_stats stream table via pg_trickle.
         // Refreshed every 10 seconds.
+        // IDEMPOTENT-02 (issue #83): drop first so repeated calls don't warn.
+        pgrx::Spi::run("SELECT pg_trickle.drop_stream_table('_pg_ripple.graph_stats')").ok();
         pgrx::Spi::run(
             "SELECT pg_trickle.create_stream_table(
                 '_pg_ripple.graph_stats',
@@ -83,6 +87,8 @@ mod pg_ripple {
 
         // Create _pg_ripple.vp_cardinality stream table — per-predicate live
         // row counts for BGP join reordering without waiting for ANALYZE.
+        // IDEMPOTENT-02 (issue #83): drop first so repeated calls don't warn.
+        pgrx::Spi::run("SELECT pg_trickle.drop_stream_table('_pg_ripple.vp_cardinality')").ok();
         pgrx::Spi::run(
             "SELECT pg_trickle.create_stream_table(
                 '_pg_ripple.vp_cardinality',
@@ -107,6 +113,8 @@ mod pg_ripple {
         // Create _pg_ripple.rare_predicate_candidates stream table with
         // IMMEDIATE mode — replaces the merge-worker GROUP BY polling for
         // VP promotion detection.
+        // IDEMPOTENT-02 (issue #83): drop first so repeated calls don't warn.
+        pgrx::Spi::run("SELECT pg_trickle.drop_stream_table('_pg_ripple.rare_predicate_candidates')").ok();
         pgrx::Spi::run(
             "SELECT pg_trickle.create_stream_table(
                 '_pg_ripple.rare_predicate_candidates',
@@ -162,6 +170,8 @@ mod pg_ripple {
         // Refreshed every 5 seconds via pg_trickle incremental view maintenance.
         // Reading the summary is an index scan on a small table rather than a
         // full GROUP BY over potentially millions of violation rows.
+        // IDEMPOTENT-02 (issue #83): drop first so repeated calls don't warn.
+        pgrx::Spi::run("SELECT pg_trickle.drop_stream_table('_pg_ripple.violation_summary')").ok();
         pgrx::Spi::run(
             "SELECT pg_trickle.create_stream_table(
                 '_pg_ripple.violation_summary',
