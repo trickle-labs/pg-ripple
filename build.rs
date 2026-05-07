@@ -5,13 +5,11 @@
 fn parse_versions_toml(contents: &str, key: &str) -> Option<String> {
     for line in contents.lines() {
         let line = line.trim();
-        if line.starts_with(key) {
-            if let Some(rest) = line.split_once('=') {
+        if line.starts_with(key) && let Some(rest) = line.split_once('=') {
                 let val = rest.1.trim().trim_matches('"');
                 if !val.is_empty() {
                     return Some(val.to_string());
                 }
-            }
         }
     }
     None

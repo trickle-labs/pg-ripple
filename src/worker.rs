@@ -89,10 +89,10 @@ impl PredicateCache {
     /// Returns `None` when the pg_ripple extension is not yet installed.
     fn get_or_refresh(&mut self) -> Option<&[i64]> {
         let cache_ttl_secs = 60u64;
-        if self.ids.is_empty() || self.loaded_at.elapsed().as_secs() >= cache_ttl_secs {
-            if !self.reload() {
-                return None;
-            }
+        if (self.ids.is_empty() || self.loaded_at.elapsed().as_secs() >= cache_ttl_secs)
+            && !self.reload()
+        {
+            return None;
         }
         Some(&self.ids)
     }
