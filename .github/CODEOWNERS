@@ -7,40 +7,40 @@
 # Owners are notified when a PR touches files matching their pattern.
 
 # ── Default: all files require maintainer review ──────────────────────────────
-*                                   @grove/pg-ripple-maintainers
+*                                   @trickle-labs/pg-ripple-maintainers
 
 # ── Rust source ───────────────────────────────────────────────────────────────
-src/                                @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-src/dictionary/                     @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-src/storage/                        @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-src/sparql/                         @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-src/datalog/                        @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-src/shacl/                          @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-src/export/                         @grove/pg-ripple-maintainers @grove/pg-ripple-rust
+src/                                @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+src/dictionary/                     @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+src/storage/                        @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+src/sparql/                         @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+src/datalog/                        @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+src/shacl/                          @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+src/export/                         @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
 
 # ── Build & dependency configuration ─────────────────────────────────────────
-Cargo.toml                          @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-Cargo.lock                          @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-build.rs                            @grove/pg-ripple-maintainers @grove/pg-ripple-rust
+Cargo.toml                          @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+Cargo.lock                          @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+build.rs                            @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
 
 # ── PostgreSQL extension control ─────────────────────────────────────────────
-pg_ripple.control                   @grove/pg-ripple-maintainers
+pg_ripple.control                   @trickle-labs/pg-ripple-maintainers
 
 # ── SQL (extension install scripts and regress tests) ────────────────────────
-sql/                                @grove/pg-ripple-maintainers @grove/pg-ripple-rust
-tests/                              @grove/pg-ripple-maintainers @grove/pg-ripple-rust
+sql/                                @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
+tests/                              @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-rust
 
 # ── CI / GitHub Actions ───────────────────────────────────────────────────────
-.github/workflows/                  @grove/pg-ripple-maintainers @grove/pg-ripple-infra
+.github/workflows/                  @trickle-labs/pg-ripple-maintainers @trickle-labs/pg-ripple-infra
 
 # ── Agent skills & customisation ─────────────────────────────────────────────
-.github/skills/                     @grove/pg-ripple-maintainers
+.github/skills/                     @trickle-labs/pg-ripple-maintainers
 
 # ── Planning and architecture documents ───────────────────────────────────────
-plans/                              @grove/pg-ripple-maintainers
-ROADMAP.md                          @grove/pg-ripple-maintainers
-AGENTS.md                           @grove/pg-ripple-maintainers
+plans/                              @trickle-labs/pg-ripple-maintainers
+ROADMAP.md                          @trickle-labs/pg-ripple-maintainers
+AGENTS.md                           @trickle-labs/pg-ripple-maintainers
 
 # ── Release process ───────────────────────────────────────────────────────────
-RELEASE.md                          @grove/pg-ripple-maintainers
-CHANGELOG.md                        @grove/pg-ripple-maintainers
+RELEASE.md                          @trickle-labs/pg-ripple-maintainers
+CHANGELOG.md                        @trickle-labs/pg-ripple-maintainers

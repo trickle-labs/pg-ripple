@@ -2,7 +2,7 @@
 
 ## Batteries-Included Image
 
-The `ghcr.io/grove/pg-ripple:<version>` image bundles six extensions in a
+The `ghcr.io/trickle-labs/pg-ripple:<version>` image bundles six extensions in a
 single container:
 
 | Extension | Purpose |
@@ -20,7 +20,7 @@ No additional setup is needed — simply start the container and `CREATE EXTENSI
 ```bash
 docker run --rm -p 5432:5432 \
   -e POSTGRES_PASSWORD=ripple \
-  ghcr.io/grove/pg-ripple:0.98.0
+  ghcr.io/trickle-labs/pg-ripple:0.98.0
 ```
 
 ```bash

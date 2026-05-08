@@ -15,7 +15,7 @@ pre-installed — on any Kubernetes cluster.
 ### Add the Helm repository
 
 ```bash
-helm repo add pg-ripple https://grove.github.io/pg-ripple/charts
+helm repo add pg-ripple https://trickle-labs.github.io/pg-ripple/charts
 helm repo update
 ```
 
@@ -46,7 +46,7 @@ kubectl exec -it <pod-name> -- psql -U postgres \
 | Key | Default | Description |
 |-----|---------|-------------|
 | `replicaCount` | `1` | Number of PostgreSQL Pods |
-| `image.repository` | `ghcr.io/grove/pg-ripple` | Image repository |
+| `image.repository` | `ghcr.io/trickle-labs/pg-ripple` | Image repository |
 | `image.tag` | `0.54.0` | Image tag |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy |
 | `postgres.password` | `ripple` | Superuser password (use a Secret in production) |

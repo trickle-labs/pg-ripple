@@ -7,7 +7,7 @@ The quickest way to try pg_ripple is with Docker. No PostgreSQL installation req
 ```bash
 docker run --rm -p 5432:5432 \
   -e POSTGRES_PASSWORD=ripple \
-  ghcr.io/grove/pg-ripple:latest
+  ghcr.io/trickle-labs/pg-ripple:latest
 ```
 
 > **Note**: The sandbox container is configured for development/testing and uses trust authentication for external TCP connections. For production use, see [Installation](../getting-started/installation.md) and [Security](../operations/security.md).
@@ -78,7 +78,7 @@ SELECT * FROM pg_ripple.sparql('
 To build the Docker image yourself:
 
 ```bash
-git clone https://github.com/grove/pg-ripple.git
+git clone https://github.com/trickle-labs/pg-ripple.git
 cd pg-ripple
 docker build -t pg-ripple:local .
 docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=ripple pg-ripple:local

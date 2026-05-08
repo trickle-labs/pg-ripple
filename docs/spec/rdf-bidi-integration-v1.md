@@ -1,6 +1,6 @@
 # RDF Bidirectional Integration Profile, v1 (draft)
 
-> **Status**: Draft, vendor-neutral. Editor: pg_ripple project. Reference implementation: [pg_ripple](https://github.com/grove/pg-ripple) v0.77.0+.
+> **Status**: Draft, vendor-neutral. Editor: pg_ripple project. Reference implementation: [pg_ripple](https://github.com/trickle-labs/pg-ripple) v0.77.0+.
 >
 > This document specifies a wire-level and behavioural profile that any RDF triplestore can implement to participate in **bidirectional integration** with external systems (CRMs, ERPs, SaaS APIs, other RDF stores) without per-relay reconciliation glue. The profile is grounded in W3C standards (RDF 1.1, RDF-star, OWL 2 RL, SHACL, SPARQL 1.1, JSON-LD 1.1, PROV-O) and adds nothing not derivable from them; its contribution is the *combination* and the *protocol*.
 >
@@ -368,7 +368,7 @@ Candidate mapping: Bidi-1.0 would cover scenarios 1–8; Bidi-1.0-Ops would addi
 
 ## 12. Non-normative reference implementation
 
-[pg_ripple](https://github.com/grove/pg-ripple) v0.77.0+ is the reference implementation. The mapping from this specification's vocabulary to pg_ripple-specific surface is documented at [docs/src/operations/pg-trickle-relay.md](../src/operations/pg-trickle-relay.md). pg_ripple-specific concerns out of scope for this specification:
+[pg_ripple](https://github.com/trickle-labs/pg-ripple) v0.77.0+ is the reference implementation. The mapping from this specification's vocabulary to pg_ripple-specific surface is documented at [docs/src/operations/pg-trickle-relay.md](../src/operations/pg-trickle-relay.md). pg_ripple-specific concerns out of scope for this specification:
 
 - Storage layout (HTAP delta/main partitioning).
 - Queue substrate (Postgres tables with `SKIP LOCKED` leases).
@@ -439,4 +439,4 @@ Implementations using RDF-star annotations (§3.2) to carry per-statement contex
 - [JSON-LD 1.1 Framing](https://www.w3.org/TR/json-ld11-framing/) (W3C Recommendation)
 - [PROV-O](https://www.w3.org/TR/prov-o/) (W3C Recommendation)
 - [CloudEvents 1.0](https://github.com/cloudevents/spec) (CNCF)
-- [pg_ripple v0.77.0 + v0.78.0 roadmap](https://github.com/grove/pg-ripple/blob/main/roadmap/v0.77.0-full.md) (reference implementation)
+- [pg_ripple v0.77.0 + v0.78.0 roadmap](https://github.com/trickle-labs/pg-ripple/blob/main/roadmap/v0.77.0-full.md) (reference implementation)

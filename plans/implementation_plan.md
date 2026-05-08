@@ -553,7 +553,7 @@ The SPARQL→SQL translator reads loaded SHACL shapes:
 
 ### 4.10 Ecosystem: pg_trickle Integration (`src/ecosystem/`)
 
-**Purpose**: Optional reactivity layer powered by [pg_trickle](https://github.com/grove/pg-trickle) stream tables. All features in this module require pg_trickle to be installed; core pg_ripple functionality works without it. See [full analysis](ecosystem/pg_trickle.md).
+**Purpose**: Optional reactivity layer powered by [pg_trickle](https://github.com/trickle-labs/pg-trickle) stream tables. All features in this module require pg_trickle to be installed; core pg_ripple functionality works without it. See [full analysis](ecosystem/pg_trickle.md).
 
 #### 4.10.1 Runtime Detection
 

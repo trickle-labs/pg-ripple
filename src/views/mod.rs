@@ -50,7 +50,7 @@ use crate::sparql::sqlgen;
 
 // ─── pg_trickle install hint ─────────────────────────────────────────────────
 
-const PGTRICKLE_HINT: &str = "Install pg_trickle: https://github.com/grove/pg-trickle — \
+const PGTRICKLE_HINT: &str = "Install pg_trickle: https://github.com/trickle-labs/pg-trickle — \
      then run: CREATE EXTENSION pg_trickle";
 
 // ─── pg_tide install hint (TIDE-3, v0.93.0) ──────────────────────────────────

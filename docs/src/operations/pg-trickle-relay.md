@@ -75,7 +75,7 @@ pg_tide must be created before pg_trickle (which calls `tide.outbox_create()` vi
 
 ```sql
 CREATE EXTENSION pg_tide;      -- relay, outbox, inbox (trickle-labs/pg-tide ≥ 0.4.0)
-CREATE EXTENSION pg_trickle;   -- IVM only (grove/pg-trickle ≥ 0.46.0)
+CREATE EXTENSION pg_trickle;   -- IVM only (trickle-labs/pg-trickle ≥ 0.46.0)
 CREATE EXTENSION pg_ripple;    -- RDF triple store (≥ 0.93.0)
 ```
 
@@ -913,7 +913,7 @@ runtime, so credentials never need to be stored in the database.
 # docker-compose.yml sketch
 services:
   postgres:
-    image: ghcr.io/grove/pg-ripple:latest
+    image: ghcr.io/trickle-labs/pg-ripple:latest
     # pg_ripple, pg_trickle, pg_tide, PostGIS, and pgvector all pre-installed
 
   relay:

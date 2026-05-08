@@ -42,10 +42,10 @@ SELECT pg_ripple.create_ask_view(
     'test_av',
     'ASK { ?s ?p ?o }'
 ) IS NULL AS create_ask_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is not installed — ASK views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — ASK views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- ── pg_trickle absent: drop_ask_view raises descriptive error ─────────────────
 SELECT pg_ripple.drop_ask_view('test_av') IS NULL AS drop_ask_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is not installed — ASK views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — ASK views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- ── Wrong query form: CONSTRUCT query rejected ────────────────────────────────
 SELECT pg_ripple.create_ask_view(
     'bad_av',

@@ -10,11 +10,11 @@
 #   spec:
 #     postgresql:
 #       extensionImages:
-#         - ghcr.io/grove/pg-ripple:0.98.0-cnpg
+#         - ghcr.io/trickle-labs/pg-ripple:0.98.0-cnpg
 #
 # See docs/src/operations/cloudnativepg.md for the full walkthrough.
 #
-# Published as: ghcr.io/grove/pg-ripple:0.98.0-cnpg
+# Published as: ghcr.io/trickle-labs/pg-ripple:0.98.0-cnpg
 
 # ── Build stage ───────────────────────────────────────────────────────────────
 FROM rust:1-bookworm AS builder
@@ -101,7 +101,7 @@ COPY --from=builder \
     /usr/share/postgresql/18/extension/vector* \
     "${EXTENSION_FILES_DIR}/ext/"
 
-LABEL org.opencontainers.image.source="https://github.com/grove/pg-ripple"
+LABEL org.opencontainers.image.source="https://github.com/trickle-labs/pg-ripple"
 LABEL org.opencontainers.image.description="CloudNativePG extension volume: pg_ripple + pgvector for PostgreSQL 18"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.version="0.98.0-cnpg"

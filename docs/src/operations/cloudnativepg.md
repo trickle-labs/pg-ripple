@@ -22,8 +22,8 @@ pg_ripple publishes two images per release:
 
 | Image | Contents |
 |-------|----------|
-| `ghcr.io/grove/pg-ripple:<version>` | Full batteries-included image |
-| `ghcr.io/grove/pg-ripple:<version>-cnpg` | Extension volume for CloudNativePG |
+| `ghcr.io/trickle-labs/pg-ripple:<version>` | Full batteries-included image |
+| `ghcr.io/trickle-labs/pg-ripple:<version>-cnpg` | Extension volume for CloudNativePG |
 
 The `-cnpg` image contains pg_ripple and pgvector compiled for PostgreSQL 18 at
 the paths expected by CNP:
@@ -52,7 +52,7 @@ spec:
   postgresql:
     extensionImages:
       - name: pg-ripple-ext
-        image: ghcr.io/grove/pg-ripple:0.98.0-cnpg   # ← extension volume
+        image: ghcr.io/trickle-labs/pg-ripple:0.98.0-cnpg   # ← extension volume
     parameters:
       allow_system_table_mods: "on"
       shared_preload_libraries: "pg_ripple"

@@ -102,4 +102,4 @@ For deep coverage of each axis see [Operations → Scaling](../operations/scalin
 
 - [Reference → Architecture](../reference/architecture.md) — full, code-linked architecture description.
 - [Operations → Architecture overview](../operations/architecture.md) — the operations-team view of the same architecture.
-- [Plans → Implementation plan](https://github.com/grove/pg-ripple/blob/main/plans/implementation_plan.md) — the authoritative description of the *eventual target architecture*.
+- [Plans → Implementation plan](https://github.com/trickle-labs/pg-ripple/blob/main/plans/implementation_plan.md) — the authoritative description of the *eventual target architecture*.

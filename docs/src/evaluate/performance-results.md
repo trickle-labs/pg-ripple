@@ -37,7 +37,7 @@ A triple store that gets 95 % of W3C tests right has a 5 % chance of returning a
 
 ### Performance numbers come from real machines, not marketing
 
-Every benchmark on this page is run in GitHub Actions on a known instance type. The configuration, dataset, and harness are reproducible from the [`benchmarks/`](https://github.com/grove/pg-ripple/tree/main/benchmarks) directory. If you cannot reproduce a number, that is a bug — file an issue.
+Every benchmark on this page is run in GitHub Actions on a known instance type. The configuration, dataset, and harness are reproducible from the [`benchmarks/`](https://github.com/trickle-labs/pg-ripple/tree/main/benchmarks) directory. If you cannot reproduce a number, that is a bug — file an issue.
 
 ### What we have *not* benchmarked
 

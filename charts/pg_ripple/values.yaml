@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   # -- Batteries-included image (pg_ripple + PostGIS + pgvector).
-  repository: ghcr.io/grove/pg-ripple
+  repository: ghcr.io/trickle-labs/pg-ripple
   # -- Pin to an explicit release tag. Never use "latest" in production.
   tag: "0.73.0"
   pullPolicy: IfNotPresent
@@ -61,7 +61,7 @@ http:
     #    image as the PostgreSQL container (tag must match the extension version).
     #    Override to use a standalone pg_ripple_http build.
     # -- Pin to an explicit release tag. Never use "latest" in production.
-    repository: ghcr.io/grove/pg-ripple
+    repository: ghcr.io/trickle-labs/pg-ripple
     tag: "0.73.0"
     pullPolicy: IfNotPresent
   service:

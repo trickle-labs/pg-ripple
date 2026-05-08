@@ -252,7 +252,7 @@ When the implementation checklist is complete and all tests pass, generate a com
 1. **Completed deliverables**: Extract from ROADMAP.md for this version; count `[x]` checkboxes in code and documentation sections.
 2. **Next version blockers**: Read ROADMAP.md section for next version; identify deliverables with explicit prerequisites (e.g., "requires v0.4 storage layer").
 3. **Deferred items**: Search ROADMAP.md and git commit history for items marked "descoped for vX.Y.Z" or similar; include reason.
-4. **Outstanding items**: Run `gh issue list -R grove/pg-ripple --label "defer" --label "backlog"` and `gh pr list -R grove/pg-ripple --draft` to find open items.
+4. **Outstanding items**: Run `gh issue list -R trickle-labs/pg-ripple --label "defer" --label "backlog"` and `gh pr list -R trickle-labs/pg-ripple --draft` to find open items.
 5. **Code TODOs**: Run `grep -rn "TODO\|FIXME\|XXX" src/ --include="*.rs" | head -20` to surface code-level concerns.
 6. **Git stats**: Run `git log vX.(Y-1).Z..HEAD --oneline | wc -l` and `git diff vX.(Y-1).Z HEAD --stat --summary | tail -3` for diff stats.
 

@@ -1,6 +1,6 @@
 # Materialized Views
 
-pg_ripple v0.11.0 integrates with [pg_trickle](https://github.com/grove/pg-trickle) to provide always-fresh, incrementally-maintained stream tables for SPARQL queries, Datalog goals, and predicate semi-joins. All three features are soft-gated — pg_ripple loads and operates normally without pg_trickle; the new functions detect its absence at call time and return a clear error with an install hint.
+pg_ripple v0.11.0 integrates with [pg_trickle](https://github.com/trickle-labs/pg-trickle) to provide always-fresh, incrementally-maintained stream tables for SPARQL queries, Datalog goals, and predicate semi-joins. All three features are soft-gated — pg_ripple loads and operates normally without pg_trickle; the new functions detect its absence at call time and return a clear error with an install hint.
 
 ---
 

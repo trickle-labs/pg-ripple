@@ -499,7 +499,7 @@ Arrow Flight bulk export at [pg_ripple_http/src/arrow_encode.rs:260–320](../pg
 ## Area 14: Build System & Developer Experience
 
 **ID: BUILD-01 | HIGH | Effort: S**
-[docker-compose.yml:23,40](../docker-compose.yml#L23) pins `image: ghcr.io/grove/pg-ripple:0.54.0` — 29 versions stale. Anyone running `docker compose up` gets v0.54.0 silently.
+[docker-compose.yml:23,40](../docker-compose.yml#L23) pins `image: ghcr.io/trickle-labs/pg-ripple:0.54.0` — 29 versions stale. Anyone running `docker compose up` gets v0.54.0 silently.
 - **fix**: Bump to `:0.83.0`; add CI lint that asserts the tag matches `Cargo.toml`.
 
 **ID: BUILD-02 | LOW | Effort: S**
@@ -688,7 +688,7 @@ grep -n "COMPATIBLE_EXTENSION_MIN" pg_ripple_http/src/main.rs
 # → 38: const COMPATIBLE_EXTENSION_MIN: &str = "0.79.0";
 
 # Docker
-grep "image:" docker-compose.yml                   # → ghcr.io/grove/pg-ripple:0.54.0  (×2)
+grep "image:" docker-compose.yml                   # → ghcr.io/trickle-labs/pg-ripple:0.54.0  (×2)
 
 # Fuzz targets
 ls fuzz/fuzz_targets/                              # → 17 files

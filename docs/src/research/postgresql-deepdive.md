@@ -1,6 +1,6 @@
 # PostgreSQL as a High-Performance Triple Store
 
-> *This page mirrors [`plans/postgresql-triplestore-deep-dive.md`](https://github.com/grove/pg-ripple/blob/main/plans/postgresql-triplestore-deep-dive.md) — the architectural blueprint written during the design phase of pg_ripple. It explains *why* each major design decision was made.*
+> *This page mirrors [`plans/postgresql-triplestore-deep-dive.md`](https://github.com/trickle-labs/pg-ripple/blob/main/plans/postgresql-triplestore-deep-dive.md) — the architectural blueprint written during the design phase of pg_ripple. It explains *why* each major design decision was made.*
 
 ---
 
@@ -199,8 +199,8 @@ PostgreSQL 18 brings several features that materially improve pg_ripple's perfor
 
 ## Further Reading
 
-- [plans/implementation_plan.md](https://github.com/grove/pg-ripple/blob/main/plans/implementation_plan.md) — detailed API signatures, algorithms, and crate choices
-- [plans/postgresql-triplestore-deep-dive.md](https://github.com/grove/pg-ripple/blob/main/plans/postgresql-triplestore-deep-dive.md) — extended research survey with academic references
+- [plans/implementation_plan.md](https://github.com/trickle-labs/pg-ripple/blob/main/plans/implementation_plan.md) — detailed API signatures, algorithms, and crate choices
+- [plans/postgresql-triplestore-deep-dive.md](https://github.com/trickle-labs/pg-ripple/blob/main/plans/postgresql-triplestore-deep-dive.md) — extended research survey with academic references
 - [Abadi et al. 2007](https://dsf.berkeley.edu/cs286/papers/rdf-vldb2007.pdf) — original VP paper
 - [qEndpoint](https://www.semantic-web-journal.net/content/qendpoint-novel-triple-store-architecture-large-rdf-graphs) — HTAP inspiration for the delta/main split
 - [Berlin SPARQL Benchmark (BSBM)](http://wifo5-03.informatik.uni-mannheim.de/bizer/berlinsparqlbenchmark/) — query mix used in pg_ripple benchmarks

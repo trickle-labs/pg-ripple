@@ -38,7 +38,7 @@ spec:
   postgresql:
     extensionImages:
       - name: pg-ripple-ext
-        image: ghcr.io/grove/pg-ripple:0.98.0-cnpg
+        image: ghcr.io/trickle-labs/pg-ripple:0.98.0-cnpg
     parameters:
       allow_system_table_mods: "on"
       shared_preload_libraries: "pg_ripple"

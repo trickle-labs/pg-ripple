@@ -112,4 +112,4 @@ ERROR: pg_trickle is required for framing views — install pg_trickle and add i
 shared_preload_libraries, then retry
 ```
 
-Extension load never fails due to a missing pg_trickle. See [pg_trickle](https://github.com/grove/pg-trickle) for installation instructions.
+Extension load never fails due to a missing pg_trickle. See [pg_trickle](https://github.com/trickle-labs/pg-trickle) for installation instructions.

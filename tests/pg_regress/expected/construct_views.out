@@ -45,10 +45,10 @@ SELECT pg_ripple.create_construct_view(
     'test_cv',
     'CONSTRUCT { ?s <https://example.org/p> ?o } WHERE { ?s <https://example.org/p> ?o }'
 ) IS NULL AS create_construct_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- ── pg_trickle absent: drop_construct_view raises descriptive error ───────────
 SELECT pg_ripple.drop_construct_view('test_cv') IS NULL AS drop_construct_view_without_pgtrickle_errors;
-ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- ── Wrong query form: SELECT query rejected ───────────────────────────────────
 SELECT pg_ripple.create_construct_view(
     'bad_cv',
@@ -60,10 +60,10 @@ SELECT pg_ripple.create_construct_view(
     'unbound_cv',
     'CONSTRUCT { ?s <https://example.org/q> ?unbound } WHERE { ?s <https://example.org/p> ?o }'
 ) IS NULL AS unbound_variable_rejected;
-ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
 -- ── Blank node in template: descriptive error ─────────────────────────────────
 SELECT pg_ripple.create_construct_view(
     'blank_cv',
     'CONSTRUCT { _:b0 <https://example.org/p> ?o } WHERE { ?s <https://example.org/p> ?o }'
 ) IS NULL AS blank_node_in_template_rejected;
-ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/grove/pg-trickle — then run: CREATE EXTENSION pg_trickle
+ERROR:  pg_trickle is not installed — CONSTRUCT views require pg_trickle; hint: Install pg_trickle: https://github.com/trickle-labs/pg-trickle — then run: CREATE EXTENSION pg_trickle
