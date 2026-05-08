@@ -1,0 +1,8 @@
+-- Migration 0.99.1 → 0.99.2
+--
+-- Changes in this release:
+--   - pg_trickle dependency bumped from 0.49.0 to 0.49.1 (upstream bug fixes)
+--   - Repository relocated to new GitHub organization (grove/pg-ripple)
+--   - No SQL schema changes; all changes are in Rust, Dockerfile, and CI configuration
+--
+-- No SQL statements required for this migration.
