@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.4",
   "version": 1,
-  "serialNumber": "urn:uuid:198bd2d5-439e-42a3-a7ec-2090f8748a4e",
+  "serialNumber": "urn:uuid:491446ac-8e66-4d51-a00a-37383df32feb",
   "metadata": {
-    "timestamp": "2026-05-07T15:55:59.368879000Z",
+    "timestamp": "2026-05-08T10:32:22.175300000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.99.1",
+      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.99.2",
       "name": "pg_ripple",
-      "version": "0.99.1",
+      "version": "0.99.2",
       "description": "High-performance RDF triple store with native SPARQL query execution for PostgreSQL 18",
       "scope": "required",
       "licenses": [
@@ -24,20 +24,20 @@
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/pg_ripple@0.99.1?download_url=file://.",
+      "purl": "pkg:cargo/pg_ripple@0.99.2?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
-          "url": "https://github.com/grove/pg-ripple"
+          "url": "https://github.com/trickle-labs/pg-ripple"
         }
       ],
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.99.1 bin-target-0",
+          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.99.2 bin-target-0",
           "name": "pg_ripple",
-          "version": "0.99.1",
-          "purl": "pkg:cargo/pg_ripple@0.99.1?download_url=file://.#src/lib.rs"
+          "version": "0.99.2",
+          "purl": "pkg:cargo/pg_ripple@0.99.2?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -6201,7 +6201,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.99.1",
+      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.99.2",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.44",
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
