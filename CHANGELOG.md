@@ -15,11 +15,11 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ## [0.99.2] — 2026-05-08 — pg_trickle 0.49.1 patch; new repository
 
-**Patch release: bumps pg_trickle to 0.49.1 to pick up upstream bug fixes, and establishes the new grove/pg-ripple GitHub repository. No schema changes.**
+**Patch release: bumps pg_trickle to 0.49.1 to pick up upstream bug fixes, and establishes the new grove/pg-ripple GitHub repository. No schema changes. Evidence: `docker-compose.yml`, `sql/pg_ripple--0.99.1--0.99.2.sql`.**
 
 ### Changed
 
-- **DOCKER-01**: Dockerfile `PG_TRICKLE_VERSION` bumped from `0.49.0` to `0.49.1` to pick up upstream bug fixes released in pg_trickle 0.49.1.
+- **DOCKER-01**: `docker-compose.yml` image tag and Dockerfile `PG_TRICKLE_VERSION` bumped from `0.49.0` to `0.49.1` to pick up upstream bug fixes released in pg_trickle 0.49.1.
 - **TRICKLE-PROBE-01**: `.versions.toml` `pg_trickle` version updated to `0.49.1`; `PG_TRICKLE_TESTED_VERSION` compile-time constant updated automatically via `build.rs`.
 - **REPO-01**: Repository relocated to `grove/pg-ripple` (new GitHub organization). All CI workflows, artifact URLs, and documentation links updated accordingly.
 
