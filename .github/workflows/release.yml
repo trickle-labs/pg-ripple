@@ -569,8 +569,10 @@ jobs:
 
       - name: Publish pg_ripple_http
         # Only publish when a CARGO_REGISTRY_TOKEN secret is configured.
-        # Idempotent: skip gracefully if the version is already on crates.io
-        # (happens when a tag is deleted and recreated for a fix).
+        # Idempotent: the crates.io API check races with concurrent runs (e.g.
+        # a tag deleted-and-recreated triggers two runs whose publish-crate jobs
+        # overlap).  Catch cargo's own "already uploaded" error as a reliable
+        # fallback so the job succeeds regardless of which run wins the race.
         if: ${{ env.CARGO_REGISTRY_TOKEN != '' }}
         run: |
           VERSION=$(grep '^version' pg_ripple_http/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
@@ -579,7 +581,14 @@ jobs:
           if [ "$STATUS" = "200" ]; then
             echo "pg_ripple_http ${VERSION} is already published on crates.io — skipping."
           else
-            cargo publish --package pg_ripple_http --no-verify
+            OUT=$(cargo publish --package pg_ripple_http --no-verify 2>&1) && echo "$OUT" || {
+              if echo "$OUT" | grep -qi "already uploaded\|already exists"; then
+                echo "pg_ripple_http ${VERSION} was published by a concurrent run — skipping."
+              else
+                echo "$OUT" >&2
+                exit 1
+              fi
+            }
           fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
