@@ -97,32 +97,25 @@ When a knowledge base grows beyond a few dozen rules, contradictions become inev
 
 **Implementation approach**: At rule registration time, analyse rule heads for potential conflicts (rules that derive the same predicate with incompatible semantics). At inference time, detect contradictions by checking derived facts against SHACL constraints that express mutual exclusion. Surface conflicts via a `check_conflicts(ruleset)` function that returns a structured report of all detected logical tensions.
 
-### 5. Domain Rule Libraries (Knowledge Starter Packs)
+### 5. Domain Rule Libraries (An Open Ecosystem, Not a Bundle)
 
-One of the biggest barriers to expert system adoption is the "cold start" problem — you need substantial domain knowledge encoded before the system becomes useful, but encoding knowledge is expensive. pg_ripple already ships with built-in RDFS, OWL 2 RL, SKOS, Dublin Core, Schema.org, and FOAF rule sets. Extending this to include domain-specific starter packs would dramatically lower the barrier to adoption.
+One of the biggest barriers to expert system adoption is the "cold start" problem — you need substantial domain knowledge encoded before the system becomes useful, but encoding knowledge is expensive. pg_ripple already ships with built-in RDFS, OWL 2 RL, SKOS, Dublin Core, Schema.org, and FOAF rule sets. The natural next step is making it straightforward for the community to publish, discover, and install domain-specific rule libraries.
 
-Imagine a `load_rule_library('clinical-decision-support-v2')` command that loads hundreds of validated medical reasoning rules, or `load_rule_library('anti-money-laundering-eu')` that encodes the key decision logic from EU AML directives. These wouldn't replace domain experts — they would give them a running start, providing a scaffolding of standard rules that can be customised for local requirements.
+The key word there is *community*. pg_ripple should not bundle clinical, AML, or compliance libraries in-tree. Those domains carry genuine licensing and liability complexity — clinical guidelines are often copyright-protected, and encoding regulatory logic creates an implied representation of compliance that we are not in a position to make. Instead, pg_ripple should provide the *infrastructure* for a rule library ecosystem: a well-documented format, installation tooling, and a documentation chapter showing authors how to publish their own libraries. Domain experts and specialist vendors are far better placed than a general-purpose database extension to produce, validate, and maintain authoritative rule content.
 
-**Implementation approach**: Define a rule library format (a Turtle file containing Datalog rules, SHACL shapes, and metadata). Create a registry (`_pg_ripple.rule_libraries`) that tracks installed libraries, their versions, and customisations. Provide `install_rule_library`, `upgrade_rule_library`, and `uninstall_rule_library` functions.
+Imagine a future where a specialist AML consultancy publishes a `pg-ripple-aml-eu` library under their own licence and liability framework, and operators install it with a single `install_rule_library('https://example-aml-vendor.com/libraries/aml-eu-v2.ttl')` call. That is the model to build toward.
 
-#### Licensing and liability considerations
+**Implementation approach**: Define a rule library format (a Turtle file containing Datalog rules, SHACL shapes, and metadata triples including `dcterms:title`, `dcterms:license`, `dcterms:description`, and `owl:versionInfo`). Create a registry (`_pg_ripple.rule_libraries`) that tracks installed libraries, their versions, licence IRIs, and customisations. Provide `install_rule_library(source TEXT)`, `upgrade_rule_library(name TEXT)`, and `uninstall_rule_library(name TEXT)` functions. Before completing installation, `install_rule_library` must surface the library's `dcterms:license` and `dcterms:description` to the operator and require explicit confirmation. Write a documentation chapter (`docs/src/cookbook/rule-libraries.md`) explaining the format, how to author a library, how to publish one, and what licence and disclaimer requirements operators should look for.
 
-Domain rule libraries raise licensing and liability questions that must be resolved before any library ships in-tree. These apply even when the underlying source material is public law or published guidelines.
+#### Why we don't bundle domain libraries
 
-**Source material and IP.** Clinical guidelines published by bodies such as NICE, the AHA, or the FDA are often protected by copyright or database rights, even though they are produced for public benefit. Encoding them as executable Datalog rules creates a derivative work, and the licence terms of the originating body must be checked before distribution. Many public-health bodies permit non-commercial reuse with attribution but prohibit commercial redistribution — conditions incompatible with an open-source extension. The safest approach is to write rules in our own words, implementing the *logic* described in a guideline rather than reproducing its text, and to cite the underlying standard in metadata rather than including protected content verbatim.
+Domain rule libraries raise licensing and liability concerns that are best handled outside the core project.
 
-**Regulatory-compliance libraries.** EU AML Directive IV/V and GDPR are legislative texts in the public domain; there is no copyright concern with paraphrasing or encoding their requirements. However, *interpretation* of regulatory text is a legal matter. A rule library that purports to encode AML compliance logic could mislead organisations into believing they are compliant when they are not. The library must carry a prominent disclaimer, and the metadata triples must include a `dcterms:description` field that states the library is illustrative, not authoritative legal advice.
+**IP and copyright.** Clinical guidelines from bodies such as NICE, AHA, or FDA are often protected by copyright or database rights even when publicly available. Encoding them as executable Datalog rules creates a derivative work. Many public-health bodies permit non-commercial reuse but prohibit commercial redistribution — conditions incompatible with a general-purpose open-source extension.
 
-**Licence for shipped libraries.** Libraries distributed in-tree with pg_ripple inherit the project licence (currently the licence in `LICENSE`). Third-party libraries installed at runtime by the operator are governed by whatever licence they carry in their metadata. The `_pg_ripple.rule_libraries` catalog should store the `dcterms:license` IRI for every installed library, and `install_rule_library` should surface that value to the operator before completing installation.
+**Regulatory interpretation.** AML directives and GDPR are public law, but their *interpretation* is a legal matter. A library that appears to encode compliance logic could mislead an operator into believing they are compliant when they are not. That liability belongs with the domain specialist, not with the database extension that runs their rules.
 
-**Disclaimer requirement.** Every in-tree reference library must carry the following metadata triple:
-
-```turtle
-<urn:pg-ripple:library:NAME> dcterms:description
-  "This library is provided for educational and prototyping purposes only. It does not constitute legal, medical, financial, or compliance advice. Organisations must independently validate any rules against applicable regulations and consult qualified professionals before use in production systems." .
-```
-
-**Liability scope.** pg_ripple provides the infrastructure to load and execute rules; it makes no representations about the correctness or completeness of any third-party rule library. This must be stated clearly in the documentation chapter that accompanies v0.103.0.
+**Liability scope.** pg_ripple provides the infrastructure to load and execute rules. It makes no representations about the correctness, completeness, or regulatory adequacy of any third-party rule library. This must be stated clearly in the documentation.
 
 ### 6. Confidence Calibration and Bayesian Updates
 
