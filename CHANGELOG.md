@@ -13,6 +13,31 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.101.0] — 2026-05-09 — Natural Language Explanation
+
+**Natural language explanation of Datalog-derived facts via LLM or deterministic fallback renderer.**
+
+### Added
+
+- **NL-EXPLAIN-01**: `_pg_ripple.explanation_cache (sid BIGINT, format TEXT, model TEXT, explanation TEXT, cached_at TIMESTAMPTZ, PRIMARY KEY (sid, format, model))` table — caches NL explanations keyed by `(fact SID, format, LLM model)` to avoid repeated LLM calls. Expires after `pg_ripple.explanation_cache_ttl` seconds (default: 3600).
+- **NL-EXPLAIN-02**: `pg_ripple.explanation_cache_ttl` GUC (INT, default `3600`) — TTL in seconds for cached explanations. Set to `0` to disable caching entirely.
+- **NL-EXPLAIN-03**: `pg_ripple.explain_inference(subject TEXT, predicate TEXT, object TEXT, format TEXT DEFAULT 'text') → TEXT` — returns a plain-English narrative of why a Datalog fact was derived. Retrieves the proof tree via `justify()`, then either (a) sends it to the configured LLM endpoint with a domain-appropriate system prompt, or (b) falls back to a deterministic indented-text renderer. Returns `NULL` for base (non-inferred) facts. Never raises an error — always returns something readable.
+- **NL-EXPLAIN-04**: `pg_ripple.explain_inference_jsonb(subject TEXT, predicate TEXT, object TEXT) → JSONB` — returns `{"proof_tree": <justify() output>, "narrative": "<LLM or fallback explanation>"}` for programmatic consumers.
+- **NL-EXPLAIN-05**: `pg_ripple.vacuum_explanation_cache() → BIGINT` — removes expired rows from `_pg_ripple.explanation_cache`; returns the count deleted. Call periodically or after bulk inference runs.
+- **NL-EXPLAIN-06**: LLM mock mode for testing: when `pg_ripple.llm_endpoint = 'mock'`, `explain_inference()` returns a canned narrative containing the rule name — enables full code-path coverage in pg_regress without an external LLM.
+- **NL-EXPLAIN-07**: `POST /explain` and `GET /explain` HTTP endpoints in `pg_ripple_http` — delegates to `pg_ripple.explain_inference()`.
+- **NL-EXPLAIN-08**: `src/datalog/nlexplain.rs` — new module containing all NL explanation logic: LLM call, mock handler, deterministic fallback renderer, cache read/write.
+
+### Changed
+
+- **RENAME-01**: `pg_ripple.explain_inference(text, text, text, text) RETURNS SETOF record` (v0.61.0 derivation-chain walker) renamed to `pg_ripple.explain_inference_provenance()` to free the name for the new NL explanation function. Migration script drops the old function; the renamed variant is available under the new name.
+
+### Migration
+
+- `sql/pg_ripple--0.100.0--0.101.0.sql`: drops old `explain_inference(text, text, text, text)` SETOF function; creates `_pg_ripple.explanation_cache` table and index.
+
+---
+
 ## [0.100.0] — 2026-05-09 — Proof trees & justification infrastructure
 
 **Proof trees & justification infrastructure: `_pg_ripple.derivations` table, `pg_ripple.record_derivations` GUC, `justify()` proof-tree function, and `vacuum_derivations()` cleanup. No schema changes required beyond the new `derivations` table and supporting indexes added via migration script.**

@@ -817,7 +817,7 @@ mod pg_ripple {
         crate::datalog::explain::explain_datalog(rule_set_name)
     }
 
-    // ── v0.61.0: explain_inference ────────────────────────────────────────────
+    // ── v0.61.0: explain_inference_provenance (renamed from explain_inference in v0.101.0) ────
 
     /// Return the rule-firing provenance chain for a given inferred triple.
     ///
@@ -838,8 +838,11 @@ mod pg_ripple {
     /// - `p` — predicate IRI
     /// - `o` — object IRI or literal
     /// - `g` — named graph IRI (`NULL` for the default graph)
+    ///
+    /// > **Note**: renamed from `explain_inference` to `explain_inference_provenance` in
+    /// > v0.101.0 to free the `explain_inference` name for the new NL explanation function.
     #[pg_extern]
-    fn explain_inference(
+    fn explain_inference_provenance(
         s: &str,
         p: &str,
         o: &str,
@@ -855,6 +858,77 @@ mod pg_ripple {
     > {
         let rows = crate::datalog::explain::explain_inference_impl(s, p, o, g);
         TableIterator::new(rows)
+    }
+
+    // ── v0.101.0: explain_inference / explain_inference_jsonb / vacuum_explanation_cache ──
+
+    /// Return a natural-language explanation of why pg_ripple derived a given fact.
+    ///
+    /// Retrieves the proof tree from `_pg_ripple.derivations` via `justify()`,
+    /// decodes all dictionary IDs to human-readable IRI strings and literal values,
+    /// then either:
+    ///
+    /// a) Sends the structured proof tree to the configured LLM endpoint
+    ///    (`pg_ripple.llm_endpoint`) for a narrative explanation, or
+    /// b) Falls back to a deterministic indented-text renderer when the endpoint
+    ///    is not configured or returns an error (never raises an error — always
+    ///    returns something readable).
+    ///
+    /// Results are cached in `_pg_ripple.explanation_cache` keyed by `(sid, format,
+    /// model)` and expire after `pg_ripple.explanation_cache_ttl` seconds (default 3600).
+    ///
+    /// # Arguments
+    ///
+    /// - `subject`   — subject IRI (without angle brackets)
+    /// - `predicate` — predicate IRI
+    /// - `object`    — object IRI or literal
+    /// - `format`    — `'text'` (default) or `'markdown'`
+    ///
+    /// # Return value
+    ///
+    /// Returns `NULL` for base (non-inferred) facts.
+    ///
+    /// # Prerequisites
+    ///
+    /// `pg_ripple.record_derivations` must have been `on` during the `infer()` run
+    /// that produced the fact.
+    #[pg_extern]
+    fn explain_inference(
+        subject: &str,
+        predicate: &str,
+        object: &str,
+        format: default!(&str, "'text'"),
+    ) -> Option<String> {
+        crate::datalog::nlexplain::explain_inference_impl(subject, predicate, object, format)
+    }
+
+    /// Return a JSONB document containing both the structured proof tree and the
+    /// natural-language narrative for a Datalog-derived fact.
+    ///
+    /// Shape:
+    /// ```json
+    /// { "proof_tree": { … }, "narrative": "The fact was derived because …" }
+    /// ```
+    ///
+    /// Returns `NULL` for base (non-inferred) facts.
+    #[pg_extern]
+    fn explain_inference_jsonb(
+        subject: &str,
+        predicate: &str,
+        object: &str,
+    ) -> Option<pgrx::JsonB> {
+        crate::datalog::nlexplain::explain_inference_jsonb_impl(subject, predicate, object)
+            .map(pgrx::JsonB)
+    }
+
+    /// Remove expired rows from `_pg_ripple.explanation_cache`.
+    ///
+    /// Deletes rows whose `cached_at` is older than `pg_ripple.explanation_cache_ttl`
+    /// seconds.  Returns the number of rows removed.  Call this function periodically
+    /// (e.g., via `pg_cron`) or after bulk inference runs.
+    #[pg_extern]
+    fn vacuum_explanation_cache() -> i64 {
+        crate::datalog::nlexplain::vacuum_explanation_cache_impl()
     }
 
     // ── v0.100.0: justify / vacuum_derivations (PROOF-TREE-01) ───────────────

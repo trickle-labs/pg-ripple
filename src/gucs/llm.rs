@@ -69,3 +69,10 @@ pub static KGE_ENABLED: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(f
 /// GUC: knowledge-graph embedding model: `'transe'` (default) or `'rotate'` (v0.57.0).
 pub static KGE_MODEL: pgrx::GucSetting<Option<std::ffi::CString>> =
     pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+// ─── v0.101.0 NL Explanation Cache GUCs ──────────────────────────────────────
+
+/// GUC: TTL in seconds for `_pg_ripple.explanation_cache` entries (v0.101.0).
+/// Default: 3600 (1 hour). Set to 0 to disable caching.
+pub static EXPLANATION_CACHE_TTL_SECS: pgrx::GucSetting<i32> =
+    pgrx::GucSetting::<i32>::new(3600);

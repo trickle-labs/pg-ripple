@@ -511,3 +511,30 @@ COMMENT ON TABLE _pg_ripple.derivations IS
     name = "v0100_derivations_table",
     requires = ["v028_embedding_queue"]
 );
+
+pgrx::extension_sql!(
+    r#"
+-- NL explanation cache (v0.101.0 NL-EXPLAIN-01)
+-- Caches natural-language explanations of Datalog-inferred facts to avoid
+-- repeated LLM calls.  One row per (fact SID, format, LLM model) combination.
+-- Keyed on SID so dictionary churn does not create stale cache entries.
+-- Expires after pg_ripple.explanation_cache_ttl seconds (default: 3600).
+CREATE TABLE IF NOT EXISTS _pg_ripple.explanation_cache (
+    sid         BIGINT      NOT NULL,
+    format      TEXT        NOT NULL DEFAULT 'text',
+    model       TEXT        NOT NULL DEFAULT '',
+    explanation TEXT        NOT NULL,
+    cached_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (sid, format, model)
+);
+CREATE INDEX IF NOT EXISTS idx_explanation_cache_cached_at
+    ON _pg_ripple.explanation_cache (cached_at);
+COMMENT ON TABLE _pg_ripple.explanation_cache IS
+    'NL explanation cache for Datalog-inferred facts (v0.101.0). '
+    'One row per (sid, format, model). TTL controlled by '
+    'pg_ripple.explanation_cache_ttl (default 3600 seconds). '
+    'Vacuum with pg_ripple.vacuum_explanation_cache().';
+"#,
+    name = "v0101_explanation_cache",
+    requires = ["v0100_derivations_table"]
+);

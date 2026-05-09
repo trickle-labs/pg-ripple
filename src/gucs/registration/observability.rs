@@ -100,4 +100,17 @@ pub fn register() {
         GucContext::Suset,
         GucFlags::default(),
     );
+
+    // ── v0.101.0 GUCs — NL Explanation Cache ─────────────────────────────────
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.explanation_cache_ttl",
+        c"TTL in seconds for _pg_ripple.explanation_cache entries (v0.101.0). \
+          Explanations older than this are regenerated. 0 disables caching (default: 3600).",
+        c"",
+        &crate::gucs::llm::EXPLANATION_CACHE_TTL_SECS,
+        0,
+        86400 * 30, // max 30 days
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

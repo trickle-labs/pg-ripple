@@ -44,6 +44,7 @@ pub mod dred;
 pub mod explain;
 pub mod lattice;
 pub mod magic;
+pub mod nlexplain;
 pub mod parallel;
 pub mod parser;
 pub mod rewrite;

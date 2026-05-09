@@ -111,6 +111,7 @@ pub(crate) struct RagResponse {
 // MOD-01 (v0.72.0): extracted handler submodules
 pub(crate) mod admin_handlers;
 pub(crate) mod confidence_handlers;
+pub(crate) mod explain_handler;
 pub(crate) mod pagerank_handlers;
 pub(crate) mod rag_handler;
 pub(crate) mod sparql_handlers;
@@ -269,6 +270,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/pagerank/find-duplicates",
             post(pagerank_handlers::find_duplicates),
+        )
+        // v0.101.0: Natural-language inference explanation (NL-EXPLAIN-01)
+        .route(
+            "/explain",
+            post(explain_handler::explain_post).get(explain_handler::explain_get),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)
