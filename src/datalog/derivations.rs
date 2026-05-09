@@ -37,10 +37,7 @@ where
         return;
     };
     if let Err(e) = Spi::run_with_args(&sql, &[]) {
-        pgrx::warning!(
-            "derivation record error for rule '{}': {e}",
-            rule.rule_text
-        );
+        pgrx::warning!("derivation record error for rule '{}': {e}", rule.rule_text);
     }
 }
 
@@ -316,9 +313,8 @@ where
             _ => return None,
         };
         let alias = format!("b{idx}");
-        let table_expr = format!(
-            "(SELECT s, o, g, i FROM _pg_ripple.vp_rare WHERE p = {pred_id}) AS {alias}"
-        );
+        let table_expr =
+            format!("(SELECT s, o, g, i FROM _pg_ripple.vp_rare WHERE p = {pred_id}) AS {alias}");
         bid_columns.push(format!("{alias}.i"));
 
         let mut join_conds: Vec<String> = Vec::new();
