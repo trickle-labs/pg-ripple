@@ -225,6 +225,20 @@
 | v0.99.1 | **Patch: pg_trickle & pg_tide version probe fix; view `decode=true` IVM fix; IMMEDIATE mode** — `PG_TRICKLE_TESTED_VERSION` corrected to `"0.49.0"`; Dockerfile `PG_TRICKLE_VERSION` bumped to `0.49.0` and `PG_TIDE_VERSION` to `0.16.0`; `create_sparql_view`/`create_datalog_view` with `decode=true` now creates a separate `_decoded` companion VIEW instead of wrapping the stream table; `immediate` boolean parameter added to all view creation functions | Released ✅ | Patch | — |
 | v0.99.2 | **Patch: pg_trickle 0.49.1; new repository** — `PG_TRICKLE_VERSION` bumped to `0.49.1`; `.versions.toml` updated; repository relocated to `grove/pg-ripple` | Released ✅ | Patch | — |
 
+### Expert System Platform (v0.100.0 – v0.106.0)
+
+> **Foundation document**: see [plans/expert-system.md](plans/expert-system.md) for the full analysis of what makes pg_ripple an expert system platform, competitive positioning, application scenarios (clinical, AML, regulatory, industrial), and the rationale for each phase. The seven versions below map directly to the eight-phase roadmap in that document (phases 3 and 4 are bundled in v0.102.0).
+
+| Version | Theme | Status | Scope | Full details |
+|---------|-------|--------|-------|-------------- |
+| v0.100.0 | **Proof trees & justification infrastructure** — `_pg_ripple.derivations` table recording `(derived_sid, rule_name, antecedent_sids[])` for every Datalog-derived fact; `pg_ripple.record_derivations` GUC (default off) gates the overhead; `justify(subject TEXT, predicate TEXT, object TEXT)` SQL function returning the full backward-chaining proof tree as JSONB; recursive derivation-graph walker with cycle protection; batch dictionary decode for human-readable IRI labels in proof output; derivations survive DRed retraction cleanly (orphan rows vacuumed on next DRed pass); migration script; pg_regress tests for derivation recording and proof-tree correctness | Planned | Large | — |
+| v0.101.0 | **Natural language explanation** — `explain_inference(subject TEXT, predicate TEXT, object TEXT, format TEXT DEFAULT 'text')` function: retrieves proof tree from `_pg_ripple.derivations`, decodes all dictionary IDs to human-readable IRIs and labels, feeds structured tree to the LLM endpoint (`pg_ripple.llm_endpoint`) with a domain-appropriate system prompt, returns a natural language narrative; `_pg_ripple.explanation_cache` table with TTL-based invalidation (`pg_ripple.explanation_cache_ttl` GUC); REST endpoint `POST /explain` in `pg_ripple_http`; mock-LLM test coverage; JSONB variant `explain_inference_jsonb()` returning structured proof with embedded narrative | Planned | Medium | — |
+| v0.102.0 | **What-if reasoning & conflict detection** — `hypothetical_inference(hypotheses JSONB, rules TEXT DEFAULT 'default')` uses a transaction-scoped temporary table to assert hypothetical facts, runs incremental Datalog inference via DRed, collects all newly derived and retracted conclusions, rolls back; returns diff as JSONB `{"derived": [...], "retracted": []}`; `rule_conflicts(ruleset TEXT)` performs static analysis of rule heads for potential contradictions and runtime detection of derived facts that violate SHACL mutual-exclusion constraints; `pg_ripple.block_on_conflict` GUC to optionally halt inference when a contradiction is detected; REST endpoints `POST /hypothetical` and `GET /rule-conflicts/{ruleset}` in `pg_ripple_http` | Planned | Large | — |
+| v0.103.0 | **Domain rule libraries** — rule library format specification (Turtle file containing Datalog rules, SHACL shapes, and metadata triples); `_pg_ripple.rule_libraries` catalog table `(name TEXT, version TEXT, installed_at TIMESTAMPTZ, description TEXT, dependencies TEXT[])`; `install_rule_library(name TEXT, source TEXT)`, `upgrade_rule_library(name TEXT)`, `uninstall_rule_library(name TEXT)` SQL functions with dependency resolution and conflict checking; implicit dependency activation (installing `'aml-eu'` auto-activates `'foaf'` and `'dcterms'`); first three reference libraries shipped in-tree: `'medical-decision-support-v1'` (clinical risk stratification rules and SHACL shapes), `'aml-eu-v1'` (EU AML Directive IV/V decision logic), `'gdpr-compliance-v1'` (data processing lawfulness and erasure rules); REST endpoint `GET /rule-libraries` listing available and installed libraries | Planned | Large | — |
+| v0.104.0 | **Guided rule authoring & LLM rule extraction** — web-based rule builder served by `pg_ripple_http` at `/rule-builder`: form-based UI allowing domain experts to construct rules interactively ("When [subject condition] AND [object condition], conclude [head triple] with confidence [value]") with automatic compilation to Datalog and live validation against the existing knowledge base; `draft_rule_from_nl(description TEXT)` SQL function translating a natural language rule description to Datalog via LLM endpoint, with preview of derivations on sample data before committing; `validate_rule(rule TEXT)` checks syntax, detects unused variables, identifies potential stratification issues; `suggest_rules(graph_iri TEXT, examples JSONB)` identifies statistical patterns in observed triples and proposes candidate Datalog rules for domain expert review | Planned | Large | — |
+| v0.105.0 | **Temporal reasoning in Datalog** — temporal operators in Datalog parser: `WITHIN(duration)`, `AFTER(timestamp)`, `BEFORE(timestamp)`, `DURING(from, to)`, `SEQUENCE(event1, event2, window)`, `CONSECUTIVE(n, predicate, window)`; operators compile to PostgreSQL window functions and tsrange queries over `valid_from`/`valid_to` timestamp columns stored in VP tables and `_pg_ripple.temporal_facts`; `pg_ripple.enable_temporal_operators` GUC; temporal pattern detection rules: "if condition holds for N consecutive readings within window W, then conclude C"; integrate with CDC replication log to maintain fact validity intervals automatically as data changes; `pg:temporal_window(?subject, ?predicate, ?start, ?end)` SPARQL function for time-bounded triple retrieval; `sh:validFor` SHACL constraint with XSD duration expression | Planned | Very Large | — |
+| v0.106.0 | **Bayesian confidence updates** — dynamic belief revision: `update_confidence(subject TEXT, predicate TEXT, object TEXT, evidence JSONB)` recalculates confidence using prior confidence and incoming evidence reliability score via Bayes' theorem; `_pg_ripple.evidence_log` table recording each evidence event with timestamp, source IRI, likelihood ratio, and prior/posterior confidence; confidence propagation through DRed: when a base-fact confidence changes, downstream inferred-fact confidences update incrementally without full recomputation; `pg_ripple.confidence_update_strategy` GUC (`'bayesian'` | `'noisy-or'` | `'manual'`); conflict-weighted confidence: when two rules derive contradictory conclusions, confidence scores are attenuated according to conflict severity; batch evidence ingestion via `bulk_update_confidence(data TEXT, format TEXT)`; REST endpoint `POST /confidence/update` in `pg_ripple_http`; proptest oracle comparing Bayesian updates against a reference implementation | Planned | Large | — |
+
 ### Stable Release & Ecosystem (v1.0.0 – v1.2.0)
 
 | Version | Theme | Status | Scope | Full details |
@@ -365,6 +379,45 @@ v0.94–v0.97    ─── Assessment 15 remediation: COMPATIBLE_EXTENSION_MIN a
                │   datalog_handlers sub-split; missing_docs CI gate; 4 new Prometheus
                │   metrics; concurrent PageRank+writes load test; Arrow Flight EXPLAIN
                │   row-estimate; Low-severity polish + supply-chain hygiene
+       │
+v0.98–v0.99    ─── Vocabulary bundles: SKOS (28 rules, 10 SHACL validators, 5 SQL helpers,
+               │   explain_contradiction(), coverage_map(), named bundle API);
+               │   DCTERMS (11 rules, 8 validators), Schema.org (15 rules, 6 validators),
+               │   FOAF (8 rules, 5 validators), cross-bundle activation
+       │
+v0.100.0       ─── Expert system platform — phase 1: proof trees & justification
+               │   infrastructure: _pg_ripple.derivations table, record_derivations GUC,
+               │   justify() JSONB proof tree, DRed-aware retraction, dictionary-decoded
+               │   labels, pg_regress test suite
+       │
+v0.101.0       ─── Expert system platform — phase 2: natural language explanation:
+               │   explain_inference() LLM-powered narrative from proof tree,
+               │   explanation_cache table + TTL GUC, POST /explain REST endpoint,
+               │   mock-LLM test coverage
+       │
+v0.102.0       ─── Expert system platform — phases 3+4: what-if reasoning & conflict
+               │   detection: hypothetical_inference() transaction-scoped DRed sandbox,
+               │   rule_conflicts() static+runtime contradiction detection,
+               │   block_on_conflict GUC, POST /hypothetical REST endpoint
+       │
+v0.103.0       ─── Expert system platform — phase 5: domain rule libraries:
+               │   rule library format spec (Turtle), _pg_ripple.rule_libraries catalog,
+               │   install/upgrade/uninstall with dependency resolution; 3 reference
+               │   libraries: medical-decision-support, aml-eu, gdpr-compliance
+       │
+v0.104.0       ─── Expert system platform — phase 6: guided rule authoring & LLM
+               │   extraction: /rule-builder web UI, draft_rule_from_nl() LLM
+               │   compilation, validate_rule(), suggest_rules() pattern proposals
+       │
+v0.105.0       ─── Expert system platform — phase 7: temporal reasoning: WITHIN/AFTER/
+               │   BEFORE/DURING/SEQUENCE/CONSECUTIVE Datalog operators, window function
+               │   + tsrange compilation, valid_from/valid_to VP columns, CDC fact
+               │   validity intervals, sh:validFor SHACL constraint
+       │
+v0.106.0       ─── Expert system platform — phase 8: Bayesian confidence updates:
+               │   update_confidence() Bayesian revision, evidence_log table, incremental
+               │   DRed confidence propagation, conflict-weighted attenuation,
+               │   confidence_update_strategy GUC, POST /confidence/update REST endpoint
        │
 v1.0.0         ─── Stable release: 72-hour continuous load test, third-party security
                │   audit, API stability matrix, documentation freeze, public benchmarks
