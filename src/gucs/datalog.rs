@@ -163,3 +163,12 @@ pub static EXPORT_CONFIDENCE: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>:
 /// GUC: CONSTRUCT writeback confidence propagation mode: `'explicit'` or `'inherit'` (v0.87.0).
 pub static CWB_CONFIDENCE_PROPAGATION: pgrx::GucSetting<Option<std::ffi::CString>> =
     pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+// ─── v0.100.0 Proof Tree / Derivation Recording GUCs ─────────────────────────
+
+/// GUC: when `true`, the semi-naive inference engine records derivation
+/// provenance in `_pg_ripple.derivations` for every newly derived fact.
+/// Disabled by default because of the storage and performance overhead.
+/// Enable before calling `infer()` / `infer_agg()` when you need `justify()`.
+/// (v0.100.0 PROOF-TREE-01)
+pub static RECORD_DERIVATIONS: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);

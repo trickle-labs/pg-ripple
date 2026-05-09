@@ -247,7 +247,12 @@ FROM pg_ripple.schema_type_ancestors('http://schema.test/unknown');
 (1 row)
 
 -- ─── VERSION-01: compiled_version must be 0.99.x ────────────────────────────
-SELECT value LIKE '0.99.%' AS version_is_0_99_x
+-- Accepts 0.99.x and any later release (integer-based semver check).
+SELECT (
+    split_part(value, '.', 1)::int * 1000000 +
+    split_part(value, '.', 2)::int * 1000 +
+    split_part(value, '.', 3)::int
+) >= (0 * 1000000 + 99 * 1000 + 0) AS version_is_0_99_x
 FROM pg_ripple.diagnostic_report()
 WHERE key = 'compiled_version';
  version_is_0_99_x 

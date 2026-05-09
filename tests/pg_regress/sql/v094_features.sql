@@ -13,8 +13,13 @@ SET search_path TO pg_ripple, public;
 
 -- ─── H15-01: Version bump ────────────────────────────────────────────────────
 
--- compiled_version should be 0.94.0 or later (extension bumped to 0.95.0)
-SELECT value >= '0.94.0' AS version_ok
+-- compiled_version should be 0.94.0 or later (integer-based semver check avoids
+-- lexicographic ordering issues when minor version >= 100).
+SELECT (
+    split_part(value, '.', 1)::int * 1000000 +
+    split_part(value, '.', 2)::int * 1000 +
+    split_part(value, '.', 3)::int
+) >= (0 * 1000000 + 94 * 1000 + 0) AS version_ok
 FROM pg_ripple.diagnostic_report()
 WHERE key = 'compiled_version';
 

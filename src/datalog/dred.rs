@@ -217,6 +217,12 @@ pub fn run_dred_on_delete(pred_id: i64, s_val: i64, o_val: i64, _g_val: i64) -> 
 
         // ── Phase 3: Cleanup ─────────────────────────────────────────────────
         let _ = Spi::run_with_args(&format!("DROP TABLE IF EXISTS {temp_over}"), &[]);
+
+        // v0.100.0 PROOF-TREE-01: vacuum orphan derivation rows for any
+        // retracted facts so proof trees remain consistent.
+        if total_retracted > 0 {
+            let _ = crate::datalog::derivations::vacuum_orphan_derivations();
+        }
     }
 
     total_retracted

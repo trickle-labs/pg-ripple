@@ -510,4 +510,18 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.100.0 Proof Tree / Derivation Recording GUCs ──────────────────────
+
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.record_derivations",
+        c"When on, the semi-naive inference engine records derivation provenance in \
+      _pg_ripple.derivations for every newly derived fact, enabling justify() proof trees. \
+      Off by default due to storage and performance overhead. Enable before calling infer() \
+      when you need backward-chaining explanations. (v0.100.0 PROOF-TREE-01)",
+        c"",
+        &crate::gucs::datalog::RECORD_DERIVATIONS,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

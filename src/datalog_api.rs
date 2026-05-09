@@ -856,4 +856,51 @@ mod pg_ripple {
         let rows = crate::datalog::explain::explain_inference_impl(s, p, o, g);
         TableIterator::new(rows)
     }
+
+    // ── v0.100.0: justify / vacuum_derivations (PROOF-TREE-01) ───────────────
+
+    /// Return the backward-chaining proof tree for a Datalog-derived triple as JSONB.
+    ///
+    /// Requires `pg_ripple.record_derivations = on` to have been set before the
+    /// `infer()` / `infer_agg()` call that produced the fact.  Returns `NULL` when:
+    ///
+    /// - The triple is not in the knowledge base.
+    /// - No derivation provenance was recorded for this triple (either it is a
+    ///   base fact or `record_derivations` was off during inference).
+    ///
+    /// The returned JSONB has the shape:
+    /// ```json
+    /// {
+    ///   "type": "inferred",
+    ///   "sid": 42,
+    ///   "triple": { "subject": "...", "predicate": "...", "object": "..." },
+    ///   "derivations": [
+    ///     {
+    ///       "rule": "?x <pred_b> ?y :- ?x <pred_a> ?y .",
+    ///       "rule_set": "my_rules",
+    ///       "antecedents": [ { "type": "base", "sid": 7, "triple": { ... } } ]
+    ///     }
+    ///   ]
+    /// }
+    /// ```
+    ///
+    /// Cycle protection is built in: if the derivation graph contains a cycle,
+    /// the node is tagged `{"cycle": true}` and recursion stops.
+    #[pg_extern]
+    fn justify(subject: &str, predicate: &str, object: &str) -> Option<pgrx::JsonB> {
+        crate::datalog::derivations::justify_impl(subject, predicate, object).map(pgrx::JsonB)
+    }
+
+    /// Remove orphan rows from `_pg_ripple.derivations` — rows whose `derived_sid`
+    /// no longer exists in `_pg_ripple.vp_rare`.
+    ///
+    /// Orphans are created when a derived fact is retracted (via DRed or manual
+    /// deletion) but the corresponding derivation row is not immediately cleaned
+    /// up.  Call this function after bulk retractions or as a scheduled task.
+    ///
+    /// Returns the number of rows removed.
+    #[pg_extern]
+    fn vacuum_derivations() -> i64 {
+        crate::datalog::derivations::vacuum_orphan_derivations()
+    }
 }

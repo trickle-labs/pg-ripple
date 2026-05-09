@@ -54,9 +54,9 @@ ORDER BY key;
 SELECT
     (SELECT value FROM pg_ripple.diagnostic_report() WHERE key = 'schema_version') AS sv,
     (SELECT value FROM pg_ripple.diagnostic_report() WHERE key = 'compiled_version') AS cv;
-   sv   |   cv   
---------+--------
- 0.98.0 | 0.99.2
+   sv   |   cv    
+--------+---------
+ 0.98.0 | 0.100.0
 (1 row)
 
 -- GUC values should be valid

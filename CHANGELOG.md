@@ -13,6 +13,29 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.100.0] — 2026-05-09 — Proof trees & justification infrastructure
+
+**Proof trees & justification infrastructure: `_pg_ripple.derivations` table, `pg_ripple.record_derivations` GUC, `justify()` proof-tree function, and `vacuum_derivations()` cleanup. No schema changes required beyond the new `derivations` table and supporting indexes added via migration script.**
+
+### Added
+
+- **PROOF-TREE-01**: `_pg_ripple.derivations` table recording `(id BIGINT IDENTITY, derived_sid BIGINT, rule_name TEXT, rule_set TEXT, antecedent_sids BIGINT[], created_at TIMESTAMPTZ)` for every Datalog-derived fact when recording is enabled. Unique constraint on `(derived_sid, rule_name)` prevents duplicate rows.
+- **PROOF-TREE-02**: `pg_ripple.record_derivations` GUC (default `off`) gates derivation recording overhead. Set to `on` before calling `infer_with_stats()` to capture provenance.
+- **PROOF-TREE-03**: Derivation recording wired into the semi-naive inference engine (`run_inference_seminaive`). After each fixpoint run, antecedent SIDs are captured via delta-table joins and stored in `_pg_ripple.derivations`. Delta-table approach correctly identifies newly-derived triples (avoids false positives from pre-existing base facts).
+- **PROOF-TREE-04**: `pg_ripple.justify(subject TEXT, predicate TEXT, object TEXT) → JSONB` SQL function returning the full backward-chaining proof tree. Returns a JSONB object with `"type"` (`"inferred"` or `"base"`), `"sid"`, `"triple"` (subject/predicate/object as human-readable strings), and `"derivations"` array. Returns NULL for triples not in the store.
+- **PROOF-TREE-05**: Recursive derivation-graph walker with cycle protection (visited-SID set prevents infinite loops) and depth limit (MAX_DEPTH = 64 levels).
+- **PROOF-TREE-06**: Batch dictionary decode for human-readable IRI labels in proof output — all SIDs in the proof tree are decoded in a single SQL batch query.
+- **PROOF-TREE-07**: `pg_ripple.vacuum_derivations() → BIGINT` function to remove orphan derivation rows (where `derived_sid` no longer exists in any VP table). Returns the count of rows removed.
+- **PROOF-TREE-08**: Derivations survive DRed retraction cleanly: `run_dred_on_delete` removes derivation rows for deleted SIDs; subsequent `vacuum_derivations()` cleans residual orphans.
+- **SEMVER-FIX-01**: Version comparison tests in pg_regress test suite updated to use integer-based semantic version comparison (`split_part(version, '.', N)::int`) to correctly handle minor versions ≥ 100 (lexicographic comparison breaks for `0.100.0` vs `0.99.x`).
+
+### Migration
+
+- Schema changes: New `_pg_ripple.derivations` table with GIN index on `antecedent_sids` and B-tree index on `derived_sid`.
+- Migration script: `sql/pg_ripple--0.99.2--0.100.0.sql`.
+
+---
+
 ## [0.99.2] — 2026-05-08 — pg_trickle 0.49.1 patch; new repository
 
 **Patch release: bumps pg_trickle to 0.49.1 to pick up upstream bug fixes, and establishes the new grove/pg-ripple GitHub repository. No schema changes. Evidence: `docker-compose.yml`, `sql/pg_ripple--0.99.1--0.99.2.sql`.**

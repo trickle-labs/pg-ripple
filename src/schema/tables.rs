@@ -474,3 +474,40 @@ $$;
     name = "v028_embedding_queue",
     requires = ["v027_embeddings_table"]
 );
+
+// v0.100.0: Proof tree / derivation provenance table (PROOF-TREE-01).
+pgrx::extension_sql!(
+    r#"
+-- Derivation provenance table (v0.100.0 PROOF-TREE-01)
+-- Records why each inferred fact was derived: which rule fired and which base
+-- triples (antecedents) satisfied the rule body.  Populated only when
+-- pg_ripple.record_derivations = on; stays empty (zero overhead) otherwise.
+--
+-- Columns:
+--   derived_sid     — statement ID (vp_rare.i) of the inferred triple
+--   rule_name       — the raw Datalog rule text (used as the human-readable name)
+--   rule_set        — the rule set this rule belongs to (e.g. 'rdfs', 'owl-rl')
+--   antecedent_sids — array of statement IDs of the body-atom triples that
+--                     satisfied the rule for this specific derivation
+--   created_at      — when the derivation was recorded
+CREATE TABLE IF NOT EXISTS _pg_ripple.derivations (
+    id              BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    derived_sid     BIGINT      NOT NULL,
+    rule_name       TEXT        NOT NULL,
+    rule_set        TEXT        NOT NULL DEFAULT '',
+    antecedent_sids BIGINT[]    NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT derivations_unique UNIQUE (derived_sid, rule_name)
+);
+CREATE INDEX IF NOT EXISTS idx_derivations_derived_sid
+    ON _pg_ripple.derivations (derived_sid);
+CREATE INDEX IF NOT EXISTS idx_derivations_antecedent
+    ON _pg_ripple.derivations USING GIN (antecedent_sids);
+COMMENT ON TABLE _pg_ripple.derivations IS
+    'Proof provenance for Datalog-inferred facts. '
+    'Populated when pg_ripple.record_derivations = on. '
+    'Query with pg_ripple.justify(subject, predicate, object).';
+"#,
+    name = "v0100_derivations_table",
+    requires = ["v028_embedding_queue"]
+);

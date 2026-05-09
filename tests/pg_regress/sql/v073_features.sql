@@ -123,7 +123,12 @@ FROM pg_ripple.sparql('SELECT * WHERE { ?s ?p ?o } LIMIT 0');
 -- 5b. sparql_update() is callable.
 SELECT pg_ripple.sparql_update('INSERT DATA {}') IS NOT NULL AS sparql_update_callable;
 
--- 5c. Extension version is 0.73.0 or later.
-SELECT default_version >= '0.73.0' AS correct_version
+-- 5c. Extension version is 0.73.0 or later (integer-based semver check avoids
+-- lexicographic ordering issues when minor version ≥ 100).
+SELECT (
+    split_part(default_version, '.', 1)::int * 1000000 +
+    split_part(default_version, '.', 2)::int * 1000 +
+    split_part(default_version, '.', 3)::int
+) >= (0 * 1000000 + 73 * 1000 + 0) AS correct_version
 FROM pg_catalog.pg_available_extensions
 WHERE name = 'pg_ripple';

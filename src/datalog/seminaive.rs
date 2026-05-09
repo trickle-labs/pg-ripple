@@ -282,6 +282,22 @@ pub fn run_inference_seminaive(rule_set_name: &str) -> (i64, i32) {
         }
     }
 
+    // v0.100.0 PROOF-TREE-01: record derivation provenance when record_derivations = on.
+    // Delta tables are still live here (dropped further below), so we can use them
+    // to filter vp_rare to only newly-derived rows.
+    if crate::RECORD_DERIVATIONS.get() && total_derived > 0 {
+        let delta_fn = |pred_id: i64| -> Option<String> {
+            if derived_pred_ids.contains(&pred_id) {
+                Some(format!("_dl_delta_{pred_id}"))
+            } else {
+                None
+            }
+        };
+        for rule in &active_rules {
+            super::derivations::record_rule_derivations_with_delta(rule, rule_set_name, &delta_fn);
+        }
+    }
+
     // v0.87.0 PROB-DATALOG-01: propagate confidence scores when probabilistic_datalog = on.
     if crate::PROBABILISTIC_DATALOG.get() {
         for rule in &active_rules {
