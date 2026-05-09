@@ -44,8 +44,9 @@ pub fn explain_inference_impl(
     // Step 3 — check explanation cache (if TTL > 0).
     let ttl = crate::gucs::llm::EXPLANATION_CACHE_TTL_SECS.get();
     if ttl > 0 && sid > 0 {
-        if let Some(cached) = read_cache(sid, format, &model) {
-            return Some(cached);
+        let cached = read_cache(sid, format, &model);
+        if cached.is_some() {
+            return cached;
         }
     }
 
@@ -344,16 +345,12 @@ pub fn render_proof_tree_text(tree: &serde_json::Value, format: &str) -> String 
     if format == "markdown" {
         buf.push_str("## Proof Tree\n\n");
     }
-    render_node(tree, 0, &mut buf, format);
+    render_node(tree, 0, &mut buf);
     buf
 }
 
-fn render_node(node: &serde_json::Value, depth: usize, buf: &mut String, format: &str) {
-    let indent = if format == "markdown" {
-        "  ".repeat(depth)
-    } else {
-        "  ".repeat(depth)
-    };
+fn render_node(node: &serde_json::Value, depth: usize, buf: &mut String) {
+    let indent = "  ".repeat(depth);
 
     let node_type = node
         .get("type")
@@ -391,7 +388,7 @@ fn render_node(node: &serde_json::Value, depth: usize, buf: &mut String, format:
                     buf.push_str(&format!("{indent}  via rule: {rule}\n"));
                     if let Some(ants) = deriv.get("antecedents").and_then(|v| v.as_array()) {
                         for ant in ants {
-                            render_node(ant, depth + 2, buf, format);
+                            render_node(ant, depth + 2, buf);
                         }
                     }
                 }
