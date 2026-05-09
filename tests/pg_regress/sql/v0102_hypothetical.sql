@@ -1,0 +1,200 @@
+-- v0.102.0 Feature Regression Tests
+-- Tests for: What-if reasoning (hypothetical inference)
+--
+-- Covers:
+--   HYPO-01: hypothetical_inference() GUC default for hypothetical_max_assertions
+--   HYPO-02: correct diff — hypothetical fact triggers a known rule
+--   HYPO-03: isolation — no rows appear in real VP tables after the call
+--   HYPO-04: retraction — hypothetical retract causes a previously-inferred triple to appear in "retracted"
+--   HYPO-05: side-effect absence — clean state between consecutive calls
+--   HYPO-06: rollback correctness — outer transaction rollback leaves no residual state
+--   HYPO-07: PT0450 raised when hypothetical_max_assertions is exceeded
+
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+
+-- Load library so _PG_init registers GUCs (required when shared_preload_libraries is not set).
+LOAD '$libdir/pg_ripple';
+
+-- ─── HYPO-01: hypothetical_max_assertions GUC default ────────────────────────
+
+SELECT current_setting('pg_ripple.hypothetical_max_assertions', true) = '10000'
+    AS hypothetical_max_assertions_default;
+
+-- ─── Setup: load a base graph and a simple transitive rule ───────────────────
+
+SELECT pg_ripple.drop_rules('hypo_test') IS NOT DISTINCT FROM NULL
+    AS hypo_rules_dropped;
+
+-- Load a simple ancestor rule: ?x ancestor ?z :- ?x parent ?z .
+SELECT pg_ripple.load_rules(
+    '?x <http://hypo.test/ancestor> ?z :- ?x <http://hypo.test/parent> ?z .',
+    'hypo_test'
+) > 0 AS hypo_rules_loaded;
+
+-- Insert a base triple: Alice parent Bob
+SELECT pg_ripple.insert_triple(
+    '<http://hypo.test/Alice>',
+    '<http://hypo.test/parent>',
+    '<http://hypo.test/Bob>'
+) IS NOT DISTINCT FROM NULL AS hypo_base_triple_inserted;
+
+-- Run inference so Alice ancestor Bob is materialised.
+SELECT pg_ripple.infer('hypo_test') >= 0 AS hypo_initial_infer_ok;
+
+-- Verify the inferred triple exists in the real graph (use SPARQL ASK to be
+-- storage-location agnostic — inference may route to delta or vp_rare).
+SELECT pg_ripple.sparql_ask(
+    'ASK { <http://hypo.test/Alice> <http://hypo.test/ancestor> <http://hypo.test/Bob> }'
+) AS alice_ancestor_bob_inferred;
+
+-- ─── HYPO-02: correct diff — hypothetical assert triggers inference ───────────
+
+-- Hypothetically add "Bob parent Carol" and check that "Alice ancestor Carol"
+-- would be derived (via the transitivity rule).
+-- NOTE: The rule "?x ancestor ?z :- ?x parent ?z" is a one-hop rule, so we
+-- only need Bob parent Carol to derive Alice ancestor Carol if Alice parent Bob.
+-- But the rule only has one body atom, so it derives ?x ancestor ?z from ?x parent ?z.
+-- With Alice parent Bob (base) AND Bob parent Carol (hypothetical), the rule
+-- will also derive Bob ancestor Carol directly from the hypothetical assert.
+
+SELECT (pg_ripple.hypothetical_inference(
+    '{"assert": [{"s": "http://hypo.test/Bob", "p": "http://hypo.test/parent", "o": "http://hypo.test/Carol"}]}',
+    'hypo_test'
+) ->> 'derived') IS NOT NULL AS hypo_diff_derived_not_null;
+
+-- The derived array should be non-empty (Bob ancestor Carol derived from hypothetical).
+SELECT jsonb_array_length(
+    pg_ripple.hypothetical_inference(
+        '{"assert": [{"s": "http://hypo.test/Bob", "p": "http://hypo.test/parent", "o": "http://hypo.test/Carol"}]}',
+        'hypo_test'
+    ) -> 'derived'
+) >= 1 AS hypo_derived_not_empty;
+
+-- The retracted array should be empty (nothing would be retracted).
+SELECT jsonb_array_length(
+    pg_ripple.hypothetical_inference(
+        '{"assert": [{"s": "http://hypo.test/Bob", "p": "http://hypo.test/parent", "o": "http://hypo.test/Carol"}]}',
+        'hypo_test'
+    ) -> 'retracted'
+) = 0 AS hypo_retracted_empty;
+
+-- ─── HYPO-03: isolation — no rows in real VP tables after the call ────────────
+
+-- The hypothetical call must not materialise "Bob ancestor Carol" in the real graph.
+-- Use SPARQL ASK to check all storage locations (delta, main, vp_rare).
+SELECT NOT pg_ripple.sparql_ask(
+    'ASK { ?s <http://hypo.test/ancestor> <http://hypo.test/Carol> }'
+) AS carol_not_in_real_graph;
+
+-- The real graph should still have exactly the pre-existing inferred triple
+-- (Alice ancestor Bob only); Carol must not have been persisted.
+SELECT NOT pg_ripple.sparql_ask(
+    'ASK { <http://hypo.test/Alice> <http://hypo.test/ancestor> <http://hypo.test/Carol> }'
+) AS only_alice_ancestor_bob_in_real_graph;
+
+-- ─── HYPO-04: retraction — hypothetical retract causes derived triple to appear in "retracted" ──
+
+-- Hypothetically retract "Alice parent Bob" (the base fact) and verify that
+-- "Alice ancestor Bob" (the inferred fact) appears in the "retracted" array.
+SELECT jsonb_array_length(
+    pg_ripple.hypothetical_inference(
+        '{"assert": [], "retract": [{"s": "http://hypo.test/Alice", "p": "http://hypo.test/parent", "o": "http://hypo.test/Bob"}]}',
+        'hypo_test'
+    ) -> 'retracted'
+) >= 1 AS hypo_retraction_triggers_retracted;
+
+-- After the retraction call, the real graph should still contain Alice ancestor Bob.
+SELECT pg_ripple.sparql_ask(
+    'ASK { <http://hypo.test/Alice> <http://hypo.test/ancestor> <http://hypo.test/Bob> }'
+) AS alice_ancestor_bob_still_in_real_graph_after_retract_call;
+
+-- ─── HYPO-05: side-effect absence — clean state between consecutive calls ─────
+
+-- Call hypothetical_inference twice with different hypotheses in the same session.
+-- Both calls should return independent, correct results.
+
+-- Call 1: assert Bob parent Carol.
+SELECT jsonb_array_length(
+    pg_ripple.hypothetical_inference(
+        '{"assert": [{"s": "http://hypo.test/Bob", "p": "http://hypo.test/parent", "o": "http://hypo.test/Carol"}]}',
+        'hypo_test'
+    ) -> 'derived'
+) >= 1 AS hypo_call1_derived;
+
+-- Call 2: assert Bob parent Dave — should also work independently.
+SELECT jsonb_array_length(
+    pg_ripple.hypothetical_inference(
+        '{"assert": [{"s": "http://hypo.test/Bob", "p": "http://hypo.test/parent", "o": "http://hypo.test/Dave"}]}',
+        'hypo_test'
+    ) -> 'derived'
+) >= 1 AS hypo_call2_derived;
+
+-- Verify Carol is still not in the real graph (call 1 did not persist).
+SELECT NOT pg_ripple.sparql_ask(
+    'ASK { ?s ?p <http://hypo.test/Carol> }'
+) AS carol_not_persisted_after_call1;
+
+-- Verify Dave is also not in the real graph (call 2 did not persist).
+SELECT NOT pg_ripple.sparql_ask(
+    'ASK { ?s ?p <http://hypo.test/Dave> }'
+) AS dave_not_persisted_after_call2;
+
+-- ─── HYPO-06: rollback correctness ───────────────────────────────────────────
+
+-- Run hypothetical_inference inside a transaction, then roll back.
+-- After rollback the real graph should be unchanged.
+BEGIN;
+SELECT jsonb_array_length(
+    pg_ripple.hypothetical_inference(
+        '{"assert": [{"s": "http://hypo.test/Bob", "p": "http://hypo.test/parent", "o": "http://hypo.test/Eve"}]}',
+        'hypo_test'
+    ) -> 'derived'
+) >= 1 AS hypo_in_txn_derived;
+ROLLBACK;
+
+-- Eve must not appear anywhere in the graph after rollback.
+SELECT NOT pg_ripple.sparql_ask(
+    'ASK { ?s ?p <http://hypo.test/Eve> }'
+) AS eve_not_in_graph_after_rollback;
+
+-- The original inferred triple (Alice ancestor Bob) must still be present.
+SELECT pg_ripple.sparql_ask(
+    'ASK { <http://hypo.test/Alice> <http://hypo.test/ancestor> <http://hypo.test/Bob> }'
+) AS alice_ancestor_bob_survives_rollback;
+
+-- ─── HYPO-07: PT0450 — limit exceeded ────────────────────────────────────────
+
+-- Set limit very low, then try to submit more hypotheses than the limit.
+SET pg_ripple.hypothetical_max_assertions = 2;
+
+DO $$
+BEGIN
+    -- Try to call with 3 hypotheses (exceeds limit of 2).
+    PERFORM pg_ripple.hypothetical_inference(
+        '{"assert": [
+            {"s": "http://hypo.test/A", "p": "http://hypo.test/p", "o": "http://hypo.test/B"},
+            {"s": "http://hypo.test/B", "p": "http://hypo.test/p", "o": "http://hypo.test/C"},
+            {"s": "http://hypo.test/C", "p": "http://hypo.test/p", "o": "http://hypo.test/D"}
+        ]}',
+        'hypo_test'
+    );
+    RAISE NOTICE 'ERROR: expected PT0450 but no error was raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLERRM ILIKE '%PT0450%' OR SQLERRM ILIKE '%hypothetical_max_assertions%' THEN
+            RAISE NOTICE 'PT0450_RAISED_OK';
+        ELSE
+            RAISE NOTICE 'UNEXPECTED_ERROR: %', SQLERRM;
+        END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+RESET pg_ripple.hypothetical_max_assertions;
+
+-- ─── Cleanup ──────────────────────────────────────────────────────────────────
+
+SELECT pg_ripple.drop_rules('hypo_test') IS NOT DISTINCT FROM NULL
+    AS hypo_cleanup_rules;

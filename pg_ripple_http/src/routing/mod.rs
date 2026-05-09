@@ -112,6 +112,7 @@ pub(crate) struct RagResponse {
 pub(crate) mod admin_handlers;
 pub(crate) mod confidence_handlers;
 pub(crate) mod explain_handler;
+pub(crate) mod hypothetical_handler;
 pub(crate) mod pagerank_handlers;
 pub(crate) mod rag_handler;
 pub(crate) mod sparql_handlers;
@@ -276,6 +277,8 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
             "/explain",
             post(explain_handler::explain_post).get(explain_handler::explain_get),
         )
+        // v0.102.0: What-if reasoning (hypothetical inference)
+        .route("/hypothetical", post(hypothetical_handler::hypothetical_post))
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)
         .with_state(state)

@@ -83,6 +83,8 @@ mod pagerank;
 mod pagerank_api;
 // v0.98.0 modules — SKOS support, named bundle API & graph intelligence
 mod skos;
+// v0.102.0 modules — What-if reasoning (hypothetical inference)
+pub(crate) mod hypothetical;
 
 // Re-export all GUC statics at the crate root so that `crate::SOME_GUC` paths
 // in existing code continue to work after the split.

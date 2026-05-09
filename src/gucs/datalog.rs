@@ -172,3 +172,11 @@ pub static CWB_CONFIDENCE_PROPAGATION: pgrx::GucSetting<Option<std::ffi::CString
 /// Enable before calling `infer()` / `infer_agg()` when you need `justify()`.
 /// (v0.100.0 PROOF-TREE-01)
 pub static RECORD_DERIVATIONS: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
+
+// ─── v0.102.0 Hypothetical Inference GUCs ────────────────────────────────────
+
+/// GUC: maximum number of assertions + retractions allowed in a single
+/// `hypothetical_inference()` call.  Exceeding this limit raises PT0450.
+/// (v0.102.0 HYPO-01)
+pub static HYPOTHETICAL_MAX_ASSERTIONS: pgrx::GucSetting<i32> =
+    pgrx::GucSetting::<i32>::new(10_000);
