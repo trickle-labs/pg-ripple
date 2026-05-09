@@ -74,5 +74,4 @@ pub static KGE_MODEL: pgrx::GucSetting<Option<std::ffi::CString>> =
 
 /// GUC: TTL in seconds for `_pg_ripple.explanation_cache` entries (v0.101.0).
 /// Default: 3600 (1 hour). Set to 0 to disable caching.
-pub static EXPLANATION_CACHE_TTL_SECS: pgrx::GucSetting<i32> =
-    pgrx::GucSetting::<i32>::new(3600);
+pub static EXPLANATION_CACHE_TTL_SECS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(3600);

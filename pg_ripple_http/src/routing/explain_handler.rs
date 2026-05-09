@@ -74,7 +74,14 @@ pub(crate) async fn explain_post(
         }
     };
 
-    explain_inner(&state, &req.subject, &req.predicate, &req.object, &req.format).await
+    explain_inner(
+        &state,
+        &req.subject,
+        &req.predicate,
+        &req.object,
+        &req.format,
+    )
+    .await
 }
 
 // ─── GET /explain ─────────────────────────────────────────────────────────────
@@ -161,9 +168,7 @@ async fn explain_inner(
         }
     };
 
-    let explanation: Option<String> = rows
-        .first()
-        .and_then(|row| row.get::<_, Option<String>>(0));
+    let explanation: Option<String> = rows.first().and_then(|row| row.get::<_, Option<String>>(0));
 
     json_response(
         StatusCode::OK,

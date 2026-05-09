@@ -182,11 +182,7 @@ fn generate_narrative(tree: &serde_json::Value, format: &str, model: &str) -> St
 ///
 /// Returns `None` when the endpoint is not set, is set to `'mock'`, or
 /// returns an error (in all error cases we fall back gracefully).
-fn try_llm_narrative(
-    tree: &serde_json::Value,
-    format: &str,
-    _model: &str,
-) -> Option<String> {
+fn try_llm_narrative(tree: &serde_json::Value, format: &str, _model: &str) -> Option<String> {
     let endpoint_raw = crate::LLM_ENDPOINT
         .get()
         .and_then(|cs| cs.to_str().ok().map(ToOwned::to_owned))
@@ -198,10 +194,7 @@ fn try_llm_narrative(
 
     // Mock endpoint: return a canned explanation for testing.
     if endpoint_raw == "mock" {
-        let triple = tree
-            .get("triple")
-            .cloned()
-            .unwrap_or(serde_json::json!({}));
+        let triple = tree.get("triple").cloned().unwrap_or(serde_json::json!({}));
         let subject = triple
             .get("subject")
             .and_then(|v| v.as_str())
@@ -220,9 +213,8 @@ fn try_llm_narrative(
             .and_then(|d| d.get("rule"))
             .and_then(|v| v.as_str())
             .unwrap_or("an unnamed rule");
-        let narrative = format!(
-            "The fact that {subject} has {pred} {object} was derived by rule: {rule}."
-        );
+        let narrative =
+            format!("The fact that {subject} has {pred} {object} was derived by rule: {rule}.");
         if format == "markdown" {
             return Some(format!(
                 "## Explanation\n\n{narrative}\n\n### Rule\n\n```\n{rule}\n```"
@@ -370,18 +362,9 @@ fn render_node(node: &serde_json::Value, depth: usize, buf: &mut String, format:
 
     // Extract triple label.
     let triple_str = node.get("triple").map(|t| {
-        let s = t
-            .get("subject")
-            .and_then(|v| v.as_str())
-            .unwrap_or("?");
-        let p = t
-            .get("predicate")
-            .and_then(|v| v.as_str())
-            .unwrap_or("?");
-        let o = t
-            .get("object")
-            .and_then(|v| v.as_str())
-            .unwrap_or("?");
+        let s = t.get("subject").and_then(|v| v.as_str()).unwrap_or("?");
+        let p = t.get("predicate").and_then(|v| v.as_str()).unwrap_or("?");
+        let o = t.get("object").and_then(|v| v.as_str()).unwrap_or("?");
         format!("{s}  {p}  {o}")
     });
 
@@ -406,9 +389,7 @@ fn render_node(node: &serde_json::Value, depth: usize, buf: &mut String, format:
                         .and_then(|v| v.as_str())
                         .unwrap_or("(unnamed rule)");
                     buf.push_str(&format!("{indent}  via rule: {rule}\n"));
-                    if let Some(ants) =
-                        deriv.get("antecedents").and_then(|v| v.as_array())
-                    {
+                    if let Some(ants) = deriv.get("antecedents").and_then(|v| v.as_array()) {
                         for ant in ants {
                             render_node(ant, depth + 2, buf, format);
                         }
