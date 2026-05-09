@@ -402,41 +402,63 @@ v0.100.0       ─── Expert system platform — phase 1: proof trees & justi
                │   justify() JSONB proof tree, DRed-aware retraction, dictionary-decoded
                │   labels, proptest suite for derivation + retraction correctness
        │
-v0.101.0       ─── Expert system platform — phase 2: natural language explanation:
+       ├─── Parallel track A (needs v0.100.0):
+       │
+v0.101.0       │── Expert system — phase 2: natural language explanation:
                │   explain_inference() LLM-powered narrative from proof tree,
                │   structured-text fallback when LLM unavailable,
                │   explanation_cache + TTL GUC, POST /explain REST endpoint
        │
-v0.102.0       ─── Expert system platform — phase 3: what-if reasoning:
-               │   hypothetical_inference() layered-overlay DRed sandbox,
+v0.102.0       │── Expert system — phase 3: what-if reasoning:
+               │   hypothetical_inference() HTAP-aware layered-overlay DRed sandbox,
                │   returns derived/retracted diff JSONB, POST /hypothetical
        │
-v0.103.0       ─── Expert system platform — phase 4: conflict detection:
+v0.103.0       │── Expert system — phase 4: conflict detection:
                │   rule_conflicts() static+runtime contradiction detection,
                │   block_on_conflict GUC, GET /rule-conflicts REST endpoint
        │
-v0.104.0       ─── Expert system platform — phase 5: domain rule library infrastructure:
+       ├─── Parallel track B (needs v0.99.x):
+       │
+v0.104.0       │── Expert system — phase 5: domain rule library infrastructure:
                │   rule library format spec (Turtle + metadata), _pg_ripple.rule_libraries
                │   catalog, install_rule_library(source, accept_license) with SSRF guard,
-               │   ecosystem docs chapter; no bundled domain libraries
+               │   coexists with built-in bundles (v0.98.0); no bundled domain libraries
        │
-v0.105.0       ─── Expert system platform — phase 6: guided rule authoring & LLM
-               │   extraction: draft_rule_from_nl() multi-candidate output,
+v0.105.0       │── Expert system — phase 6: guided rule authoring & LLM extraction
+               │   (needs v0.104.0): draft_rule_from_nl() multi-candidate output,
                │   validate_rule(), suggest_rules() (experimental), POST /rules/draft
        │
-v0.106.0       ─── Expert system platform — phase 7a: temporal reasoning (basic):
-               │   _pg_ripple.temporal_facts + temporal_predicates tables; no VP schema
-               │   changes; mark_temporal() registry; snapshot vs. versioned data model
-               │   GUC; AFTER/BEFORE/DURING operators; pg:temporal_window() SPARQL fn
+       ├─── Parallel track C (needs v0.99.x, independent of A and B):
        │
-v0.107.0       ─── Expert system platform — phase 7b: temporal reasoning (advanced):
+v0.106.0       │── Expert system — phase 7a: temporal reasoning (basic):
+               │   _pg_ripple.temporal_facts + temporal_predicates tables; no VP schema
+               │   changes; mark_temporal() registry; insert_triple_temporal();
+               │   snapshot vs. versioned data model GUC; AFTER/BEFORE/DURING operators
+       │
+v0.107.0       │── Expert system — phase 7b: temporal reasoning (advanced, needs v0.106.0):
                │   WITHIN/SEQUENCE/CONSECUTIVE operators, window-function compilation,
                │   CDC integration writing valid_from/valid_to for marked predicates
        │
-v0.108.0       ─── Expert system platform — phase 8: Bayesian confidence updates:
+       ├─── Parallel track D (needs v0.87.0 + v0.100.0):
+       │
+v0.108.0       │── Expert system — phase 8: Bayesian confidence updates:
                │   update_confidence() Bayesian revision, evidence_log table, incremental
                │   DRed propagation, confidence_propagation_max_depth GUC,
-               │   confidence_update_strategy GUC, POST /confidence/update REST endpoint
+               │   conflict-weighted attenuation (conditional on v0.103.0)
+       │
+       ├─── Parallel track E (needs v0.49.0 + v0.87.0):
+       │
+v0.109.0       │── NS-RL foundation: string similarity builtins (trigram, Levenshtein,
+               │   Soundex, Metaphone, Jaro-Winkler) + resolve_entities() orchestrator,
+               │   er_blocking_templates(), sameas_apply_rate_limit GUC
+       │
+v0.110.0       │── NS-RL evaluation (needs v0.109.0): evaluate_resolution() harness,
+               │   Magellan CI gate, live monitoring stream tables, explain_rule(),
+               │   sameas_anomaly_log
+       │
+v0.111.0       │── NS-RL PPRL (needs v0.110.0): bloom_encode() CLK, pg:dice_similarity,
+               │   dp_noisy_count/dp_noisy_histogram with SQL injection guard,
+               │   PPRL federation cookbook
        │
 v1.0.0         ─── Stable release: 72-hour continuous load test, third-party security
                │   audit, API stability matrix, documentation freeze, public benchmarks
