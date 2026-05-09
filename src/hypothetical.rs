@@ -25,10 +25,11 @@
 //! 8. Snapshot the new state — this is the "after" set.
 //! 9. Roll back the sub-transaction (restores the real graph).
 //! 10. Compute diff:
-//!     - `derived`   = `after − before` minus the explicitly asserted triples
-//!                     that happen to be head-predicate triples (those are
-//!                     inputs, not conclusions).
-//!     - `retracted` = `before − after`.
+//!
+//! - `derived`   = `after − before` minus the explicitly asserted triples
+//!   that happen to be head-predicate triples (those are inputs, not conclusions).
+//! - `retracted` = `before − after`.
+//!
 //! 11. Return `{"derived": [...], "retracted": [...]}`.
 
 use std::collections::HashSet;
