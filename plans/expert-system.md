@@ -105,6 +105,25 @@ Imagine a `load_rule_library('clinical-decision-support-v2')` command that loads
 
 **Implementation approach**: Define a rule library format (a Turtle file containing Datalog rules, SHACL shapes, and metadata). Create a registry (`_pg_ripple.rule_libraries`) that tracks installed libraries, their versions, and customisations. Provide `install_rule_library`, `upgrade_rule_library`, and `uninstall_rule_library` functions.
 
+#### Licensing and liability considerations
+
+Domain rule libraries raise licensing and liability questions that must be resolved before any library ships in-tree. These apply even when the underlying source material is public law or published guidelines.
+
+**Source material and IP.** Clinical guidelines published by bodies such as NICE, the AHA, or the FDA are often protected by copyright or database rights, even though they are produced for public benefit. Encoding them as executable Datalog rules creates a derivative work, and the licence terms of the originating body must be checked before distribution. Many public-health bodies permit non-commercial reuse with attribution but prohibit commercial redistribution — conditions incompatible with an open-source extension. The safest approach is to write rules in our own words, implementing the *logic* described in a guideline rather than reproducing its text, and to cite the underlying standard in metadata rather than including protected content verbatim.
+
+**Regulatory-compliance libraries.** EU AML Directive IV/V and GDPR are legislative texts in the public domain; there is no copyright concern with paraphrasing or encoding their requirements. However, *interpretation* of regulatory text is a legal matter. A rule library that purports to encode AML compliance logic could mislead organisations into believing they are compliant when they are not. The library must carry a prominent disclaimer, and the metadata triples must include a `dcterms:description` field that states the library is illustrative, not authoritative legal advice.
+
+**Licence for shipped libraries.** Libraries distributed in-tree with pg_ripple inherit the project licence (currently the licence in `LICENSE`). Third-party libraries installed at runtime by the operator are governed by whatever licence they carry in their metadata. The `_pg_ripple.rule_libraries` catalog should store the `dcterms:license` IRI for every installed library, and `install_rule_library` should surface that value to the operator before completing installation.
+
+**Disclaimer requirement.** Every in-tree reference library must carry the following metadata triple:
+
+```turtle
+<urn:pg-ripple:library:NAME> dcterms:description
+  "This library is provided for educational and prototyping purposes only. It does not constitute legal, medical, financial, or compliance advice. Organisations must independently validate any rules against applicable regulations and consult qualified professionals before use in production systems." .
+```
+
+**Liability scope.** pg_ripple provides the infrastructure to load and execute rules; it makes no representations about the correctness or completeness of any third-party rule library. This must be stated clearly in the documentation chapter that accompanies v0.103.0.
+
 ### 6. Confidence Calibration and Bayesian Updates
 
 The existing probabilistic reasoning assigns static confidence values to triples. A mature expert system needs *dynamic* confidence — beliefs that strengthen or weaken as new evidence arrives. When a medical test comes back positive, the confidence in the associated diagnosis should increase. When a follow-up test contradicts the first, both should be re-evaluated.
