@@ -117,11 +117,11 @@ Many expert systems need to reason about time. "If blood pressure has been eleva
 
 **Implementation approach**: Extend the Datalog parser to support temporal operators (`WITHIN`, `AFTER`, `BEFORE`, `DURATION`) that compile to SQL window functions and range queries over timestamp columns. Integrate with the CDC (Change Data Capture) infrastructure to maintain a temporal log of fact validity intervals.
 
-### 8. User-Facing Rule Authoring Interface
+### 8. LLM-Assisted Rule Authoring
 
-Today, writing rules requires knowledge of either SPARQL CONSTRUCT syntax or pg_ripple's Turtle-flavoured Datalog notation. While these are significantly more readable than traditional Prolog or CLIPS syntax, they still require programming literacy. For pg_ripple to serve as a true expert system platform, domain experts — doctors, lawyers, financial analysts — need to be able to author and review rules in something closer to structured natural language.
+Today, writing rules requires knowledge of either SPARQL CONSTRUCT syntax or pg_ripple's Turtle-flavoured Datalog notation. While these are significantly more readable than traditional Prolog or CLIPS syntax, they still require programming literacy. For pg_ripple to serve as a true expert system platform, domain experts — doctors, lawyers, financial analysts — need to be able to express rules in something closer to structured natural language.
 
-**Implementation approach**: Two complementary approaches. First, a "guided rule builder" in the HTTP companion service that presents a form-based interface ("When [condition], if [additional condition], then conclude [consequence] with confidence [value]") and compiles to Datalog. Second, an LLM-assisted rule authoring mode where the expert describes a rule in natural language and the system generates Datalog, presents it back for validation, and optionally runs it against sample data to show what it would derive.
+**Implementation approach**: An LLM-assisted rule authoring mode where the expert describes a rule in natural language via `draft_rule_from_nl(description TEXT)` and the system generates Datalog, presents it back for validation, and optionally runs it against sample data to show what it would derive. `validate_rule(rule TEXT)` catches syntax errors, unused variables, and stratification issues before a rule is committed. `suggest_rules(graph_iri TEXT, examples JSONB)` analyses existing triple patterns and proposes candidate rules for review. These functions are accessible over SQL and via a REST endpoint in `pg_ripple_http`, allowing any external tool or application to integrate rule authoring workflows. A user interface for domain experts is a deliberate out-of-scope item, to be addressed in a separate project.
 
 
 ## The Neuro-Symbolic Opportunity
