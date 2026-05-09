@@ -278,7 +278,10 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
             post(explain_handler::explain_post).get(explain_handler::explain_get),
         )
         // v0.102.0: What-if reasoning (hypothetical inference)
-        .route("/hypothetical", post(hypothetical_handler::hypothetical_post))
+        .route(
+            "/hypothetical",
+            post(hypothetical_handler::hypothetical_post),
+        )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)
         .with_state(state)

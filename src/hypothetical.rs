@@ -57,10 +57,7 @@ fn parse_json_triple(obj: &Value) -> Option<(String, String, String, i64)> {
     let s = obj.get("s")?.as_str()?.to_owned();
     let p = obj.get("p")?.as_str()?.to_owned();
     let o = obj.get("o")?.as_str()?.to_owned();
-    let g = obj
-        .get("g")
-        .and_then(|v| v.as_i64())
-        .unwrap_or(0);
+    let g = obj.get("g").and_then(|v| v.as_i64()).unwrap_or(0);
     Some((s, p, o, g))
 }
 
@@ -104,7 +101,12 @@ fn snapshot_all_triples(head_preds: &[i64]) -> HashSet<EncodedTriple> {
                     .collect()
             });
             for (s, o, g) in rows {
-                result.insert(EncodedTriple { s, p: pred_id, o, g });
+                result.insert(EncodedTriple {
+                    s,
+                    p: pred_id,
+                    o,
+                    g,
+                });
             }
 
             // Also check vp_rare for any un-promoted rows.
@@ -124,7 +126,12 @@ fn snapshot_all_triples(head_preds: &[i64]) -> HashSet<EncodedTriple> {
                 .collect()
             });
             for (s, o, g) in rare_rows {
-                result.insert(EncodedTriple { s, p: pred_id, o, g });
+                result.insert(EncodedTriple {
+                    s,
+                    p: pred_id,
+                    o,
+                    g,
+                });
             }
         } else {
             // Rare predicate — only in vp_rare.
@@ -144,7 +151,12 @@ fn snapshot_all_triples(head_preds: &[i64]) -> HashSet<EncodedTriple> {
                 .collect()
             });
             for (s, o, g) in rows {
-                result.insert(EncodedTriple { s, p: pred_id, o, g });
+                result.insert(EncodedTriple {
+                    s,
+                    p: pred_id,
+                    o,
+                    g,
+                });
             }
         }
     }
@@ -202,7 +214,10 @@ fn decode_triple(t: &EncodedTriple) -> Value {
 
 // ─── Main entry point ─────────────────────────────────────────────────────────
 
-pub fn hypothetical_inference_impl(hypotheses: serde_json::Value, rules: &str) -> serde_json::Value {
+pub fn hypothetical_inference_impl(
+    hypotheses: serde_json::Value,
+    rules: &str,
+) -> serde_json::Value {
     crate::datalog::ensure_catalog();
 
     // ── 1. Enforce max-assertions limit ────────────────────────────────────────
@@ -261,7 +276,12 @@ pub fn hypothetical_inference_impl(hypotheses: serde_json::Value, rules: &str) -
             let o_id = encode_rdf_term(&o_str);
             parsed_asserts.push((s_id, p_id, o_id, g));
             if head_preds.contains(&p_id) {
-                asserted_head_triples.insert(EncodedTriple { s: s_id, p: p_id, o: o_id, g });
+                asserted_head_triples.insert(EncodedTriple {
+                    s: s_id,
+                    p: p_id,
+                    o: o_id,
+                    g,
+                });
             }
         }
     }
@@ -278,7 +298,9 @@ pub fn hypothetical_inference_impl(hypotheses: serde_json::Value, rules: &str) -
     // creates a subtransaction savepoint.  We always pair it with
     // RollbackAndReleaseCurrentSubTransaction so the speculative changes never
     // escape to the outer transaction.
-    unsafe { pgrx::pg_sys::BeginInternalSubTransaction(std::ptr::null()); }
+    unsafe {
+        pgrx::pg_sys::BeginInternalSubTransaction(std::ptr::null());
+    }
 
     // ── 5. Apply hypothetical asserts ──────────────────────────────────────────
     for (s_id, p_id, o_id, g) in &parsed_asserts {
@@ -302,7 +324,9 @@ pub fn hypothetical_inference_impl(hypotheses: serde_json::Value, rules: &str) -
     // ── 10. Roll back — restore the real graph ─────────────────────────────────
     // SAFETY: Must be called after BeginInternalSubTransaction to discard all
     // speculative writes.
-    unsafe { pgrx::pg_sys::RollbackAndReleaseCurrentSubTransaction(); }
+    unsafe {
+        pgrx::pg_sys::RollbackAndReleaseCurrentSubTransaction();
+    }
 
     // ── 11. Compute diff ───────────────────────────────────────────────────────
     // "derived" = triples that appeared after inference but did not exist
@@ -317,10 +341,7 @@ pub fn hypothetical_inference_impl(hypotheses: serde_json::Value, rules: &str) -
 
     // "retracted" = triples that existed before but no longer exist after the
     // hypothetical changes and re-inference.
-    let mut retracted: Vec<Value> = before
-        .difference(&after)
-        .map(decode_triple)
-        .collect();
+    let mut retracted: Vec<Value> = before.difference(&after).map(decode_triple).collect();
     retracted.sort_by_key(|v| v.to_string());
 
     json!({"derived": derived, "retracted": retracted})
