@@ -13,6 +13,31 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.103.0] — 2026-05-10 — Conflict Detection
+
+**Find contradictory Datalog rules before they cause problems. Two detection modes: static structural analysis and live runtime scanning of derived facts.**
+
+### Added
+
+- **CONFLICT-01**: `pg_ripple.rule_conflicts(ruleset TEXT, mode TEXT DEFAULT 'static') → JSONB` — detects conflicting rules in a rule set.
+  - **Static mode**: structural analysis over the parsed rule AST and SHACL shape catalog (no VP table reads). Detects:
+    - `same_head_opposing_values`: pairs of rules with the same head predicate and different constant object terms (e.g. one derives `?x ex:eligible "true"`, another derives `?x ex:eligible "false"`).
+    - `rule_vs_shacl`: rules that derive triples for a predicate referenced by a `sh:not`, `sh:disjoint`, or `sh:in` SHACL constraint.
+  - **Runtime mode**: queries `_pg_ripple.derivations` joined with `_pg_ripple.vp_rare` to find already-derived contradictions: same subject + predicate with two different inferred values, or `sh:disjoint` property violations among inferred facts.
+  - Returns a JSONB array of conflict objects; empty array means no conflicts.
+- **CONFLICT-02**: `pg_ripple.rule_conflict_check_on_load` GUC (BOOL, default `off`) — when `on`, static conflict analysis runs automatically at `load_rules()` time and raises a WARNING for each conflict found (not an error — allows loading of rule sets that have known soft conflicts).
+- **CONFLICT-03**: `pg_ripple.block_on_conflict` GUC (BOOL, default `off`) — when `on`, the `infer()` SQL function calls `rule_conflicts(ruleset, 'runtime')` after inference completes and raises PT0451 if any conflicts are found.
+- **CONFLICT-04**: Error code PT0451: `inference halted: rule conflict detected in ruleset '%s' (set pg_ripple.block_on_conflict = off to continue despite conflicts)`.
+- **CONFLICT-05**: `GET /rule-conflicts/{ruleset}?mode=static|runtime` REST endpoint in `pg_ripple_http`.
+- **CONFLICT-06**: `src/datalog/conflict.rs` — new module implementing both detection modes.
+- **CONFLICT-07**: pg_regress tests: `tests/pg_regress/sql/v0103_conflicts_static.sql` (same-head conflict, rule-vs-SHACL conflict, clean rule set) and `tests/pg_regress/sql/v0103_conflicts_runtime.sql` (runtime contradiction detection, block_on_conflict check).
+
+### Migration
+
+- `sql/pg_ripple--0.102.0--0.103.0.sql`: no schema changes; all new functionality is compiled from Rust.
+
+---
+
 ## [0.102.0] — 2026-05-09 — What-if Reasoning (Hypothetical Inference)
 
 **Run Datalog inference on speculative graph modifications without persisting changes. All VP tables are left unchanged; isolation is guaranteed via PostgreSQL internal sub-transactions.**

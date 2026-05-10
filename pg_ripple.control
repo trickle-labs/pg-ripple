@@ -1,8 +1,8 @@
 # Extension control file for pg_ripple.
 # See: https://www.postgresql.org/docs/current/extend-extensions.html
 
-comment = 'High-performance RDF triple store with SPARQL 1.1, SHACL, Datalog, HTAP, federation, and what-if reasoning (v0.102.0)'
-default_version = '0.102.0'
+comment = 'High-performance RDF triple store with SPARQL 1.1, SHACL, Datalog, HTAP, federation, and conflict detection (v0.103.0)'
+default_version = '0.103.0'
 # MUST match the current release version (keep in sync with Cargo.toml)
 module_pathname = '$libdir/pg_ripple'
 relocatable = false

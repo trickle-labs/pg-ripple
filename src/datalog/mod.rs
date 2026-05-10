@@ -37,6 +37,7 @@
 pub mod builtins;
 pub mod cache;
 pub mod compiler;
+pub mod conflict;
 pub mod coordinator;
 pub mod demand;
 pub mod derivations;
@@ -59,6 +60,7 @@ pub use compiler::compile_rule_set;
 pub use compiler::compile_single_rule_to;
 pub use compiler::has_variable_pred;
 pub use compiler::vp_read_expr_pub;
+pub use conflict::rule_conflicts;
 pub use demand::parse_demands_json;
 pub use demand::run_infer_demand;
 pub use dred::{check_dred_safety, run_dred_on_delete};

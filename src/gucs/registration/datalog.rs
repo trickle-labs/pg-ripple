@@ -539,4 +539,28 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.103.0 Conflict Detection GUCs ─────────────────────────────────────
+
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.rule_conflict_check_on_load",
+        c"When on, static conflict analysis runs automatically at load_rules() time \
+      and raises a WARNING for each conflict found (not an error). \
+      Default off. (v0.103.0 CONFLICT-01)",
+        c"",
+        &crate::gucs::datalog::RULE_CONFLICT_CHECK_ON_LOAD,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.block_on_conflict",
+        c"When on, the semi-naive inference engine checks for runtime rule conflicts \
+      after each fixpoint iteration and raises PT0451 if any are found, halting \
+      inference before committing derived facts. Default off. (v0.103.0 CONFLICT-02)",
+        c"",
+        &crate::gucs::datalog::BLOCK_ON_CONFLICT,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

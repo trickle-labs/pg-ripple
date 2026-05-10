@@ -111,6 +111,7 @@ pub(crate) struct RagResponse {
 // MOD-01 (v0.72.0): extracted handler submodules
 pub(crate) mod admin_handlers;
 pub(crate) mod confidence_handlers;
+pub(crate) mod conflict_handler;
 pub(crate) mod explain_handler;
 pub(crate) mod hypothetical_handler;
 pub(crate) mod pagerank_handlers;
@@ -281,6 +282,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/hypothetical",
             post(hypothetical_handler::hypothetical_post),
+        )
+        // v0.103.0: Rule conflict detection
+        .route(
+            "/rule-conflicts/{ruleset}",
+            get(conflict_handler::rule_conflicts_get),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)

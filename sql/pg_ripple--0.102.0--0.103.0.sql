@@ -1,0 +1,27 @@
+-- Migration 0.102.0 → 0.103.0: Conflict Detection
+--
+-- Schema changes: None.
+--
+-- New Rust-compiled SQL functions exposed in this release:
+--   pg_ripple.rule_conflicts(ruleset TEXT, mode TEXT DEFAULT 'static') → JSONB
+--     Returns a JSONB array of conflict objects describing contradictions in the
+--     named rule set. mode = 'static' performs structural analysis over the rule
+--     AST and SHACL shape catalog; mode = 'runtime' scans _pg_ripple.derivations
+--     for already-derived contradictions.
+--
+-- New GUCs:
+--   pg_ripple.rule_conflict_check_on_load (BOOL, default off)
+--     When on, static conflict analysis runs automatically at load_rules() time
+--     and raises a WARNING for each conflict found.
+--
+--   pg_ripple.block_on_conflict (BOOL, default off)
+--     When on, the semi-naive inference engine calls rule_conflicts(ruleset,
+--     'runtime') after each fixpoint iteration and raises PT0451 if any
+--     conflicts are found, halting inference before committing derived facts.
+--
+-- New REST endpoint (pg_ripple_http):
+--   GET /rule-conflicts/{ruleset}?mode=static|runtime
+--     Returns the JSONB array from rule_conflicts().
+--
+-- No SQL migration statements are required because all changes are
+-- implemented as new compiled Rust functions registered via pgrx.
