@@ -524,4 +524,19 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.102.0 Hypothetical Inference GUCs ──────────────────────────────────
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.hypothetical_max_assertions",
+        c"Maximum total number of assert + retract triples in a single \
+      hypothetical_inference() call. Exceeding this limit raises PT0450. \
+      Default 10000. (v0.102.0 HYPO-01)",
+        c"",
+        &crate::gucs::datalog::HYPOTHETICAL_MAX_ASSERTIONS,
+        1,
+        1_000_000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

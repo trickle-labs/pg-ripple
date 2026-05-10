@@ -977,4 +977,52 @@ mod pg_ripple {
     fn vacuum_derivations() -> i64 {
         crate::datalog::derivations::vacuum_orphan_derivations()
     }
+
+    // ── v0.102.0: hypothetical_inference ──────────────────────────────────────
+
+    /// Run what-if inference on hypothetical facts without touching real VP tables.
+    ///
+    /// Asserts and retracts the triples in `hypotheses` in an isolated savepoint,
+    /// runs semi-naive Datalog inference for `rules`, then rolls everything back.
+    /// Returns a JSONB diff of what *would* be derived or retracted.
+    ///
+    /// # Argument format
+    ///
+    /// ```json
+    /// {
+    ///   "assert":  [{"s": "<iri>", "p": "<iri>", "o": "<iri-or-literal>"}],
+    ///   "retract": [{"s": "<iri>", "p": "<iri>", "o": "<iri-or-literal>"}]
+    /// }
+    /// ```
+    ///
+    /// IRI values may be bare (`http://...`) or angle-bracketed (`<http://...>`).
+    ///
+    /// # Return value
+    ///
+    /// ```json
+    /// {
+    ///   "derived":   [{"s": "...", "p": "...", "o": "..."}],
+    ///   "retracted": [{"s": "...", "p": "...", "o": "..."}]
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// - PT0450: total hypothesis size exceeds `pg_ripple.hypothetical_max_assertions`.
+    ///
+    /// # Isolation guarantee
+    ///
+    /// No row is written to any VP table after this function returns.
+    /// All changes exist only inside a PostgreSQL SAVEPOINT that is always
+    /// rolled back before the result is returned.
+    #[pg_extern]
+    fn hypothetical_inference(
+        hypotheses: pgrx::JsonB,
+        rules: default!(&str, "'default'"),
+    ) -> pgrx::JsonB {
+        pgrx::JsonB(crate::hypothetical::hypothetical_inference_impl(
+            hypotheses.0,
+            rules,
+        ))
+    }
 }

@@ -13,6 +13,28 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.102.0] — 2026-05-09 — What-if Reasoning (Hypothetical Inference)
+
+**Run Datalog inference on speculative graph modifications without persisting changes. All VP tables are left unchanged; isolation is guaranteed via PostgreSQL internal sub-transactions.**
+
+### Added
+
+- **HYPO-01**: `pg_ripple.hypothetical_max_assertions` GUC (INT, default `10000`, min 1, max 1,000,000) — maximum total number of assert + retract triples in a single `hypothetical_inference()` call. Exceeding this limit raises error code PT0450.
+- **HYPO-02**: `pg_ripple.hypothetical_inference(hypotheses JSONB, rules TEXT DEFAULT 'default') → JSONB` — runs the named rule set on a speculative copy of the graph and returns a JSON object with two arrays:
+  - `"derived"`: triples that would be newly inferred if the hypotheses were applied.
+  - `"retracted"`: triples that were previously inferred but would no longer hold.
+  - Input format: `{"assert": [{"s": "…", "p": "…", "o": "…", "g"?: N}, …], "retract": […]}`.
+- **HYPO-03**: Subtransaction isolation — all speculative changes are wrapped in `BeginInternalSubTransaction` / `RollbackAndReleaseCurrentSubTransaction`, ensuring VP tables are never modified.
+- **HYPO-04**: `POST /hypothetical` HTTP endpoint in `pg_ripple_http` — accepts the same JSONB format as the SQL function.
+- **HYPO-05**: `src/hypothetical.rs` — new module implementing snapshot-diff algorithm: captures "before" state of head-predicate VP tables, applies hypothetical changes, re-runs inference from a clean slate, snapshots "after" state, rolls back, and computes the diff.
+- **HYPO-06**: 8 pg_regress tests (`tests/pg_regress/sql/v0102_hypothetical.sql`) covering GUC default, correct diff, isolation, retraction, side-effect absence, outer-transaction rollback, and PT0450 limit.
+
+### Migration
+
+- `sql/pg_ripple--0.101.0--0.102.0.sql`: no schema changes; all overlay tables are session-local and transient.
+
+---
+
 ## [0.101.0] — 2026-05-09 — Natural Language Explanation
 
 **Natural language explanation of Datalog-derived facts via LLM or deterministic fallback renderer.**

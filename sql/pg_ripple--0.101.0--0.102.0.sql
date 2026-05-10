@@ -1,0 +1,16 @@
+-- Migration 0.101.0 → 0.102.0: What-if reasoning (hypothetical inference)
+--
+-- New SQL objects (v0.102.0):
+--   FUNCTION pg_ripple.hypothetical_inference(hypotheses JSONB, rules TEXT DEFAULT 'default')
+--             → JSONB
+--
+-- The function is compiled from Rust and installed by pgrx; no SQL schema
+-- changes are required.  All sandbox tables are session-local temporary objects
+-- created and destroyed inside the function call — they never appear in any
+-- permanent schema.
+--
+-- New GUC (registered in _PG_init, no catalog change):
+--   pg_ripple.hypothetical_max_assertions  INT  default 10000
+--
+-- Error codes added:
+--   PT0450 — hypothesis set exceeds hypothetical_max_assertions limit
