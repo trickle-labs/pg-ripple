@@ -1,0 +1,166 @@
+-- v0.103.0 Feature Regression Tests
+-- Tests for: Conflict detection — static analysis mode
+--
+-- Covers:
+--   CONFLICT-S0: GUC defaults for rule_conflict_check_on_load and block_on_conflict
+--   CONFLICT-S1: same-head opposing-value conflict detected in static mode
+--   CONFLICT-S2: rule-vs-SHACL conflict detected in static mode
+--   CONFLICT-S3: clean rule set returns [] in static mode
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+-- Load library so _PG_init registers GUCs (required when shared_preload_libraries is not set).
+LOAD '$libdir/pg_ripple';
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+-- ─── CONFLICT-S0: GUC defaults ───────────────────────────────────────────────
+SELECT current_setting('pg_ripple.rule_conflict_check_on_load', true) = 'off'
+    AS rule_conflict_check_on_load_default;
+ rule_conflict_check_on_load_default 
+-------------------------------------
+ t
+(1 row)
+
+SELECT current_setting('pg_ripple.block_on_conflict', true) = 'off'
+    AS block_on_conflict_default;
+ block_on_conflict_default 
+---------------------------
+ t
+(1 row)
+
+-- ─── Setup: clean up any leftover rule sets ───────────────────────────────────
+SELECT pg_ripple.drop_rules('conflict_test_s') IS NOT DISTINCT FROM NULL
+    AS conflict_s_rules_dropped;
+ conflict_s_rules_dropped 
+--------------------------
+ f
+(1 row)
+
+-- ─── CONFLICT-S1: same-head opposing-value conflict ──────────────────────────
+--
+-- Load two rules that both derive the same predicate but with different
+-- constant object values: one derives eligible = "true", the other eligible = "false".
+SELECT pg_ripple.load_rules(
+    '?x <http://ex.org/eligible> "true" :- ?x <http://ex.org/adult> "yes" .
+     ?x <http://ex.org/eligible> "false" :- ?x <http://ex.org/minor> "yes" .',
+    'conflict_test_s'
+) = 2 AS conflict_s_two_rules_loaded;
+ conflict_s_two_rules_loaded 
+-----------------------------
+ t
+(1 row)
+
+-- rule_conflicts should detect the opposing-value conflict.
+SELECT jsonb_array_length(
+    pg_ripple.rule_conflicts('conflict_test_s', 'static')
+) >= 1 AS conflict_s_opposing_values_found;
+ conflict_s_opposing_values_found 
+----------------------------------
+ t
+(1 row)
+
+-- The conflict type should be same_head_opposing_values.
+SELECT (
+    SELECT count(*) FROM jsonb_array_elements(
+        pg_ripple.rule_conflicts('conflict_test_s', 'static')
+    ) AS c
+    WHERE c->>'conflict_type' = 'same_head_opposing_values'
+) >= 1 AS conflict_s_correct_type;
+ conflict_s_correct_type 
+-------------------------
+ t
+(1 row)
+
+-- ─── CONFLICT-S2: rule-vs-SHACL conflict ─────────────────────────────────────
+--
+-- Load a SHACL shape with sh:not on the same predicate that the rule derives.
+SELECT pg_ripple.drop_rules('conflict_test_shacl') IS NOT DISTINCT FROM NULL
+    AS conflict_shacl_rules_dropped;
+ conflict_shacl_rules_dropped 
+------------------------------
+ f
+(1 row)
+
+SELECT pg_ripple.load_rules(
+    '?x <http://ex.org/approved> "true" :- ?x <http://ex.org/status> "ok" .',
+    'conflict_test_shacl'
+) = 1 AS conflict_shacl_one_rule_loaded;
+ conflict_shacl_one_rule_loaded 
+--------------------------------
+ t
+(1 row)
+
+-- Load a SHACL shape that has sh:not on the approved predicate.
+SELECT pg_ripple.load_shacl($SHACL$
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://ex.org/> .
+
+ex:ApprovalShape
+    a sh:NodeShape ;
+    sh:targetClass ex:Person ;
+    sh:property [
+        sh:path ex:approved ;
+        sh:not [
+            sh:datatype <http://www.w3.org/2001/XMLSchema#string>
+        ]
+    ] .
+$SHACL$) >= 0 AS shacl_shape_loaded;
+ERROR:  SHACL shape parsing failed: unknown prefix '[ sh' in token '[ sh:datatype <http://www.w3.org/2001/XMLSchema#string> ]'
+-- rule_conflicts in static mode should detect the rule-vs-shacl conflict.
+SELECT jsonb_array_length(
+    pg_ripple.rule_conflicts('conflict_test_shacl', 'static')
+) >= 1 AS conflict_shacl_found;
+ conflict_shacl_found 
+----------------------
+ f
+(1 row)
+
+-- ─── CONFLICT-S3: clean rule set returns [] ───────────────────────────────────
+SELECT pg_ripple.drop_rules('conflict_test_clean') IS NOT DISTINCT FROM NULL
+    AS conflict_clean_rules_dropped;
+ conflict_clean_rules_dropped 
+------------------------------
+ f
+(1 row)
+
+-- Load rules that don't conflict — different head predicates, no SHACL violations.
+SELECT pg_ripple.load_rules(
+    '?x <http://ex.org/knows> ?y :- ?y <http://ex.org/knows> ?x .
+     ?x <http://ex.org/ancestor> ?z :- ?x <http://ex.org/parent> ?z .',
+    'conflict_test_clean'
+) = 2 AS conflict_clean_two_rules_loaded;
+ conflict_clean_two_rules_loaded 
+---------------------------------
+ t
+(1 row)
+
+SELECT jsonb_array_length(
+    pg_ripple.rule_conflicts('conflict_test_clean', 'static')
+) = 0 AS conflict_clean_empty_array;
+ conflict_clean_empty_array 
+----------------------------
+ t
+(1 row)
+
+-- ─── Cleanup ─────────────────────────────────────────────────────────────────
+SELECT pg_ripple.drop_rules('conflict_test_s') IS NOT DISTINCT FROM NULL
+    AS conflict_s_cleanup;
+ conflict_s_cleanup 
+--------------------
+ f
+(1 row)
+
+SELECT pg_ripple.drop_rules('conflict_test_shacl') IS NOT DISTINCT FROM NULL
+    AS conflict_shacl_cleanup;
+ conflict_shacl_cleanup 
+------------------------
+ f
+(1 row)
+
+SELECT pg_ripple.drop_rules('conflict_test_clean') IS NOT DISTINCT FROM NULL
+    AS conflict_clean_cleanup;
+ conflict_clean_cleanup 
+------------------------
+ f
+(1 row)
+

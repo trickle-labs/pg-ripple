@@ -180,3 +180,20 @@ pub static RECORD_DERIVATIONS: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>
 /// (v0.102.0 HYPO-01)
 pub static HYPOTHETICAL_MAX_ASSERTIONS: pgrx::GucSetting<i32> =
     pgrx::GucSetting::<i32>::new(10_000);
+
+// ─── v0.103.0 Conflict Detection GUCs ────────────────────────────────────────
+
+/// GUC: when `true`, static conflict analysis runs automatically at
+/// `load_rules()` time and raises a WARNING for each conflict found (not an
+/// error — allows loading of rule sets that have known soft conflicts).
+/// (v0.103.0 CONFLICT-01)
+pub static RULE_CONFLICT_CHECK_ON_LOAD: pgrx::GucSetting<bool> =
+    pgrx::GucSetting::<bool>::new(false);
+
+/// GUC: when `true`, the semi-naive inference engine calls
+/// `rule_conflicts(ruleset, 'runtime')` after each fixpoint iteration and
+/// raises PT0451 if any conflicts are found, halting inference before
+/// committing derived facts.  Off by default.
+/// (v0.103.0 CONFLICT-02)
+pub static BLOCK_ON_CONFLICT: pgrx::GucSetting<bool> =
+    pgrx::GucSetting::<bool>::new(false);

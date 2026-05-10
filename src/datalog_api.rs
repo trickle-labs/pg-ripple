@@ -22,7 +22,31 @@ mod pg_ripple {
             Ok(rs) => rs,
             Err(e) => pgrx::error!("rule parse error: {e}"),
         };
-        crate::datalog::store_rules(rule_set, &rule_set_ir.rules)
+        let count = crate::datalog::store_rules(rule_set, &rule_set_ir.rules);
+        // v0.103.0 CONFLICT-01: run static conflict analysis on load when the
+        // GUC pg_ripple.rule_conflict_check_on_load is enabled.
+        if crate::RULE_CONFLICT_CHECK_ON_LOAD.get() {
+            let conflicts = crate::datalog::rule_conflicts(rule_set, "static");
+            if let Some(arr) = conflicts.as_array() {
+                for c in arr {
+                    let pattern = c
+                        .get("conflicting_pattern")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown conflict");
+                    let ctype = c
+                        .get("conflict_type")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown");
+                    pgrx::warning!(
+                        "rule conflict detected in rule set '{}' ({}): {}",
+                        rule_set,
+                        ctype,
+                        pattern
+                    );
+                }
+            }
+        }
+        count
     }
 
     /// Load a built-in rule set by name.
@@ -216,7 +240,23 @@ mod pg_ripple {
     /// Returns the number of triples derived.
     #[pg_extern]
     fn infer(rule_set: default!(&str, "'custom'")) -> i64 {
-        crate::datalog::run_inference(rule_set)
+        let derived = crate::datalog::run_inference(rule_set);
+        // v0.103.0 CONFLICT-02: when block_on_conflict is on, run runtime
+        // conflict detection after inference completes and raise PT0451 if any
+        // contradictions are found.
+        if crate::BLOCK_ON_CONFLICT.get() {
+            let conflicts = crate::datalog::rule_conflicts(rule_set, "runtime");
+            if let Some(arr) = conflicts.as_array()
+                && !arr.is_empty()
+            {
+                pgrx::error!(
+                    "inference halted: rule conflict detected in ruleset '{}' \
+                     (set pg_ripple.block_on_conflict = off to continue despite conflicts) (PT0451)",
+                    rule_set
+                );
+            }
+        }
+        derived
     }
 
     /// Run semi-naive inference for the named rule set and materialise derived triples.
@@ -1024,5 +1064,68 @@ mod pg_ripple {
             hypotheses.0,
             rules,
         ))
+    }
+
+    // ── v0.103.0 Conflict Detection ──────────────────────────────────────────
+
+    /// Detect conflicting rules in a rule set.
+    ///
+    /// `ruleset` — name of the rule set to analyse (matches `rule_set` in
+    ///             `_pg_ripple.rules`).
+    /// `mode`    — `'static'` (default) for structural analysis over the rule
+    ///             AST and the SHACL shape catalog; `'runtime'` to scan
+    ///             `_pg_ripple.derivations` for already-derived contradictions.
+    ///
+    /// Returns a JSONB array of conflict objects; an empty array means no
+    /// conflicts were found.
+    ///
+    /// Each conflict object has the shape:
+    /// ```json
+    /// {
+    ///   "mode": "static" | "runtime",
+    ///   "rule_a": "<rule text>",
+    ///   "rule_b": "<rule text or null>",
+    ///   "conflict_type": "same_head_opposing_values | rule_vs_shacl | runtime_violation",
+    ///   "head_predicate": "<IRI>",
+    ///   "conflicting_pattern": "<description>",
+    ///   "shacl_constraint": "<shape IRI or null>",
+    ///   "example_triple": null
+    /// }
+    /// ```
+    ///
+    /// # Mode: `'static'`
+    ///
+    /// Detects two classes of structural contradiction at rule registration
+    /// time or on demand (no VP table reads):
+    ///
+    /// 1. **`same_head_opposing_values`**: pairs of rules with the same head
+    ///    predicate and different constant object terms — e.g. one rule derives
+    ///    `?x ex:eligible "true"` and another derives `?x ex:eligible "false"`.
+    ///
+    /// 2. **`rule_vs_shacl`**: a rule that derives triples for a predicate that
+    ///    is also referenced by a `sh:not`, `sh:disjoint`, or `sh:in` SHACL
+    ///    constraint.
+    ///
+    /// # Mode: `'runtime'`
+    ///
+    /// Queries `_pg_ripple.derivations` (requires
+    /// `pg_ripple.record_derivations = on` before calling `infer()`) joined
+    /// with `_pg_ripple.vp_rare` to find already-derived contradictions:
+    ///
+    /// 1. Same subject, same predicate, two different inferred values.
+    /// 2. `sh:disjoint` violations where the same subject has inferred values
+    ///    for both disjoint properties.
+    ///
+    /// # Error codes
+    ///
+    /// - PT0451: raised during `infer()` when `pg_ripple.block_on_conflict = on`
+    ///   and a runtime contradiction is found.
+    #[pg_extern]
+    fn rule_conflicts(
+        ruleset: &str,
+        mode: default!(&str, "'static'"),
+    ) -> pgrx::JsonB {
+        crate::datalog::builtins::register_standard_prefixes();
+        pgrx::JsonB(crate::datalog::rule_conflicts(ruleset, mode))
     }
 }
