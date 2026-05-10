@@ -1,0 +1,98 @@
+ rule_libraries_table_exists 
+-----------------------------
+ t
+(1 row)
+
+ list_empty_initially 
+----------------------
+ t
+(1 row)
+
+ install_returns_name 
+----------------------
+ t
+(1 row)
+
+ library_in_list 
+-----------------
+ t
+(1 row)
+
+ correct_version 
+-----------------
+ t
+(1 row)
+
+ correct_license 
+-----------------
+ t
+(1 row)
+
+ reinstall_returns_name 
+------------------------
+ t
+(1 row)
+
+ no_duplicate_after_reinstall 
+------------------------------
+ t
+(1 row)
+
+ base_triple_loaded 
+--------------------
+ t
+(1 row)
+
+ library_rules_usable 
+----------------------
+ t
+(1 row)
+
+ uninstall_returns_void 
+------------------------
+ 
+(1 row)
+
+ catalog_row_gone 
+------------------
+ t
+(1 row)
+
+ rules_gone_after_uninstall 
+----------------------------
+ t
+(1 row)
+
+DO
+ pt0455_raised 
+-----------------------
+ PT0455 raised correctly
+(1 row)
+
+ install_with_accept_license_works 
+-----------------------------------
+ t
+(1 row)
+
+ nonfree_uninstall_ok 
+----------------------
+ 
+(1 row)
+
+DO
+ pt0452_raised 
+-----------------------
+ PT0452 raised correctly
+(1 row)
+
+ version_is_0_104_x 
+---------------------
+ t
+(1 row)
+
+ cleanup_data_ok 
+-----------------
+ t
+(1 row)
+
+DELETE 0

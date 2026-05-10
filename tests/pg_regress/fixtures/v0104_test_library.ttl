@@ -1,0 +1,11 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix pg: <http://pg-ripple.org/lib/> .
+
+<urn:pg-ripple:test-v0104-library> a pg:RuleLibrary ;
+    dcterms:title "test-v0104-library" ;
+    dcterms:description "A minimal test library for v0.104.0 regression tests." ;
+    dcterms:license <https://spdx.org/licenses/MIT.html> ;
+    owl:versionInfo "1.0.0" ;
+    pg:rules """?x <http://v0104test.org/transitiveKnows> ?z :- ?x <http://v0104test.org/knows> ?z .""" .

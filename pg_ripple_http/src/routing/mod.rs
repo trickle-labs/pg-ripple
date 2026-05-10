@@ -116,6 +116,7 @@ pub(crate) mod explain_handler;
 pub(crate) mod hypothetical_handler;
 pub(crate) mod pagerank_handlers;
 pub(crate) mod rag_handler;
+pub(crate) mod rule_library_handler;
 pub(crate) mod sparql_handlers;
 
 // Re-export public helpers that arrow_encode.rs and spi_bridge.rs import via
@@ -287,6 +288,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/rule-conflicts/{ruleset}",
             get(conflict_handler::rule_conflicts_get),
+        )
+        // v0.104.0: Rule library infrastructure
+        .route(
+            "/rule-libraries",
+            get(rule_library_handler::list_rule_libraries),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)
