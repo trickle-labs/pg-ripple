@@ -61,7 +61,10 @@ pub async fn rule_conflicts_get(
     }
 
     // Validate ruleset name: alphanumeric, hyphens, underscores, dots only.
-    if !ruleset.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.') {
+    if !ruleset
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+    {
         return redacted_error(
             "bad_request",
             "ruleset name contains invalid characters",

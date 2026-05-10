@@ -1121,10 +1121,7 @@ mod pg_ripple {
     /// - PT0451: raised during `infer()` when `pg_ripple.block_on_conflict = on`
     ///   and a runtime contradiction is found.
     #[pg_extern]
-    fn rule_conflicts(
-        ruleset: &str,
-        mode: default!(&str, "'static'"),
-    ) -> pgrx::JsonB {
+    fn rule_conflicts(ruleset: &str, mode: default!(&str, "'static'")) -> pgrx::JsonB {
         crate::datalog::builtins::register_standard_prefixes();
         pgrx::JsonB(crate::datalog::rule_conflicts(ruleset, mode))
     }

@@ -195,5 +195,4 @@ pub static RULE_CONFLICT_CHECK_ON_LOAD: pgrx::GucSetting<bool> =
 /// raises PT0451 if any conflicts are found, halting inference before
 /// committing derived facts.  Off by default.
 /// (v0.103.0 CONFLICT-02)
-pub static BLOCK_ON_CONFLICT: pgrx::GucSetting<bool> =
-    pgrx::GucSetting::<bool>::new(false);
+pub static BLOCK_ON_CONFLICT: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);

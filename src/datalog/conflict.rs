@@ -83,17 +83,18 @@ fn detect_static(ruleset: &str) -> Value {
 
     for (rule_text, head_pred) in &rules {
         let obj_term = parse_head_object(rule_text);
-        by_pred.entry(*head_pred).or_default().push((rule_text.clone(), obj_term));
+        by_pred
+            .entry(*head_pred)
+            .or_default()
+            .push((rule_text.clone(), obj_term));
     }
 
     // ── (1) Same-head opposing-value conflicts ────────────────────────────────
 
     for (pred_id, rule_list) in &by_pred {
         // Only consider rules that have constant (Const) object terms.
-        let const_rules: Vec<&(String, Option<i64>)> = rule_list
-            .iter()
-            .filter(|(_, obj)| obj.is_some())
-            .collect();
+        let const_rules: Vec<&(String, Option<i64>)> =
+            rule_list.iter().filter(|(_, obj)| obj.is_some()).collect();
 
         // Check all pairs for differing constant object terms.
         for i in 0..const_rules.len() {
@@ -131,8 +132,8 @@ fn detect_static(ruleset: &str) -> Value {
     let shacl_constraints = load_shacl_constraints();
     if !shacl_constraints.is_empty() {
         for (pred_id, rule_list) in &by_pred {
-            let pred_iri = crate::dictionary::decode(*pred_id)
-                .unwrap_or_else(|| format!("<dict:{pred_id}>"));
+            let pred_iri =
+                crate::dictionary::decode(*pred_id).unwrap_or_else(|| format!("<dict:{pred_id}>"));
             for sc in &shacl_constraints {
                 if sc.path_iri == pred_iri {
                     for (text_a, _) in rule_list {
@@ -282,29 +283,28 @@ fn detect_runtime(ruleset: &str) -> Value {
             WHERE vr1.s = vr2.s \
             LIMIT 10";
 
-        let disjoint_rows: Vec<(Option<String>, Option<String>)> =
-            Spi::connect(|client| {
-                client
-                    .select(
-                        sql_disjoint,
-                        None,
-                        &[
-                            pgrx::datum::DatumWithOid::from(ruleset),
-                            pgrx::datum::DatumWithOid::from(id_a),
-                            pgrx::datum::DatumWithOid::from(id_b),
-                        ],
-                    )
-                    .map(|tbl| {
-                        tbl.map(|row| {
-                            (
-                                row.get::<String>(1).ok().flatten(),
-                                row.get::<String>(2).ok().flatten(),
-                            )
-                        })
-                        .collect::<Vec<_>>()
+        let disjoint_rows: Vec<(Option<String>, Option<String>)> = Spi::connect(|client| {
+            client
+                .select(
+                    sql_disjoint,
+                    None,
+                    &[
+                        pgrx::datum::DatumWithOid::from(ruleset),
+                        pgrx::datum::DatumWithOid::from(id_a),
+                        pgrx::datum::DatumWithOid::from(id_b),
+                    ],
+                )
+                .map(|tbl| {
+                    tbl.map(|row| {
+                        (
+                            row.get::<String>(1).ok().flatten(),
+                            row.get::<String>(2).ok().flatten(),
+                        )
                     })
-                    .unwrap_or_default()
-            });
+                    .collect::<Vec<_>>()
+                })
+                .unwrap_or_default()
+        });
 
         for (rule_a, rule_b) in disjoint_rows {
             conflicts.push(json!({
@@ -388,13 +388,14 @@ fn load_shacl_constraints() -> Vec<ShaclConstraint> {
             .select(sql, None, &[])
             .unwrap_or_else(|e| pgrx::error!("SHACL catalog read error: {e}"))
             .map(|row| {
-                let shape_iri =
-                    row.get::<String>(1).ok().flatten().unwrap_or_default();
-                let path_iri =
-                    row.get::<String>(2).ok().flatten().unwrap_or_default();
-                let constraint_type =
-                    row.get::<String>(3).ok().flatten().unwrap_or_default();
-                ShaclConstraint { shape_iri, path_iri, constraint_type }
+                let shape_iri = row.get::<String>(1).ok().flatten().unwrap_or_default();
+                let path_iri = row.get::<String>(2).ok().flatten().unwrap_or_default();
+                let constraint_type = row.get::<String>(3).ok().flatten().unwrap_or_default();
+                ShaclConstraint {
+                    shape_iri,
+                    path_iri,
+                    constraint_type,
+                }
             })
             .collect::<Vec<_>>()
     })
@@ -450,8 +451,7 @@ mod tests {
     fn test_parse_head_object_constant() {
         crate::datalog::builtins::register_standard_prefixes();
         // A rule where the head object is a constant literal — parse should not panic.
-        let rule =
-            "?x <http://ex.org/eligible> \"true\" :- ?x <http://ex.org/age> ?a .";
+        let rule = "?x <http://ex.org/eligible> \"true\" :- ?x <http://ex.org/age> ?a .";
         // Result may be Some or None depending on dictionary state; just assert no panic.
         let _ = parse_head_object(rule);
     }
