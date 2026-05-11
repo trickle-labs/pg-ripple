@@ -50,12 +50,12 @@ SELECT (
 
 -- ?z is introduced only in a negated atom, not in any positive body atom.
 SELECT (pg_ripple.validate_rule(
-    '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT(?x <http://ex.org/blocked> ?z) .'
+    '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT ?x <http://ex.org/blocked> ?z .'
 ) ->> 'valid') = 'false' AS ra03_unsafe_negation_invalid;
 
 SELECT (
     pg_ripple.validate_rule(
-        '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT(?x <http://ex.org/blocked> ?z) .'
+        '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT ?x <http://ex.org/blocked> ?z .'
     ) -> 'errors' -> 0 ->> 'code'
 ) = 'UNSAFE_NEGATION' AS ra03_unsafe_negation_error_code;
 

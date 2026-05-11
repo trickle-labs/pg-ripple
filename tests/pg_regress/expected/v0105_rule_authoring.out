@@ -6,7 +6,7 @@
 --   RA-02: validate_rule() on a rule with an unbound head variable returns {"valid": false, "errors": [...]}
 --   RA-03: validate_rule() on a rule with unsafe negation returns {"valid": false, "errors": [...]}
 --   RA-04: validate_rule() on a rule with an unused body variable returns a warning
---   RA-05: validate_rule() with syntax error returns {"valid": false}
+--   RA-05: validate_rule() on a stratification issue rule returns a warning
 --   RA-06: suggest_rules() on a small known graph returns at least one candidate
 --   RA-07: PT0458 raised when llm_endpoint is empty and draft_rule_from_nl() is called
 --   RA-08: PT0457 raised when candidates is out of range
@@ -61,7 +61,7 @@ SELECT (
 -- ─── RA-03: validate_rule() with unsafe negation ─────────────────────────────
 -- ?z is introduced only in a negated atom, not in any positive body atom.
 SELECT (pg_ripple.validate_rule(
-    '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT(?x <http://ex.org/blocked> ?z) .'
+    '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT ?x <http://ex.org/blocked> ?z .'
 ) ->> 'valid') = 'false' AS ra03_unsafe_negation_invalid;
  ra03_unsafe_negation_invalid 
 ------------------------------
@@ -70,7 +70,7 @@ SELECT (pg_ripple.validate_rule(
 
 SELECT (
     pg_ripple.validate_rule(
-        '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT(?x <http://ex.org/blocked> ?z) .'
+        '?x <http://ex.org/knows> ?y :- ?x <http://ex.org/follows> ?y, NOT ?x <http://ex.org/blocked> ?z .'
     ) -> 'errors' -> 0 ->> 'code'
 ) = 'UNSAFE_NEGATION' AS ra03_unsafe_negation_error_code;
  ra03_unsafe_negation_error_code 
@@ -164,7 +164,6 @@ EXCEPTION
         END IF;
 END;
 $$ LANGUAGE plpgsql;
-DO
 SELECT 'PT0458 raised correctly' AS pt0458_raised;
       pt0458_raised      
 -------------------------
@@ -186,10 +185,9 @@ EXCEPTION
         END IF;
 END;
 $$ LANGUAGE plpgsql;
-DO
 SELECT 'PT0457 raised (candidates=0)' AS pt0457_raised_zero;
-    pt0457_raised_zero     
----------------------------
+      pt0457_raised_zero      
+------------------------------
  PT0457 raised (candidates=0)
 (1 row)
 
@@ -207,10 +205,9 @@ EXCEPTION
         END IF;
 END;
 $$ LANGUAGE plpgsql;
-DO
 SELECT 'PT0457 raised (candidates=11)' AS pt0457_raised_eleven;
-    pt0457_raised_eleven     
-------------------------------
+     pt0457_raised_eleven      
+-------------------------------
  PT0457 raised (candidates=11)
 (1 row)
 
