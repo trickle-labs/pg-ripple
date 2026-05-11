@@ -314,6 +314,4 @@ pub static TEMPORAL_DATA_MODEL: pgrx::GucSetting<Option<std::ffi::CString>> =
 /// GUC: gate for temporal parse extensions in Datalog rules.
 /// Must be `on` to use `AFTER`, `BEFORE`, or `DURING` operators in Datalog.
 /// Default: `off`.
-pub static ENABLE_TEMPORAL_OPERATORS: pgrx::GucSetting<bool> =
-    pgrx::GucSetting::<bool>::new(false);
-
+pub static ENABLE_TEMPORAL_OPERATORS: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);

@@ -967,4 +967,5 @@ pub fn register() {
         &crate::gucs::storage::ENABLE_TEMPORAL_OPERATORS,
         GucContext::Userset,
         GucFlags::default(),
-    );}
+    );
+}

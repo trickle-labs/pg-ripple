@@ -386,8 +386,7 @@ pub(super) const PG_TOKEN_SET_RATIO_IRI: &str = "http://pg-ripple.org/functions/
 /// SPARQL FILTER function that returns `true` when a temporal fact for
 /// `(?subject, ?predicate, *)` exists with a validity interval overlapping
 /// `[?start, ?end]`.
-pub(super) const PG_TEMPORAL_WINDOW_IRI: &str =
-    "http://pg-ripple.org/functions/temporal_window";
+pub(super) const PG_TEMPORAL_WINDOW_IRI: &str = "http://pg-ripple.org/functions/temporal_window";
 
 /// Translate an argument expression to a SQL text expression.
 ///
