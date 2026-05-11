@@ -43,7 +43,6 @@ BEGIN
     PERFORM lo_unlink(v_loid);
 END;
 $$ LANGUAGE plpgsql;
-DO
 -- Write the non-permissive license test library to /tmp.
 DO $$
 DECLARE
@@ -67,7 +66,6 @@ BEGIN
     PERFORM lo_unlink(v_loid);
 END;
 $$ LANGUAGE plpgsql;
-DO
 -- Ensure the catalog table exists by calling list_rule_libraries() first.
 -- This triggers ensure_catalog() inside the function.
 SELECT count(*) = 0 AS no_preinstalled_test_libs
@@ -91,7 +89,6 @@ SELECT EXISTS (
 -- ---- LIB-02: list_rule_libraries() returns empty set initially ------------
 -- Ensure no libraries are installed (clean state).
 DELETE FROM _pg_ripple.rule_libraries WHERE name LIKE 'test-v0104%';
-DELETE 0
 SELECT count(*) = 0 AS list_empty_initially
 FROM pg_ripple.list_rule_libraries()
 WHERE name LIKE 'test-v0104%';
@@ -103,6 +100,7 @@ WHERE name LIKE 'test-v0104%';
 -- ---- LIB-03: install_rule_library() with a local Turtle file -------------
 SELECT pg_ripple.install_rule_library('/tmp/pg_ripple_v0104_test_lib.ttl') = 'test-v0104-library'
     AS install_returns_name;
+WARNING:  load_shacl: no shapes found in the supplied Turtle data
  install_returns_name 
 ----------------------
  t
@@ -213,7 +211,6 @@ EXCEPTION
         END IF;
 END;
 $$ LANGUAGE plpgsql;
-DO
 SELECT 'PT0455 raised correctly' AS pt0455_raised;
       pt0455_raised      
 -------------------------
@@ -225,6 +222,7 @@ SELECT pg_ripple.install_rule_library(
     true
 ) = 'test-v0104-nonfree-library'
     AS install_with_accept_license_works;
+WARNING:  load_shacl: no shapes found in the supplied Turtle data
  install_with_accept_license_works 
 -----------------------------------
  t
@@ -251,7 +249,6 @@ EXCEPTION
         END IF;
 END;
 $$ LANGUAGE plpgsql;
-DO
 SELECT 'PT0452 raised correctly' AS pt0452_raised;
       pt0452_raised      
 -------------------------

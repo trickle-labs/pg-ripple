@@ -315,7 +315,7 @@ fn fetch_source(source: &str) -> Result<String, String> {
 ///
 /// `visiting` is the set of library names currently on the resolution stack.
 /// Returns `Err(PT0453 message)` when a cycle is detected.
-fn check_no_cycle(name: &str, visiting: &mut Vec<String>) -> Result<(), String> {
+fn check_no_cycle(name: &str, visiting: &mut [String]) -> Result<(), String> {
     if visiting.iter().any(|n| n == name) {
         return Err(format!(
             "install_rule_library: dependency cycle detected involving library '{name}' (PT0453)"
