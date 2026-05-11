@@ -238,9 +238,11 @@ mod pg_ripple {
         )
         .unwrap_or(None);
 
-        // ── Count gold pairs ──────────────────────────────────────────────────
+        // ── Count gold pairs (owl:sameAs triples in gold graph) ───────────────
+        // We query BOTH vp_rare and any promoted VP table for owl:sameAs.
         let gold_count: i64 = if let Some(gid) = gold_graph_id {
-            Spi::get_one_with_args::<i64>(
+            // Count from vp_rare (predicate not yet promoted).
+            let rare_cnt = Spi::get_one_with_args::<i64>(
                 "SELECT COUNT(*)::bigint
                  FROM _pg_ripple.vp_rare vr
                  JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
@@ -252,7 +254,32 @@ mod pg_ripple {
                 ],
             )
             .unwrap_or(None)
-            .unwrap_or(0)
+            .unwrap_or(0);
+
+            if rare_cnt > 0 {
+                rare_cnt
+            } else {
+                // Predicate may be promoted: look up its VP table id.
+                let pred_id: Option<i64> = Spi::get_one_with_args::<i64>(
+                    "SELECT d.id FROM _pg_ripple.dictionary d
+                     JOIN _pg_ripple.predicates p ON p.id = d.id
+                     WHERE d.value = $1
+                     LIMIT 1",
+                    &[pgrx::datum::DatumWithOid::from(owl_sameas)],
+                )
+                .unwrap_or(None);
+                if let Some(pid) = pred_id {
+                    let table = format!("_pg_ripple.vp_{pid}");
+                    Spi::get_one_with_args::<i64>(
+                        &format!("SELECT COUNT(*)::bigint FROM {table} WHERE g = $1"),
+                        &[pgrx::datum::DatumWithOid::from(gid)],
+                    )
+                    .unwrap_or(None)
+                    .unwrap_or(0)
+                } else {
+                    0
+                }
+            }
         } else {
             0
         };

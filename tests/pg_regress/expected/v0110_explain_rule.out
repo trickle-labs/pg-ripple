@@ -42,10 +42,15 @@ SELECT pg_ripple.load_rules(
     '?x <https://v0110.test/parent> ?z :- ?x <https://v0110.test/parent> ?y , ?y <https://v0110.test/parent> ?z .',
     'v0110_test_rules'
 ) AS load_rules;
+NOTICE:  relation "rules" already exists, skipping
+NOTICE:  relation "rule_sets" already exists, skipping
+NOTICE:  column "derived" of relation "predicates" already exists, skipping
+NOTICE:  column "rule_set" of relation "predicates" already exists, skipping
  load_rules 
 ------------
           1
 (1 row)
+
 SELECT
     length(expl) > 0  AS explain03_non_empty,
     expl IS NOT NULL  AS explain03_not_null
@@ -123,6 +128,10 @@ FROM pg_ripple.explain_rule_batch(ARRAY[]::bigint[]);
 
 -- Cleanup
 SELECT pg_ripple.drop_rules('v0110_test_rules');
+NOTICE:  relation "rules" already exists, skipping
+NOTICE:  relation "rule_sets" already exists, skipping
+NOTICE:  column "derived" of relation "predicates" already exists, skipping
+NOTICE:  column "rule_set" of relation "predicates" already exists, skipping
  drop_rules 
 ------------
           1
