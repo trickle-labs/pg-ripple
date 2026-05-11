@@ -1,0 +1,72 @@
+ triples_loaded 
+----------------
+              1
+(1 row)
+
+ bayes01_lr_gt1_increases | bayes01_prior_in_range | bayes01_posterior_in_range 
+--------------------------+------------------------+----------------------------
+ t                        | t                      | t
+(1 row)
+
+ bayes02_lr_lt1_decreases 
+--------------------------
+ t
+(1 row)
+
+ bayes03_neutral_lr 
+--------------------
+ t
+(1 row)
+
+ bayes04_evidence_log_has_rows 
+-------------------------------
+ t
+(1 row)
+
+NOTICE:  BAYES-05 OK: PT0440 raised as expected
+ triples_loaded_bob 
+--------------------
+                  1
+(1 row)
+
+NOTICE:  BAYES-06 OK: PT0441 raised as expected
+ bayes07_vacuum_ok 
+-------------------
+ t
+(1 row)
+
+ bayes08_bulk_csv_ok 
+---------------------
+ t
+(1 row)
+
+ bayes09_bulk_jsonl_ok 
+-----------------------
+ t
+(1 row)
+
+ bayes10_evidence_log_columns 
+------------------------------
+ t
+(1 row)
+
+ bayes11_confidence_stale_exists 
+---------------------------------
+ t
+(1 row)
+
+ pg_ripple.confidence_propagation_max_depth 
+--------------------------------------------
+ 10
+(1 row)
+
+ pg_ripple.confidence_update_strategy 
+---------------------------------------
+ 
+(1 row)
+
+ bayes14_noisy_or_increases_with_lr_gt1 
+----------------------------------------
+ t
+(1 row)
+

@@ -563,4 +563,75 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.108.0 Bayesian Confidence Update GUCs ──────────────────────────────
+
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.confidence_update_strategy",
+        c"Confidence update strategy for update_confidence(): 'bayesian' (default), \
+      'noisy-or' (delegate to v0.87 noisy-OR combiner), or 'manual' (raise PT0441 — \
+      caller must set confidence directly via insert_triple()). (v0.108.0 BAYES-01)",
+        c"",
+        &crate::gucs::datalog::CONFIDENCE_UPDATE_STRATEGY,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.confidence_propagation_max_depth",
+        c"Maximum cascade depth when propagating a base-fact confidence change \
+      downstream through the derivation DAG. Facts at depth > max are queued in \
+      _pg_ripple.confidence_stale for background reprocessing. Default 10. (v0.108.0 BAYES-02)",
+        c"",
+        &crate::gucs::datalog::CONFIDENCE_PROPAGATION_MAX_DEPTH,
+        1,
+        1000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.confidence_reprocessing_interval",
+        c"Polling interval for the confidence reprocessing background worker that drains \
+      _pg_ripple.confidence_stale. Default '30 seconds'. (v0.108.0 BAYES-03)",
+        c"",
+        &crate::gucs::datalog::CONFIDENCE_REPROCESSING_INTERVAL,
+        GucContext::Sighup,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.evidence_log_retention",
+        c"Retention period for _pg_ripple.evidence_log rows. Rows older than this \
+      interval are pruned by the background worker. Default '1 year'. (v0.108.0 BAYES-04)",
+        c"",
+        &crate::gucs::datalog::EVIDENCE_LOG_RETENTION,
+        GucContext::Sighup,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.confidence_batch_size",
+        c"Batch size for bulk_update_confidence() — number of evidence rows processed \
+      per transaction. Default 1000. (v0.108.0 BAYES-05)",
+        c"",
+        &crate::gucs::datalog::CONFIDENCE_BATCH_SIZE,
+        1,
+        1_000_000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_float_guc(
+        c"pg_ripple.conflict_confidence_penalty",
+        c"Confidence attenuation penalty applied when two conflicting rules are detected. \
+      Attenuation = 1.0 - conflict_severity * penalty. Must be in [0.0, 1.0]. \
+      Default 0.3. (v0.108.0 BAYES-06)",
+        c"",
+        &crate::gucs::datalog::CONFLICT_CONFIDENCE_PENALTY,
+        0.0,
+        1.0,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

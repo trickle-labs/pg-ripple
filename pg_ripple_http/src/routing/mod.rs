@@ -246,6 +246,15 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
             "/confidence/vacuum",
             post(confidence_handlers::vacuum_confidence),
         )
+        // v0.108.0: Bayesian confidence update endpoints.
+        .route(
+            "/confidence/update",
+            post(confidence_handlers::update_confidence),
+        )
+        .route(
+            "/confidence/bulk-update",
+            post(confidence_handlers::bulk_update_confidence),
+        )
         // v0.88.0: PageRank & Graph Analytics (PR-HTTP-01)
         .route("/pagerank/run", post(pagerank_handlers::pagerank_run))
         .route(

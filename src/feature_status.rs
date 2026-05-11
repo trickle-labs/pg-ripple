@@ -756,6 +756,40 @@ mod pg_ripple {
                 Some("docs/src/features/pagerank.md".to_string()),
                 Some("src/pagerank_api.rs".to_string()),
             ),
+            // v0.108.0 Bayesian confidence update features
+            (
+                "bayesian_confidence_update".to_string(),
+                "implemented".to_string(),
+                None,
+                Some("BAYES-01 (v0.108.0): pg_ripple.update_confidence() — \
+                     Bayesian belief revision via Bayes' theorem in odds form; \
+                     supports 'bayesian', 'noisy-or', and 'manual' strategies.".to_string()),
+                Some("ci/regress: v0108_confidence.sql".to_string()),
+                Some("docs/src/features/uncertain-knowledge.md".to_string()),
+                Some("src/uncertain_knowledge_api/bayesian.rs".to_string()),
+            ),
+            (
+                "evidence_log".to_string(),
+                "implemented".to_string(),
+                None,
+                Some("BAYES-04 (v0.108.0): _pg_ripple.evidence_log — append-only log \
+                     of every Bayesian evidence event; pg_ripple.vacuum_evidence_log() \
+                     prunes expired rows.".to_string()),
+                Some("ci/regress: v0108_confidence.sql".to_string()),
+                Some("docs/src/features/uncertain-knowledge.md".to_string()),
+                Some("src/uncertain_knowledge_api/bayesian.rs".to_string()),
+            ),
+            (
+                "bulk_confidence_update".to_string(),
+                "implemented".to_string(),
+                None,
+                Some("BAYES-05 (v0.108.0): pg_ripple.bulk_update_confidence() — \
+                     batch evidence ingestion accepting CSV or JSON-L; \
+                     REST endpoint POST /confidence/bulk-update.".to_string()),
+                Some("ci/regress: v0108_confidence.sql".to_string()),
+                Some("docs/src/features/uncertain-knowledge.md".to_string()),
+                Some("src/uncertain_knowledge_api/bayesian.rs".to_string()),
+            ),
         ];
 
         TableIterator::new(rows)
