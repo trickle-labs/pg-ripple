@@ -216,7 +216,7 @@ SELECT NOT pg_ripple.temporal_consecutive(
     'P4D'
 ) AS seq06_consecutive_not_at_n_minus_1;
  seq06_consecutive_not_at_n_minus_1 
--------------------------------------
+------------------------------------
  t
 (1 row)
 
@@ -262,7 +262,7 @@ SELECT NOT pg_ripple.temporal_within(
     'P1D'
 ) AS seq08_boundary_just_outside_window;
  seq08_boundary_just_outside_window 
--------------------------------------
+------------------------------------
  t
 (1 row)
 
