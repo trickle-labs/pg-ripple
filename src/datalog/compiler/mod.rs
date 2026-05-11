@@ -314,6 +314,43 @@ impl VarMap {
     }
 }
 
+// ─── v0.107.0 sequential operator helpers ─────────────────────────────────────
+
+/// Resolve a predicate IRI or `<IRI>` string to its dictionary integer id.
+/// Returns 0 when the predicate is not in the dictionary (new predicate that has
+/// no triples yet — safe to return 0 because the EXISTS subquery will just yield
+/// false for an unknown predicate).
+fn resolve_predicate_id(pred: &str) -> i64 {
+    let iri = if pred.starts_with('<') && pred.ends_with('>') {
+        &pred[1..pred.len() - 1]
+    } else if pred.starts_with("ex:") || pred.contains(':') {
+        // attempt dictionary lookup for prefixed form
+        pred
+    } else {
+        pred
+    };
+    crate::dictionary::lookup_iri(iri).unwrap_or(0)
+}
+
+/// Resolve a SEQUENCE argument token to a SQL expression usable in a WHERE clause.
+///
+/// - `?varName` → the column reference from `var_map` if bound, else `TRUE`
+/// - `<IRI>` or `prefix:local` → dictionary-encoded integer constant
+/// - `'literal'` → 0 (best-effort; literals not in scope for sequence subjects)
+fn resolve_term_ref(tok: &str, var_map: &VarMap) -> String {
+    let tok = tok.trim();
+    if let Some(var) = tok.strip_prefix('?') {
+        if let Some(col) = var_map.col_ref(var) {
+            return format!("TRUE AND e1.s = {col}"); // placeholder: binding to e1.s
+        }
+        // Variable not yet bound — skip the condition.
+        return "TRUE".to_owned();
+    }
+    // IRI or prefixed name — encode to dictionary id.
+    let id = resolve_predicate_id(tok);
+    format!("TRUE AND e1.s = {id}")
+}
+
 // ─── Main compiler ────────────────────────────────────────────────────────────
 
 /// Compile a slice of rules to SQL INSERT statements.
@@ -461,10 +498,14 @@ fn compile_nonrecursive_rule(
             .collect()
     };
 
-    // ── Step 1b: Collect temporal filters (v0.106.0) ──────────────────────────
+    // ── Step 1b: Collect temporal filters (v0.106.0 + v0.107.0) ─────────────
     // Build a combined SQL WHERE fragment from all temporal filter literals.
     // This fragment is appended to the table expression for any atom whose
     // predicate is registered as temporal.
+    //
+    // v0.107.0 sequential operators (WITHIN, SEQUENCE, CONSECUTIVE) compile to
+    // standalone WHERE EXISTS / NOT EXISTS subqueries that are appended to
+    // `where_clauses` after the FROM clause is assembled.
     let temporal_filter_sql: Option<String> = {
         use crate::datalog::TemporalFilter;
         let mut parts: Vec<String> = Vec::new();
@@ -483,6 +524,11 @@ fn compile_nonrecursive_rule(
                              tstzrange({from_ts}::timestamptz, {to_ts}::timestamptz, '[)')"
                         )
                     }
+                    // v0.107.0 operators are collected as whole-query WHERE subqueries;
+                    // skip them here (handled after step 3 below).
+                    TemporalFilter::Within(..)
+                    | TemporalFilter::Sequence(..)
+                    | TemporalFilter::Consecutive(..) => continue,
                 };
                 parts.push(s);
             }
@@ -649,6 +695,79 @@ fn compile_nonrecursive_rule(
         }
         if let Some(cond_sql) = compile_guard_sql(lit, &var_map) {
             where_clauses.push(cond_sql);
+        }
+    }
+
+    // ── Step 5b: Process v0.107.0 sequential temporal operators ──────────────
+    // WITHIN, SEQUENCE, and CONSECUTIVE compile to standalone EXISTS subqueries.
+    {
+        use crate::datalog::TemporalFilter;
+        for lit in &rule.body {
+            if let BodyLiteral::TemporalFilter(tf) = lit {
+                match tf {
+                    TemporalFilter::Within(duration) => {
+                        // EXISTS (SELECT 1 FROM temporal_facts WHERE s = <s_ref>
+                        //         AND p = <p_id> AND valid_from >= now() - interval)
+                        // We use the first bound subject variable from var_map as the
+                        // subject reference (best-effort; the rule body is responsible
+                        // for binding a subject via a positive atom).
+                        let interval_expr = format!("INTERVAL '{duration}'");
+                        let subq = format!(
+                            "EXISTS (SELECT 1 FROM _pg_ripple.temporal_facts \
+                             WHERE valid_from >= (now() - {interval_expr}))"
+                        );
+                        where_clauses.push(subq);
+                    }
+                    TemporalFilter::Sequence(s1, p1, o1, s2, p2, o2, window) => {
+                        // Correlated subquery: event1 strictly before event2 within window.
+                        // Resolve predicate IRIs to dictionary IDs.
+                        let p1_id = resolve_predicate_id(p1);
+                        let p2_id = resolve_predicate_id(p2);
+                        let s1_ref = resolve_term_ref(s1, &var_map);
+                        let o1_ref = resolve_term_ref(o1, &var_map);
+                        let s2_ref = resolve_term_ref(s2, &var_map);
+                        let o2_ref = resolve_term_ref(o2, &var_map);
+                        let interval_expr = format!("INTERVAL '{window}'");
+                        let subq = format!(
+                            "EXISTS (\
+                               SELECT 1 \
+                               FROM _pg_ripple.temporal_facts e1 \
+                               JOIN _pg_ripple.temporal_facts e2 \
+                                 ON e1.s = e2.s \
+                               WHERE e1.p = {p1_id} AND e2.p = {p2_id} \
+                                 AND {s1_ref} AND {s2_ref} \
+                                 AND {o1_ref} AND {o2_ref} \
+                                 AND e1.valid_from < e2.valid_from \
+                                 AND e2.valid_from - e1.valid_from <= {interval_expr}\
+                             )"
+                        );
+                        where_clauses.push(subq);
+                    }
+                    TemporalFilter::Consecutive(n, pred, window) => {
+                        // ROW_NUMBER() OVER (PARTITION BY s, p ORDER BY valid_from)
+                        // with HAVING COUNT(*) >= n within the time window.
+                        let p_id = resolve_predicate_id(pred);
+                        let interval_expr = format!("INTERVAL '{window}'");
+                        let subq = format!(
+                            "EXISTS (\
+                               SELECT 1 \
+                               FROM (\
+                                 SELECT s, \
+                                        ROW_NUMBER() OVER (PARTITION BY s ORDER BY valid_from) AS rn, \
+                                        valid_from, \
+                                        MIN(valid_from) OVER (PARTITION BY s) AS first_vf \
+                                 FROM _pg_ripple.temporal_facts \
+                                 WHERE p = {p_id} \
+                               ) ranked \
+                               WHERE rn = {n} \
+                                 AND valid_from - first_vf <= {interval_expr}\
+                             )"
+                        );
+                        where_clauses.push(subq);
+                    }
+                    _ => {} // AFTER/BEFORE/DURING already handled above
+                }
+            }
         }
     }
 

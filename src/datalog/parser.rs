@@ -297,12 +297,15 @@ fn parse_body_literal(text: &str) -> Result<BodyLiteral, String> {
     Ok(BodyLiteral::Positive(atom))
 }
 
-/// Try parsing a temporal filter body literal (v0.106.0).
+/// Try parsing a temporal filter body literal (v0.106.0 + v0.107.0).
 ///
 /// Recognized forms:
 /// - `AFTER('2025-01-01'::timestamptz)` or `AFTER('2025-01-01'::xsd:dateTime)`
 /// - `BEFORE('2025-01-01'::timestamptz)`
 /// - `DURING('2025-01-01', '2025-12-31')`
+/// - `WITHIN(?s, ex:pred, ?o, 'P3D')` — (v0.107.0) fact held within last duration
+/// - `SEQUENCE(?s1, pred1, ?o1, ?s2, pred2, ?o2, 'PT1H')` — (v0.107.0) A before B within window
+/// - `CONSECUTIVE(3, ex:pred, 'P3D')` — (v0.107.0) n consecutive readings within window
 fn try_parse_temporal_filter(text: &str) -> Option<TemporalFilter> {
     let upper = text.to_uppercase();
     let trim_cast = |s: &str| -> String {
@@ -328,30 +331,91 @@ fn try_parse_temporal_filter(text: &str) -> Option<TemporalFilter> {
 
     if upper.starts_with("DURING(") && text.ends_with(')') {
         let inner = &text[7..text.len() - 1];
-        // Split on the first comma that is outside a string literal.
-        let mut depth = 0i32;
-        let mut in_str = false;
-        let mut split_pos = None;
-        for (i, c) in inner.char_indices() {
-            match c {
-                '\'' => in_str = !in_str,
-                '(' if !in_str => depth += 1,
-                ')' if !in_str => depth -= 1,
-                ',' if !in_str && depth == 0 => {
-                    split_pos = Some(i);
-                    break;
-                }
-                _ => {}
-            }
-        }
-        if let Some(pos) = split_pos {
-            let from_ts = trim_cast(&inner[..pos]);
-            let to_ts = trim_cast(&inner[pos + 1..]);
+        let parts = split_csv(inner);
+        if parts.len() == 2 {
+            let from_ts = trim_cast(&parts[0]);
+            let to_ts = trim_cast(&parts[1]);
             return Some(TemporalFilter::During(from_ts, to_ts));
         }
     }
 
+    // v0.107.0: WITHIN(?s, predicate, ?o, duration)
+    // The duration is the last argument; it can be an ISO 8601 interval string.
+    if upper.starts_with("WITHIN(") && text.ends_with(')') {
+        let inner = &text[7..text.len() - 1];
+        let parts = split_csv(inner);
+        if parts.len() == 4 {
+            // The duration is the last component.
+            let duration = trim_cast(&parts[3]);
+            return Some(TemporalFilter::Within(duration));
+        }
+    }
+
+    // v0.107.0: SEQUENCE(s1_var, pred1, o1_var, s2_var, pred2, o2_var, window)
+    if upper.starts_with("SEQUENCE(") && text.ends_with(')') {
+        let inner = &text[9..text.len() - 1];
+        let parts = split_csv(inner);
+        if parts.len() == 7 {
+            let s1 = parts[0].trim().to_owned();
+            let p1 = parts[1].trim().to_owned();
+            let o1 = parts[2].trim().to_owned();
+            let s2 = parts[3].trim().to_owned();
+            let p2 = parts[4].trim().to_owned();
+            let o2 = parts[5].trim().to_owned();
+            let window = trim_cast(&parts[6]);
+            return Some(TemporalFilter::Sequence(s1, p1, o1, s2, p2, o2, window));
+        }
+    }
+
+    // v0.107.0: CONSECUTIVE(n, predicate, window)
+    if upper.starts_with("CONSECUTIVE(") && text.ends_with(')') {
+        let inner = &text[12..text.len() - 1];
+        let parts = split_csv(inner);
+        if parts.len() == 3 {
+            let n_str = parts[0].trim();
+            let pred = parts[1].trim().to_owned();
+            let window = trim_cast(&parts[2]);
+            if let Ok(n) = n_str.parse::<i64>() {
+                return Some(TemporalFilter::Consecutive(n, pred, window));
+            }
+        }
+    }
+
     None
+}
+
+/// Split a CSV string respecting quoted strings and nested parentheses.
+/// Returns a `Vec<String>` of the comma-separated parts (un-trimmed).
+fn split_csv(s: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut current = String::new();
+    let mut depth = 0i32;
+    let mut in_str = false;
+    for c in s.chars() {
+        match c {
+            '\'' => {
+                in_str = !in_str;
+                current.push(c);
+            }
+            '(' if !in_str => {
+                depth += 1;
+                current.push(c);
+            }
+            ')' if !in_str => {
+                depth -= 1;
+                current.push(c);
+            }
+            ',' if !in_str && depth == 0 => {
+                parts.push(current.clone());
+                current.clear();
+            }
+            _ => current.push(c),
+        }
+    }
+    if !current.is_empty() || !parts.is_empty() {
+        parts.push(current);
+    }
+    parts
 }
 
 /// Try parsing an aggregate body literal.

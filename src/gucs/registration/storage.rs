@@ -961,10 +961,24 @@ pub fn register() {
 
     pgrx::GucRegistry::define_bool_guc(
         c"pg_ripple.enable_temporal_operators",
-        c"Gate for temporal parse extensions (AFTER, BEFORE, DURING) in Datalog rules. \
-          Must be on to use temporal operators. Default: off. (v0.106.0)",
+        c"Gate for temporal parse extensions (AFTER, BEFORE, DURING, WITHIN, SEQUENCE, \
+          CONSECUTIVE) in Datalog rules. Must be on to use temporal operators. \
+          Default: off. (v0.106.0 + v0.107.0)",
         c"",
         &crate::gucs::storage::ENABLE_TEMPORAL_OPERATORS,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    // v0.107.0: temporal CDC integration GUC.
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.temporal_cdc_enabled",
+        c"When on (default), insert_triple() for a temporal predicate automatically \
+          records a row in temporal_facts with valid_from = transaction_timestamp(). \
+          Set off to disable automatic CDC wiring (for historical data loading). \
+          (v0.107.0)",
+        c"",
+        &crate::gucs::storage::TEMPORAL_CDC_ENABLED,
         GucContext::Userset,
         GucFlags::default(),
     );

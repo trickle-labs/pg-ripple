@@ -1,0 +1,18 @@
+-- Migration 0.106.0 → 0.107.0: Temporal Reasoning Phase 2 — Sequential Patterns & CDC Integration
+--
+-- New SQL functions (compiled from Rust):
+--   pg_ripple.temporal_within(subject, predicate, duration_iso)  → boolean
+--   pg_ripple.temporal_sequence(s1, p1, o1, s2, p2, o2, window) → boolean
+--   pg_ripple.temporal_consecutive(n, predicate, window)          → boolean
+--   pg_ripple.retract_triple_temporal(subject, predicate, graph)  → bigint
+--
+-- New GUC:
+--   pg_ripple.temporal_cdc_enabled (boolean, default on)
+--     When on, insert_triple() for a temporal predicate automatically records a
+--     row in _pg_ripple.temporal_facts with valid_from = transaction_timestamp().
+--
+-- Datalog rule parser extended to accept WITHIN, SEQUENCE, and CONSECUTIVE
+-- operators in rule bodies (gated by pg_ripple.enable_temporal_operators = on).
+--
+-- No schema changes are required: the new operators are parse-layer additions
+-- and the CDC wiring is code-only (no new tables or columns).

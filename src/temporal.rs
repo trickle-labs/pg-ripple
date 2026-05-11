@@ -490,3 +490,214 @@ pub fn temporal_window(
     .unwrap_or(None)
     .unwrap_or(false)
 }
+
+// ─── v0.107.0 — Sequential Temporal Operators ─────────────────────────────────
+
+/// `pg_ripple.temporal_within(subject, predicate, duration)` — WITHIN operator.
+///
+/// Returns `true` if `(subject, predicate, *)` holds at least once within the most
+/// recent `duration` interval relative to the current transaction time.
+///
+/// `duration` should be an ISO 8601 duration string such as `'P3D'` (3 days) or
+/// `'PT1H'` (1 hour).
+///
+/// Example:
+/// ```sql
+/// SELECT pg_ripple.temporal_within(
+///     'http://example.org/Alice',
+///     'http://example.org/feverReading',
+///     'P3D'
+/// );
+/// ```
+#[pg_extern(schema = "pg_ripple")]
+pub fn temporal_within(subject_iri: &str, predicate_iri: &str, duration_iso: &str) -> bool {
+    let s_id = crate::dictionary::encode(subject_iri, 0);
+    let p_id = crate::dictionary::encode(predicate_iri, 0);
+
+    Spi::get_one_with_args::<bool>(
+        "SELECT EXISTS( \
+           SELECT 1 FROM _pg_ripple.temporal_facts \
+           WHERE s = $1 AND p = $2 \
+             AND valid_from >= (transaction_timestamp() - $3::interval) \
+         )",
+        &[
+            pgrx::datum::DatumWithOid::from(s_id),
+            pgrx::datum::DatumWithOid::from(p_id),
+            pgrx::datum::DatumWithOid::from(duration_iso),
+        ],
+    )
+    .unwrap_or(None)
+    .unwrap_or(false)
+}
+
+/// `pg_ripple.temporal_sequence(subj1, pred1, obj1, subj2, pred2, obj2, window)`
+/// — SEQUENCE operator.
+///
+/// Returns `true` if event1 (`subj1 pred1 obj1`) occurs strictly before event2
+/// (`subj2 pred2 obj2`) and both fall within `window` of each other.
+///
+/// Any argument that is an empty string (`''`) is treated as a wildcard (matches
+/// any value in that position).
+///
+/// Example:
+/// ```sql
+/// SELECT pg_ripple.temporal_sequence(
+///     'http://example.org/Alice', 'http://example.org/login', '',
+///     'http://example.org/Alice', 'http://example.org/locked', '',
+///     'PT1H'
+/// );
+/// ```
+#[pg_extern(schema = "pg_ripple")]
+pub fn temporal_sequence(
+    subj1: &str,
+    pred1: &str,
+    obj1: &str,
+    subj2: &str,
+    pred2: &str,
+    obj2: &str,
+    window_iso: &str,
+) -> bool {
+    let p1_id = crate::dictionary::encode(pred1, 0);
+    let p2_id = crate::dictionary::encode(pred2, 0);
+
+    // Encode non-wildcard subjects and objects.
+    let s1_cond = if subj1.is_empty() {
+        String::new()
+    } else {
+        let id = crate::dictionary::encode(subj1, 0);
+        format!("AND e1.s = {id}")
+    };
+    let o1_cond = if obj1.is_empty() {
+        String::new()
+    } else {
+        let id = crate::dictionary::encode(obj1, 0);
+        format!("AND e1.o = {id}")
+    };
+    let s2_cond = if subj2.is_empty() {
+        String::new()
+    } else {
+        let id = crate::dictionary::encode(subj2, 0);
+        format!("AND e2.s = {id}")
+    };
+    let o2_cond = if obj2.is_empty() {
+        String::new()
+    } else {
+        let id = crate::dictionary::encode(obj2, 0);
+        format!("AND e2.o = {id}")
+    };
+
+    let sql = format!(
+        "SELECT EXISTS( \
+           SELECT 1 \
+           FROM _pg_ripple.temporal_facts e1 \
+           JOIN _pg_ripple.temporal_facts e2 ON TRUE \
+           WHERE e1.p = {p1_id} AND e2.p = {p2_id} \
+             {s1_cond} {o1_cond} {s2_cond} {o2_cond} \
+             AND e1.valid_from < e2.valid_from \
+             AND e2.valid_from - e1.valid_from <= $1::interval \
+         )"
+    );
+
+    Spi::get_one_with_args::<bool>(&sql, &[pgrx::datum::DatumWithOid::from(window_iso)])
+        .unwrap_or(None)
+        .unwrap_or(false)
+}
+
+/// `pg_ripple.temporal_consecutive(n, predicate, window)` — CONSECUTIVE operator.
+///
+/// Returns `true` if there exist at least `n` rows for the given `predicate` in
+/// `_pg_ripple.temporal_facts` where each successive `valid_from` is strictly
+/// greater than the previous and all `n` fall within `window` duration of the first.
+///
+/// Example:
+/// ```sql
+/// SELECT pg_ripple.temporal_consecutive(3, 'http://example.org/feverReading', 'P3D');
+/// ```
+#[pg_extern(schema = "pg_ripple")]
+pub fn temporal_consecutive(n: i64, predicate_iri: &str, window_iso: &str) -> bool {
+    let p_id = crate::dictionary::encode(predicate_iri, 0);
+
+    // Use a window function to find groups of n readings for the same subject
+    // that all fall within the given duration window.
+    Spi::get_one_with_args::<bool>(
+        "SELECT EXISTS ( \
+           SELECT 1 \
+           FROM ( \
+             SELECT s, valid_from, \
+                    ROW_NUMBER() OVER (PARTITION BY s ORDER BY valid_from) AS rn, \
+                    MIN(valid_from) OVER (PARTITION BY s) AS first_vf \
+             FROM _pg_ripple.temporal_facts \
+             WHERE p = $1 \
+           ) ranked \
+           WHERE rn = $2 \
+             AND valid_from - first_vf <= $3::interval \
+         )",
+        &[
+            pgrx::datum::DatumWithOid::from(p_id),
+            pgrx::datum::DatumWithOid::from(n),
+            pgrx::datum::DatumWithOid::from(window_iso),
+        ],
+    )
+    .unwrap_or(None)
+    .unwrap_or(false)
+}
+
+/// `pg_ripple.retract_triple_temporal(subject, predicate, graph)` — retract a
+/// temporal fact.
+///
+/// Semantics depend on the predicate's data model:
+/// - `snapshot`: UPDATE the current open-ended row's `valid_to = transaction_timestamp()`.
+/// - `versioned`: close the latest open row (INSERT a new row is not required by
+///    retraction — the existing row is just closed).
+///
+/// Returns the number of rows affected (0 if no open row existed).
+///
+/// # Errors
+/// - PT0432: predicate is not registered as temporal.
+#[pg_extern(schema = "pg_ripple")]
+pub fn retract_triple_temporal(
+    subject_iri: &str,
+    predicate_iri: &str,
+    graph: default!(Option<String>, "NULL"),
+) -> i64 {
+    let s_id = crate::dictionary::encode(subject_iri, 0);
+    let p_id = crate::dictionary::encode(predicate_iri, 0);
+    let g_id: i64 = graph
+        .as_deref()
+        .map(|g| crate::dictionary::encode(g, 0))
+        .unwrap_or(0);
+
+    // Check the predicate is registered as temporal.
+    let data_model: Option<String> = Spi::get_one_with_args::<String>(
+        "SELECT data_model FROM _pg_ripple.temporal_predicates WHERE predicate_id = $1",
+        &[pgrx::datum::DatumWithOid::from(p_id)],
+    )
+    .unwrap_or(None);
+
+    if data_model.is_none() {
+        pgrx::error!(
+            "PT0432: retract_triple_temporal: predicate '{}' is not registered as temporal",
+            predicate_iri
+        );
+    }
+
+    // Close the latest open-ended row for (s, p, g).
+    // Both snapshot and versioned models close the latest open row on retraction.
+    let rows_affected: i64 = Spi::get_one_with_args::<i64>(
+        "WITH closed AS ( \
+           UPDATE _pg_ripple.temporal_facts \
+           SET valid_to = transaction_timestamp() \
+           WHERE s = $1 AND p = $2 AND g = $3 AND valid_to IS NULL \
+           RETURNING 1 \
+         ) SELECT COUNT(*)::bigint FROM closed",
+        &[
+            pgrx::datum::DatumWithOid::from(s_id),
+            pgrx::datum::DatumWithOid::from(p_id),
+            pgrx::datum::DatumWithOid::from(g_id),
+        ],
+    )
+    .unwrap_or(None)
+    .unwrap_or(0);
+
+    rows_affected
+}

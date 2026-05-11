@@ -203,17 +203,22 @@ pub struct RuleSet {
     pub rules: Vec<Rule>,
 }
 
-// ─── v0.106.0 — Temporal Operators ───────────────────────────────────────────
+// ─── v0.106.0 / v0.107.0 — Temporal Operators ────────────────────────────────
 
-/// Temporal filter variants for Datalog rules (v0.106.0).
+/// Temporal filter variants for Datalog rules (v0.106.0 + v0.107.0).
 ///
 /// These are special body literals that filter `temporal_facts` rows by their
 /// validity interval when `pg_ripple.enable_temporal_operators` is on.
 ///
-/// Syntax examples:
+/// v0.106.0 syntax examples:
 /// - `AFTER('2025-01-01'::xsd:dateTime)` — only facts where `valid_from > ts`
 /// - `BEFORE('2025-01-01'::xsd:dateTime)` — only facts where `valid_from < ts`
 /// - `DURING('2025-01-01', '2025-12-31')` — only facts where interval overlaps
+///
+/// v0.107.0 syntax examples:
+/// - `WITHIN(?s, ex:temp, ?v, 'P3D')` — fact held at least once in the last 3 days
+/// - `SEQUENCE(?x, ex:login, ?fail, ?x, ex:locked, ?t, 'PT1H')` — A strictly before B within window
+/// - `CONSECUTIVE(3, ex:feverReading, 'P3D')` — n consecutive readings within window
 #[derive(Debug, Clone)]
 pub enum TemporalFilter {
     /// `AFTER(timestamp)` — `valid_from > timestamp`
@@ -222,6 +227,17 @@ pub enum TemporalFilter {
     Before(String),
     /// `DURING(from_ts, to_ts)` — `tsrange(valid_from, valid_to) && tsrange(from, to)`
     During(String, String),
+    /// `WITHIN(?s, predicate, ?o, duration)` — (v0.107.0)
+    /// True if the nearest preceding temporal atom's subject/predicate/object matches
+    /// at least one row with `valid_from >= now() - interval`.
+    Within(String),
+    /// `SEQUENCE(s1_var, pred1, o1_var, s2_var, pred2, o2_var, window)` — (v0.107.0)
+    /// True if event1 occurs strictly before event2 within the window duration.
+    Sequence(String, String, String, String, String, String, String),
+    /// `CONSECUTIVE(n, predicate, window)` — (v0.107.0)
+    /// True if there are n consecutive rows for the same subject and predicate
+    /// within the window duration.
+    Consecutive(i64, String, String),
 }
 
 // ─── Catalog helpers ──────────────────────────────────────────────────────────

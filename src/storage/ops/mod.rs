@@ -51,6 +51,13 @@ pub fn next_load_generation() -> i64 {
 ///
 /// Routes to vp_rare for new/rare predicates; promotes when threshold is crossed.
 /// Returns the globally-unique statement identifier (SID).
+///
+/// # v0.107.0 CDC Integration
+///
+/// When `pg_ripple.temporal_cdc_enabled` is `on` (default) and the predicate is
+/// registered as temporal, this function also inserts into
+/// `_pg_ripple.temporal_facts` with `valid_from = transaction_timestamp()`.
+/// The data model (snapshot vs versioned) follows the predicate's registration.
 pub fn insert_triple(s: &str, p: &str, o: &str, g: i64) -> i64 {
     let s_id = encode_rdf_term(s);
     let p_id = dictionary::encode(strip_angle_brackets(p), dictionary::KIND_IRI);
@@ -89,6 +96,9 @@ pub fn insert_triple(s: &str, p: &str, o: &str, g: i64) -> i64 {
         // Mark predicate as having delta rows in the bloom filter.
         crate::shmem::set_predicate_delta_bit(p_id);
 
+        // v0.107.0: CDC → temporal_facts wiring.
+        maybe_insert_temporal_cdc(s_id, p_id, o_id, g);
+
         return sid;
     }
 
@@ -107,7 +117,67 @@ pub fn insert_triple(s: &str, p: &str, o: &str, g: i64) -> i64 {
         promote::promote_predicate(p_id);
     }
 
+    // v0.107.0: CDC → temporal_facts wiring.
+    maybe_insert_temporal_cdc(s_id, p_id, o_id, g);
+
     sid
+}
+
+/// v0.107.0 — Conditionally insert into `_pg_ripple.temporal_facts` when CDC
+/// integration is enabled and the predicate is registered as temporal.
+///
+/// This is called from `insert_triple()` after the triple has been written to
+/// the VP storage layer.  It is a no-op when:
+/// - `pg_ripple.temporal_cdc_enabled` is `off`, or
+/// - the predicate is not registered in `_pg_ripple.temporal_predicates`.
+fn maybe_insert_temporal_cdc(s_id: i64, p_id: i64, o_id: i64, g: i64) {
+    if !crate::TEMPORAL_CDC_ENABLED.get() {
+        return;
+    }
+    // Check whether this predicate is registered as temporal.
+    let data_model: Option<String> = Spi::get_one_with_args::<String>(
+        "SELECT data_model FROM _pg_ripple.temporal_predicates WHERE predicate_id = $1",
+        &[DatumWithOid::from(p_id)],
+    )
+    .unwrap_or(None);
+
+    let data_model = match data_model {
+        Some(m) => m,
+        None => return, // not a temporal predicate — nothing to do
+    };
+
+    // For 'snapshot' model: close any existing open-ended row for (s, p, g).
+    if data_model == "snapshot" {
+        Spi::run_with_args(
+            "UPDATE _pg_ripple.temporal_facts \
+             SET valid_to = transaction_timestamp() \
+             WHERE s = $1 AND p = $2 AND g = $3 AND valid_to IS NULL",
+            &[
+                DatumWithOid::from(s_id),
+                DatumWithOid::from(p_id),
+                DatumWithOid::from(g),
+            ],
+        )
+        .unwrap_or_else(|e| {
+            pgrx::warning!("temporal_cdc: snapshot close error: {e}");
+        });
+    }
+
+    // Insert new open-ended temporal fact with valid_from = transaction_timestamp().
+    Spi::run_with_args(
+        "INSERT INTO _pg_ripple.temporal_facts (s, p, o, g, valid_from, valid_to) \
+         VALUES ($1, $2, $3, $4, transaction_timestamp(), NULL) \
+         ON CONFLICT DO NOTHING",
+        &[
+            DatumWithOid::from(s_id),
+            DatumWithOid::from(p_id),
+            DatumWithOid::from(o_id),
+            DatumWithOid::from(g),
+        ],
+    )
+    .unwrap_or_else(|e| {
+        pgrx::warning!("temporal_cdc: insert temporal fact error: {e}");
+    });
 }
 
 /// Insert a triple that was pre-encoded (used by bulk loader for performance).

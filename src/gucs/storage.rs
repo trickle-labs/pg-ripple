@@ -312,6 +312,17 @@ pub static TEMPORAL_DATA_MODEL: pgrx::GucSetting<Option<std::ffi::CString>> =
     pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
 
 /// GUC: gate for temporal parse extensions in Datalog rules.
-/// Must be `on` to use `AFTER`, `BEFORE`, or `DURING` operators in Datalog.
+/// Must be `on` to use `AFTER`, `BEFORE`, `DURING`, `WITHIN`, `SEQUENCE`, or
+/// `CONSECUTIVE` operators in Datalog rules.
 /// Default: `off`.
 pub static ENABLE_TEMPORAL_OPERATORS: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
+
+// ─── v0.107.0 temporal GUCs ───────────────────────────────────────────────────
+
+/// GUC: enable automatic CDC integration for temporal predicates (v0.107.0).
+///
+/// When `on` (default), any call to `pg_ripple.insert_triple()` for a predicate
+/// registered as temporal automatically inserts a row into
+/// `_pg_ripple.temporal_facts` with `valid_from = transaction_timestamp()`.
+/// When `off`, `valid_from` must be set manually via `insert_triple_temporal()`.
+pub static TEMPORAL_CDC_ENABLED: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(true);

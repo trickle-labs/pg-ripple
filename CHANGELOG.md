@@ -13,6 +13,29 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.107.0] — 2026-05-31 — Temporal Reasoning Phase 2: Sequential Patterns & CDC Integration
+
+**Adds three sequential temporal operators (`WITHIN`, `SEQUENCE`, `CONSECUTIVE`), CDC auto-recording of temporal facts via `insert_triple()`, snapshot/versioned retraction via `retract_triple_temporal()`, and a new `pg_ripple.temporal_cdc_enabled` GUC.**
+
+### Added
+
+- **SEQ-01**: `pg_ripple.temporal_within(subject TEXT, predicate TEXT, duration TEXT) → BOOLEAN` — returns `true` if the predicate holds for the subject at least once within the most recent `duration` (ISO 8601 interval) relative to transaction time.
+- **SEQ-02**: `pg_ripple.temporal_sequence(s1 TEXT, p1 TEXT, o1 TEXT, s2 TEXT, p2 TEXT, o2 TEXT, window TEXT) → BOOLEAN` — returns `true` if event `(s1, p1, o1)` occurs strictly before event `(s2, p2, o2)` and both fall within `window` of each other. Empty string arguments act as wildcards.
+- **SEQ-03**: `pg_ripple.temporal_consecutive(n BIGINT, predicate TEXT, window TEXT) → BOOLEAN` — returns `true` if there exist `n` rows for any subject with the given predicate where all `n` fall within `window` of the first.
+- **SEQ-04**: `pg_ripple.retract_triple_temporal(subject TEXT, predicate TEXT, graph TEXT DEFAULT NULL) → BIGINT` — closes open temporal fact intervals for `(subject, predicate)`. Returns number of rows affected.
+- **SEQ-05**: GUC `pg_ripple.temporal_cdc_enabled` (BOOL, default `on`) — when `on`, `insert_triple()` for a temporal predicate automatically records a row in `_pg_ripple.temporal_facts` with `valid_from = transaction_timestamp()`.
+- **SEQ-06**: CDC wiring in `insert_triple()` — after writing to VP storage, checks `temporal_predicates` and inserts into `temporal_facts` when the predicate is temporal and `temporal_cdc_enabled` is on.
+- **SEQ-07**: Datalog parser extended — `WITHIN`, `SEQUENCE`, and `CONSECUTIVE` operators parsed in rule bodies.
+- **SEQ-08**: Datalog compiler extended — the three new operators compile to `EXISTS` subqueries using window functions over `_pg_ripple.temporal_facts`.
+- **SEQ-09**: pg_regress tests `tests/pg_regress/sql/v0107_temporal_sequential.sql` — 14 test cases covering all three operators, CDC integration, and retraction.
+- **SEQ-10**: Migration `sql/pg_ripple--0.106.0--0.107.0.sql` — comment-only; no schema changes required.
+
+### Migration
+
+`sql/pg_ripple--0.106.0--0.107.0.sql` — no schema changes; GUC `pg_ripple.temporal_cdc_enabled` defaults to `on`.
+
+---
+
 ## [0.106.0] — 2026-05-24 — Temporal Reasoning Phase 1: Temporal Fact Store & Basic Operators
 
 **Introduces a first-class temporal fact store backed by `_pg_ripple.temporal_facts`, temporal predicate registration, basic time operators in Datalog rules, a `pg:temporal_window()` SPARQL function, and an `sh:validFor` SHACL constraint.**
