@@ -538,3 +538,46 @@ COMMENT ON TABLE _pg_ripple.explanation_cache IS
     name = "v0101_explanation_cache",
     requires = ["v0100_derivations_table"]
 );
+
+// v0.106.0: Temporal fact store — predicates registry and facts table.
+pgrx::extension_sql!(
+    r#"
+-- Temporal predicates registry (v0.106.0)
+-- Marks which predicates are time-aware and what data model they use.
+-- data_model: 'snapshot' — closes previous open interval on re-assertion;
+--             'versioned' — always inserts a new row, never modifies existing rows.
+CREATE TABLE IF NOT EXISTS _pg_ripple.temporal_predicates (
+    predicate_id BIGINT NOT NULL PRIMARY KEY,
+    data_model   TEXT   NOT NULL
+                 CHECK (data_model IN ('snapshot', 'versioned')),
+    registered_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Temporal facts table (v0.106.0)
+-- Stores facts with validity intervals.  No changes to VP table schemas.
+-- valid_to IS NULL means the fact is currently valid (open-ended interval).
+CREATE TABLE IF NOT EXISTS _pg_ripple.temporal_facts (
+    s          BIGINT      NOT NULL,
+    p          BIGINT      NOT NULL,
+    o          BIGINT      NOT NULL,
+    g          BIGINT      NOT NULL DEFAULT 0,
+    valid_from TIMESTAMPTZ NOT NULL,
+    valid_to   TIMESTAMPTZ
+);
+
+-- B-tree on (s, p, valid_from, valid_to) for subject-scoped temporal queries.
+CREATE INDEX IF NOT EXISTS idx_temporal_facts_s_p_vf_vt
+    ON _pg_ripple.temporal_facts (s, p, valid_from, valid_to);
+
+-- B-tree on (p, valid_from, valid_to) for predicate-scoped temporal scans.
+CREATE INDEX IF NOT EXISTS idx_temporal_facts_p_vf_vt
+    ON _pg_ripple.temporal_facts (p, valid_from, valid_to);
+
+-- Partial B-tree for currently-valid (open-ended interval) facts.
+CREATE INDEX IF NOT EXISTS idx_temporal_facts_open
+    ON _pg_ripple.temporal_facts (valid_from, valid_to)
+    WHERE valid_to IS NULL;
+"#,
+    name = "v0106_temporal_store",
+    requires = ["v0101_explanation_cache"]
+);

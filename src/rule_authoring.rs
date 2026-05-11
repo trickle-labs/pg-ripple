@@ -124,6 +124,8 @@ pub fn validate_rule(rule: &str) -> pgrx::JsonB {
                     all_body_vars.insert(agg.result_var.clone());
                     all_body_vars.insert(agg.agg_var.clone());
                 }
+                // v0.106.0: temporal filters carry no variables — nothing to collect.
+                BodyLiteral::TemporalFilter(_) => {}
             }
         }
 

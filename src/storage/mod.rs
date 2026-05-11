@@ -233,6 +233,9 @@ pub fn initialize_schema() {
     // v0.58.0: Temporal RDF timeline table.
     crate::temporal::initialize_timeline_schema();
 
+    // v0.106.0: Temporal fact store (temporal_facts + temporal_predicates tables).
+    crate::temporal::initialize_temporal_store_schema();
+
     // v0.58.0: PROV-O provenance catalog.
     crate::prov::initialize_prov_schema();
 

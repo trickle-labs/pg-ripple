@@ -118,6 +118,11 @@ pub enum BodyLiteral {
     /// Aggregate body literal (Datalog^agg, v0.30.0).
     /// Syntax: `COUNT(?aggVar WHERE subject pred object) = ?resultVar`
     Aggregate(AggregateLiteral),
+    /// Temporal filter (v0.106.0).
+    /// Filters `temporal_facts` rows by their validity interval.
+    /// Applied to the nearest preceding positive atom whose predicate is
+    /// registered as temporal.
+    TemporalFilter(TemporalFilter),
 }
 
 /// Aggregate function kinds (v0.30.0).
@@ -196,6 +201,27 @@ pub struct RuleSet {
     #[allow(dead_code)]
     pub name: String,
     pub rules: Vec<Rule>,
+}
+
+// ─── v0.106.0 — Temporal Operators ───────────────────────────────────────────
+
+/// Temporal filter variants for Datalog rules (v0.106.0).
+///
+/// These are special body literals that filter `temporal_facts` rows by their
+/// validity interval when `pg_ripple.enable_temporal_operators` is on.
+///
+/// Syntax examples:
+/// - `AFTER('2025-01-01'::xsd:dateTime)` — only facts where `valid_from > ts`
+/// - `BEFORE('2025-01-01'::xsd:dateTime)` — only facts where `valid_from < ts`
+/// - `DURING('2025-01-01', '2025-12-31')` — only facts where interval overlaps
+#[derive(Debug, Clone)]
+pub enum TemporalFilter {
+    /// `AFTER(timestamp)` — `valid_from > timestamp`
+    After(String),
+    /// `BEFORE(timestamp)` — `valid_from < timestamp`
+    Before(String),
+    /// `DURING(from_ts, to_ts)` — `tsrange(valid_from, valid_to) && tsrange(from, to)`
+    During(String, String),
 }
 
 // ─── Catalog helpers ──────────────────────────────────────────────────────────

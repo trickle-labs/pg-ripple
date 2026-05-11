@@ -461,6 +461,39 @@ fn compile_nonrecursive_rule(
             .collect()
     };
 
+    // ── Step 1b: Collect temporal filters (v0.106.0) ──────────────────────────
+    // Build a combined SQL WHERE fragment from all temporal filter literals.
+    // This fragment is appended to the table expression for any atom whose
+    // predicate is registered as temporal.
+    let temporal_filter_sql: Option<String> = {
+        use crate::datalog::TemporalFilter;
+        let mut parts: Vec<String> = Vec::new();
+        for lit in &rule.body {
+            if let BodyLiteral::TemporalFilter(tf) = lit {
+                let s = match tf {
+                    TemporalFilter::After(ts) => {
+                        format!("valid_from > {ts}::timestamptz")
+                    }
+                    TemporalFilter::Before(ts) => {
+                        format!("valid_from < {ts}::timestamptz")
+                    }
+                    TemporalFilter::During(from_ts, to_ts) => {
+                        format!(
+                            "tstzrange(valid_from, valid_to, '[)') && \
+                             tstzrange({from_ts}::timestamptz, {to_ts}::timestamptz, '[)')"
+                        )
+                    }
+                };
+                parts.push(s);
+            }
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" AND "))
+        }
+    };
+
     // ── Step 2: Collect guards for filter-pushdown (v0.29.0) ──────────────────
     // Guards that are not yet pushed will remain as WHERE conditions.
     let all_guards: Vec<&BodyLiteral> = rule
@@ -532,7 +565,15 @@ fn compile_nonrecursive_rule(
         }
 
         if atom_idx == 0 {
-            from_clauses.push(format!("{} {alias}", vp_read_expr(pred_id)));
+            // Choose between VP table and temporal_facts routing.
+            let table_expr = if let Some(ref tf_sql) = temporal_filter_sql
+                && crate::temporal::is_temporal_predicate(pred_id)
+            {
+                crate::temporal::temporal_read_expr_filtered(pred_id, tf_sql)
+            } else {
+                vp_read_expr(pred_id)
+            };
+            from_clauses.push(format!("{table_expr} {alias}"));
             // Pushdown conditions on the first atom go to WHERE (no JOIN ON).
             where_clauses.extend(pushdown_conds);
         } else {
@@ -544,14 +585,18 @@ fn compile_nonrecursive_rule(
                     join_cond = format!("{join_cond} AND {}", pushdown_conds.join(" AND "));
                 }
             }
-            if join_cond.is_empty() {
-                from_clauses.push(format!("{} {alias}", vp_read_expr(pred_id)));
+            // Choose between VP table and temporal_facts routing.
+            let table_expr = if let Some(ref tf_sql) = temporal_filter_sql
+                && crate::temporal::is_temporal_predicate(pred_id)
+            {
+                crate::temporal::temporal_read_expr_filtered(pred_id, tf_sql)
             } else {
-                from_clauses.push(format!(
-                    "JOIN {} {alias} ON {}",
-                    vp_read_expr(pred_id),
-                    join_cond
-                ));
+                vp_read_expr(pred_id)
+            };
+            if join_cond.is_empty() {
+                from_clauses.push(format!("{table_expr} {alias}"));
+            } else {
+                from_clauses.push(format!("JOIN {table_expr} {alias} ON {join_cond}"));
             }
         }
     }

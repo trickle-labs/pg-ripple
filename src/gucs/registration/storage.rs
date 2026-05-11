@@ -946,4 +946,26 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+    // v0.106.0: temporal fact store GUCs.
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.temporal_data_model",
+        c"Default data model for pg_ripple.mark_temporal() when data_model is omitted. \
+          One of 'snapshot' (at most one open interval per (s,p,o,g); asserting a new \
+          value closes the previous one) or 'versioned' (every assertion creates a new row). \
+          Default: 'snapshot'. (v0.106.0)",
+        c"",
+        &crate::gucs::storage::TEMPORAL_DATA_MODEL,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.enable_temporal_operators",
+        c"Gate for temporal parse extensions (AFTER, BEFORE, DURING) in Datalog rules. \
+          Must be on to use temporal operators. Default: off. (v0.106.0)",
+        c"",
+        &crate::gucs::storage::ENABLE_TEMPORAL_OPERATORS,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

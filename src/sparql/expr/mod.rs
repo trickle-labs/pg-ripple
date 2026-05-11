@@ -379,6 +379,15 @@ pub(super) const PG_FUZZY_MATCH_IRI: &str = "http://pg-ripple.org/functions/fuzz
 /// `pg:token_set_ratio(a, b)` IRI — word-set similarity via pg_trgm (v0.87.0).
 pub(super) const PG_TOKEN_SET_RATIO_IRI: &str = "http://pg-ripple.org/functions/token_set_ratio";
 
+// ─── v0.106.0 temporal extension function ─────────────────────────────────────
+
+/// `pg:temporal_window(?subject, ?predicate, ?start, ?end)` IRI (v0.106.0).
+///
+/// SPARQL FILTER function that returns `true` when a temporal fact for
+/// `(?subject, ?predicate, *)` exists with a validity interval overlapping
+/// `[?start, ?end]`.
+pub(super) const PG_TEMPORAL_WINDOW_IRI: &str = "http://pg-ripple.org/functions/temporal_window";
+
 /// Translate an argument expression to a SQL text expression.
 ///
 /// For variable arguments: decode the dictionary ID to lexical text.
