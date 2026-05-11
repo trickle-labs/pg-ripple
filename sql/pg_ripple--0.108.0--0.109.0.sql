@@ -1,0 +1,36 @@
+-- Migration 0.108.0 → 0.109.0: NS-RL Foundation: String Similarity Builtins + Orchestrator
+--
+-- Schema changes: None (all changes are compiled Rust functions and GUCs)
+--
+-- New SQL-callable functions (provided via compiled Rust):
+--   pg_ripple.resolve_entities(source_graph TEXT, target_graph TEXT,
+--                               options JSON DEFAULT NULL) → JSON
+--     Five-stage neuro-symbolic entity resolution pipeline with dry_run support.
+--
+--   pg_ripple.er_blocking_templates() → TABLE(name TEXT, description TEXT, rule TEXT)
+--     Returns the three built-in ER blocking rule templates.
+--
+--   pg_ripple.er_blocking_template(name TEXT) → TEXT
+--     Returns the rule text for a named ER blocking template.
+--
+-- New SPARQL custom functions (translate to pg_trgm / fuzzystrmatch SQL):
+--   pg:trigram_similarity(?a, ?b)   -- similarity(a, b) via pg_trgm
+--   pg:levenshtein(?a, ?b)          -- levenshtein(a, b) via fuzzystrmatch
+--   pg:levenshtein_less_equal(?a, ?b, ?maxd) -- levenshtein_less_equal(a, b, maxd)
+--   pg:soundex(?s)                  -- soundex(s) via fuzzystrmatch
+--   pg:metaphone(?s, ?maxlen)       -- metaphone(s, maxlen) via fuzzystrmatch
+--   pg:jaro_winkler(?a, ?b)         -- jarowinkler(a, b) via fuzzystrmatch
+--
+-- New Datalog built-in predicates:
+--   pg:trigram_similarity(?a, ?b) OP ?r
+--   pg:levenshtein(?a, ?b) OP ?r
+--   pg:soundex(?s) OP ?r
+--   pg:metaphone(?s, maxlen) OP ?r
+--   pg:jaro_winkler(?a, ?b) OP ?r
+--
+-- New GUC parameters:
+--   pg_ripple.sameas_apply_rate_limit   (INT, default 1000)
+--     Maximum owl:sameAs assertions per resolve_entities() call.
+--   pg_ripple.string_similarity_extensions_ok (BOOL, default false)
+--     When true, allows SPARQL/Datalog string similarity functions to use
+--     fuzzystrmatch even when the extension may not be installed.

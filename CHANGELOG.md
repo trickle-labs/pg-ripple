@@ -13,6 +13,34 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.109.0] — 2026-06-14 — NS-RL Foundation: String Similarity Builtins + Orchestrator
+
+**Adds six SPARQL/Datalog string similarity built-ins for neuro-symbolic record linkage, three reusable ER blocking templates, a five-stage `resolve_entities()` orchestration pipeline, and two new GUC parameters.**
+
+### Added
+
+- **STRSIM-01**: SPARQL custom function `pg:trigram_similarity(?a, ?b)` — emits `similarity(a, b)` SQL via `pg_trgm`. Returns `xsd:double`.
+- **STRSIM-02**: SPARQL custom function `pg:levenshtein(?a, ?b)` — emits `levenshtein(a, b)` via `fuzzystrmatch`. Returns `xsd:integer`.
+- **STRSIM-03**: SPARQL custom function `pg:levenshtein_less_equal(?a, ?b, ?maxd)` — emits `levenshtein_less_equal(a, b, maxd)`. Returns `xsd:integer`.
+- **STRSIM-04**: SPARQL custom function `pg:soundex(?s)` — emits `soundex(s)` via `fuzzystrmatch`. Returns a dictionary-encoded literal.
+- **STRSIM-05**: SPARQL custom function `pg:metaphone(?s, ?maxlen)` — emits `metaphone(s, maxlen)` via `fuzzystrmatch`. Returns a dictionary-encoded literal.
+- **STRSIM-06**: SPARQL custom function `pg:jaro_winkler(?a, ?b)` — emits `jarowinkler(a, b)` via `fuzzystrmatch`. Returns `xsd:double`.
+- **STRSIM-07**: Datalog built-in predicate `pg:trigram_similarity(?a, ?b) OP ?r` — guard compiling to `similarity(a, b) OP r` in SQL WHERE clause.
+- **STRSIM-08**: Datalog built-in predicates `pg:levenshtein(?a, ?b) OP ?r`, `pg:soundex(?s) OP ?r`, `pg:metaphone(?s, maxlen) OP ?r`, `pg:jaro_winkler(?a, ?b) OP ?r` — analogous guard compilation.
+- **STRSIM-09**: `fuzzystrmatch_available()` helper — probes `pg_proc` for `levenshtein` at translation time; emits `NULL` when the extension is absent rather than erroring.
+- **ER-01**: `pg_ripple.er_blocking_templates() → TABLE(name TEXT, description TEXT, rule TEXT)` — returns three built-in ER blocking rule templates: `email`, `postal_name`, `name_prefix`.
+- **ER-02**: `pg_ripple.er_blocking_template(name TEXT) → TEXT` — returns rule text for a named ER blocking template.
+- **ER-03**: `pg_ripple.resolve_entities(source_graph TEXT, target_graph TEXT, options JSON DEFAULT NULL) → JSON` — five-stage NS-RL pipeline: symbolic blocking (IFP or custom rules), embedding-based candidate generation, SHACL validation gate, `owl:sameAs` union-find canonicalization, RDF-star provenance annotation. `dry_run=true` returns a JSON summary without writing triples.
+- **GUC-01**: `pg_ripple.sameas_apply_rate_limit` (INT, default 1000, range 1–10,000,000) — maximum `owl:sameAs` assertions per `resolve_entities()` call; raises PT0460 when exceeded.
+- **GUC-02**: `pg_ripple.string_similarity_extensions_ok` (BOOL, default false) — allows string similarity functions to require `fuzzystrmatch` at translation time.
+- **TEST**: pg_regress tests `tests/pg_regress/sql/v0109_string_similarity.sql` — 10 test cases covering GUC defaults, ER blocking templates, and `resolve_entities()` dry-run.
+
+### Migration
+
+`sql/pg_ripple--0.108.0--0.109.0.sql` — no schema changes; new functions are compiled from Rust.
+
+---
+
 ## [0.108.0] — 2026-06-07 — Bayesian Confidence Updates
 
 **Adds a Bayesian belief-revision engine for dynamic confidence updates, an append-only evidence log, bulk update ingestion, downstream propagation through the derivation DAG, and six new GUC parameters.**

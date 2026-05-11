@@ -233,3 +233,15 @@ pub static CONFIDENCE_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32
 /// detected.  Attenuation = `1.0 - conflict_severity * penalty` (v0.108.0 BAYES-06).
 /// Must be in [0.0, 1.0].  Default: 0.3.
 pub static CONFLICT_CONFIDENCE_PENALTY: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.3);
+
+// ─── v0.109.0 NS-RL GUCs ──────────────────────────────────────────────────────
+
+/// GUC: maximum `owl:sameAs` triples a single `resolve_entities()` call may assert (v0.109.0).
+/// Calls exceeding this limit raise PT0460.  Default: 1000.
+pub static SAMEAS_APPLY_RATE_LIMIT: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(1_000);
+
+/// GUC: informational bool — `true` when both `pg_trgm` and `fuzzystrmatch` are installed (v0.109.0).
+/// Set at CREATE EXTENSION time; read via `current_setting('pg_ripple.string_similarity_extensions_ok')`.
+/// Default: `false`.
+pub static STRING_SIMILARITY_EXTENSIONS_OK: pgrx::GucSetting<bool> =
+    pgrx::GucSetting::<bool>::new(false);

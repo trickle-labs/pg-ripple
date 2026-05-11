@@ -388,6 +388,28 @@ pub(super) const PG_TOKEN_SET_RATIO_IRI: &str = "http://pg-ripple.org/functions/
 /// `[?start, ?end]`.
 pub(super) const PG_TEMPORAL_WINDOW_IRI: &str = "http://pg-ripple.org/functions/temporal_window";
 
+// ─── v0.109.0 NS-RL string similarity function IRI constants ──────────────────
+
+/// `pg:trigram_similarity(a, b)` IRI — pg_trgm `similarity(a, b)` (v0.109.0).
+pub(super) const PG_TRIGRAM_SIMILARITY_IRI: &str =
+    "http://pg-ripple.org/functions/trigram_similarity";
+
+/// `pg:levenshtein(a, b)` IRI — fuzzystrmatch `levenshtein(a, b)` (v0.109.0).
+pub(super) const PG_LEVENSHTEIN_IRI: &str = "http://pg-ripple.org/functions/levenshtein";
+
+/// `pg:levenshtein_less_equal(a, b, max)` IRI — bounded levenshtein (v0.109.0).
+pub(super) const PG_LEVENSHTEIN_LESS_EQUAL_IRI: &str =
+    "http://pg-ripple.org/functions/levenshtein_less_equal";
+
+/// `pg:soundex(s)` IRI — fuzzystrmatch `soundex(s)` (v0.109.0).
+pub(super) const PG_SOUNDEX_IRI: &str = "http://pg-ripple.org/functions/soundex";
+
+/// `pg:metaphone(s, maxlen)` IRI — fuzzystrmatch `metaphone(s, maxlen)` (v0.109.0).
+pub(super) const PG_METAPHONE_IRI: &str = "http://pg-ripple.org/functions/metaphone";
+
+/// `pg:jaro_winkler(a, b)` IRI — fuzzystrmatch `jarowinkler(a, b)` (v0.109.0).
+pub(super) const PG_JARO_WINKLER_IRI: &str = "http://pg-ripple.org/functions/jaro_winkler";
+
 /// Translate an argument expression to a SQL text expression.
 ///
 /// For variable arguments: decode the dictionary ID to lexical text.

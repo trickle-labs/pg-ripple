@@ -595,6 +595,48 @@ fn compile_rule_with_one_delta_atom(
                     let escaped = pattern.replace('\'', "''");
                     where_clauses.push(format!("{col}::text ~ '{escaped}'"));
                 }
+                // ── v0.109.0 NS-RL string similarity built-ins ────────────────
+                StringBuiltin::TrigramSimilarity(a_term, b_term, op, rhs_term) => {
+                    let a_col = render_comparison_term(a_term, &var_map);
+                    let b_col = render_comparison_term(b_term, &var_map);
+                    let r = render_comparison_term(rhs_term, &var_map);
+                    let op_str = compare_op_sql(op);
+                    where_clauses.push(format!(
+                        "pg_ripple._fuzzy_match_guard({a_col}::text, {b_col}::text) {op_str} {r}"
+                    ));
+                }
+                StringBuiltin::Levenshtein(a_term, b_term, op, rhs_term) => {
+                    let a_col = render_comparison_term(a_term, &var_map);
+                    let b_col = render_comparison_term(b_term, &var_map);
+                    let r = render_comparison_term(rhs_term, &var_map);
+                    let op_str = compare_op_sql(op);
+                    where_clauses.push(format!(
+                        "levenshtein({a_col}::text, {b_col}::text) {op_str} {r}"
+                    ));
+                }
+                StringBuiltin::Soundex(s_term, op, rhs_term) => {
+                    let s_col = render_comparison_term(s_term, &var_map);
+                    let r = render_comparison_term(rhs_term, &var_map);
+                    let op_str = compare_op_sql(op);
+                    where_clauses.push(format!("soundex({s_col}::text) {op_str} {r}::text"));
+                }
+                StringBuiltin::Metaphone(s_term, maxlen, op, rhs_term) => {
+                    let s_col = render_comparison_term(s_term, &var_map);
+                    let r = render_comparison_term(rhs_term, &var_map);
+                    let op_str = compare_op_sql(op);
+                    where_clauses.push(format!(
+                        "metaphone({s_col}::text, {maxlen}) {op_str} {r}::text"
+                    ));
+                }
+                StringBuiltin::JaroWinkler(a_term, b_term, op, rhs_term) => {
+                    let a_col = render_comparison_term(a_term, &var_map);
+                    let b_col = render_comparison_term(b_term, &var_map);
+                    let r = render_comparison_term(rhs_term, &var_map);
+                    let op_str = compare_op_sql(op);
+                    where_clauses.push(format!(
+                        "jarowinkler({a_col}::text, {b_col}::text) {op_str} {r}"
+                    ));
+                }
             },
             // Aggregate literals are handled by compile_aggregate_rule, not here.
             BodyLiteral::Aggregate(_) => {}

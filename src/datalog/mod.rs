@@ -176,6 +176,17 @@ pub enum ArithOp {
 pub enum StringBuiltin {
     Strlen(Term, CompareOp, Term),
     Regex(Term, String),
+    // ── v0.109.0 NS-RL string similarity built-ins ────────────────────────────
+    /// `pg:trigram_similarity(?a, ?b) > 0.85` — pg_trgm `similarity(a, b)`.
+    TrigramSimilarity(Term, Term, CompareOp, Term),
+    /// `pg:levenshtein(?a, ?b) < 3` — fuzzystrmatch `levenshtein(a, b)`.
+    Levenshtein(Term, Term, CompareOp, Term),
+    /// `pg:soundex(?a) = ?b` — fuzzystrmatch `soundex(a)`.
+    Soundex(Term, CompareOp, Term),
+    /// `pg:metaphone(?s, 4) = ?code` — fuzzystrmatch `metaphone(s, maxlen)`.
+    Metaphone(Term, i64, CompareOp, Term),
+    /// `pg:jaro_winkler(?a, ?b) > 0.9` — fuzzystrmatch `jarowinkler(a, b)`.
+    JaroWinkler(Term, Term, CompareOp, Term),
 }
 
 /// A Datalog rule: head :- body .

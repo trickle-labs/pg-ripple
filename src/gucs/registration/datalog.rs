@@ -634,4 +634,28 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.109.0 NS-RL GUCs ───────────────────────────────────────────────────
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.sameas_apply_rate_limit",
+        c"Maximum owl:sameAs triples a single resolve_entities() call may assert. \
+      Calls exceeding this limit raise PT0460. Default 1000. (v0.109.0)",
+        c"",
+        &crate::gucs::datalog::SAMEAS_APPLY_RATE_LIMIT,
+        1,
+        10_000_000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.string_similarity_extensions_ok",
+        c"Informational: true when both pg_trgm and fuzzystrmatch are installed. \
+      Set at CREATE EXTENSION time. (v0.109.0)",
+        c"",
+        &crate::gucs::datalog::STRING_SIMILARITY_EXTENSIONS_OK,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

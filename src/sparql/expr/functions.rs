@@ -10,10 +10,23 @@ use spargebra::algebra::{Expression, Function};
 use super::super::sqlgen::Ctx;
 use super::cast::{xsd_cast_datatype, xsd_cast_sql};
 use super::{
-    PG_CONFIDENCE_IRI, PG_FUZZY_MATCH_IRI, PG_SIMILAR_IRI, PG_TEMPORAL_WINDOW_IRI,
-    PG_TOKEN_SET_RATIO_IRI, decode_lexical_sql, encode_preserving_lang, postgis_available,
-    translate_arg_text, translate_arg_value,
+    PG_CONFIDENCE_IRI, PG_FUZZY_MATCH_IRI, PG_JARO_WINKLER_IRI, PG_LEVENSHTEIN_IRI,
+    PG_LEVENSHTEIN_LESS_EQUAL_IRI, PG_METAPHONE_IRI, PG_SIMILAR_IRI, PG_SOUNDEX_IRI,
+    PG_TEMPORAL_WINDOW_IRI, PG_TOKEN_SET_RATIO_IRI, PG_TRIGRAM_SIMILARITY_IRI, decode_lexical_sql,
+    encode_preserving_lang, postgis_available, translate_arg_text, translate_arg_value,
 };
+
+/// Returns `true` when the `fuzzystrmatch` extension is installed.
+///
+/// Checked by looking for `levenshtein` in `pg_proc`.  The result is
+/// evaluated at SPARQL translation time so that we can emit `NULL` literals
+/// instead of references to fuzzystrmatch functions that PostgreSQL would
+/// reject when the extension is absent.
+pub(super) fn fuzzystrmatch_available() -> bool {
+    pgrx::Spi::get_one::<bool>("SELECT EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'levenshtein')")
+        .unwrap_or(None)
+        .unwrap_or(false)
+}
 
 // ─── Value context ────────────────────────────────────────────────────────────
 
@@ -1005,6 +1018,98 @@ pub(crate) fn translate_function_value(
                                             ({end_sql})::timestamptz, '[)') \
                          )"
                     ))
+                }
+
+                // ── v0.109.0: pg:trigram_similarity(a, b) — alias for pg:fuzzy_match ──
+                // Returns pg_trgm similarity(a, b) as a raw float via the existing guard.
+                PG_TRIGRAM_SIMILARITY_IRI => {
+                    *is_numeric = true;
+                    let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    // Reuse the existing _fuzzy_match_guard which wraps pg_trgm similarity().
+                    Some(format!("pg_ripple._fuzzy_match_guard({a_text}, {b_text})"))
+                }
+
+                // ── v0.109.0: pg:levenshtein(a, b) — edit distance ────────────
+                // Returns levenshtein(a, b)::integer from fuzzystrmatch.
+                // Emits NULL::integer when fuzzystrmatch is not installed.
+                PG_LEVENSHTEIN_IRI => {
+                    *is_numeric = true;
+                    if !fuzzystrmatch_available() {
+                        return Some("NULL::integer".to_string());
+                    }
+                    let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    Some(format!("levenshtein({a_text}, {b_text})"))
+                }
+
+                // ── v0.109.0: pg:levenshtein_less_equal(a, b, max) — bounded edit distance
+                // Returns levenshtein_less_equal(a, b, max)::integer from fuzzystrmatch.
+                // Emits NULL::integer when fuzzystrmatch is not installed.
+                PG_LEVENSHTEIN_LESS_EQUAL_IRI => {
+                    *is_numeric = true;
+                    if !fuzzystrmatch_available() {
+                        return Some("NULL::integer".to_string());
+                    }
+                    let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    // Third argument: max (integer literal or variable)
+                    let max_sql = args.get(2).and_then(|e| {
+                        if let Expression::Literal(lit) = e {
+                            lit.value().parse::<i64>().ok().map(|n| n.to_string())
+                        } else {
+                            translate_arg_text(e, bindings, ctx)
+                        }
+                    })?;
+                    Some(format!(
+                        "levenshtein_less_equal({a_text}, {b_text}, ({max_sql})::integer)"
+                    ))
+                }
+
+                // ── v0.109.0: pg:soundex(s) — phonetic code ───────────────────
+                // Returns soundex(s) as a plain-literal dictionary ID.
+                // Emits NULL::bigint when fuzzystrmatch is not installed.
+                PG_SOUNDEX_IRI => {
+                    *is_numeric = false;
+                    if !fuzzystrmatch_available() {
+                        return Some("NULL::bigint".to_string());
+                    }
+                    let s_text = translate_arg_text(args.first()?, bindings, ctx)?;
+                    Some(format!("pg_ripple.encode_term(soundex({s_text}), 2::int2)"))
+                }
+
+                // ── v0.109.0: pg:metaphone(s, maxlen) — phonetic code ─────────
+                // Returns metaphone(s, maxlen) as a plain-literal dictionary ID.
+                // Emits NULL::bigint when fuzzystrmatch is not installed.
+                PG_METAPHONE_IRI => {
+                    *is_numeric = false;
+                    if !fuzzystrmatch_available() {
+                        return Some("NULL::bigint".to_string());
+                    }
+                    let s_text = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let maxlen_sql = args.get(1).and_then(|e| {
+                        if let Expression::Literal(lit) = e {
+                            lit.value().parse::<i64>().ok().map(|n| n.to_string())
+                        } else {
+                            translate_arg_text(e, bindings, ctx)
+                        }
+                    })?;
+                    Some(format!(
+                        "pg_ripple.encode_term(metaphone({s_text}, ({maxlen_sql})::integer), 2::int2)"
+                    ))
+                }
+
+                // ── v0.109.0: pg:jaro_winkler(a, b) — Jaro-Winkler distance ──
+                // Returns jarowinkler(a, b)::float8 from fuzzystrmatch.
+                // Emits NULL::float8 when fuzzystrmatch is not installed.
+                PG_JARO_WINKLER_IRI => {
+                    *is_numeric = true;
+                    if !fuzzystrmatch_available() {
+                        return Some("NULL::float8".to_string());
+                    }
+                    let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    Some(format!("jarowinkler({a_text}, {b_text})"))
                 }
 
                 _ => None,

@@ -92,6 +92,9 @@ mod rule_library;
 // v0.105.0 modules — Guided rule authoring & LLM rule extraction
 mod rule_authoring;
 
+// v0.109.0 modules — NS-RL foundation: entity resolution orchestrator
+pub(crate) mod entity_resolution;
+
 // Re-export all GUC statics at the crate root so that `crate::SOME_GUC` paths
 // in existing code continue to work after the split.
 pub(crate) use gucs::*;

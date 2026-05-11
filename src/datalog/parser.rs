@@ -578,7 +578,101 @@ fn try_parse_string_builtin(text: &str) -> Option<BodyLiteral> {
             var_term, pattern,
         )));
     }
+    // ── v0.109.0 NS-RL string similarity built-ins ────────────────────────────
+    if text.starts_with("pg:trigram_similarity(") {
+        return try_parse_similarity_two_arg(text, "pg:trigram_similarity(", |a, b, op, rhs| {
+            StringBuiltin::TrigramSimilarity(a, b, op, rhs)
+        });
+    }
+    if text.starts_with("pg:levenshtein(") {
+        return try_parse_similarity_two_arg(text, "pg:levenshtein(", |a, b, op, rhs| {
+            StringBuiltin::Levenshtein(a, b, op, rhs)
+        });
+    }
+    if text.starts_with("pg:soundex(") {
+        // pg:soundex(?s) OP ?code  — one string argument, one comparison term
+        return try_parse_soundex(text);
+    }
+    if text.starts_with("pg:metaphone(") {
+        return try_parse_metaphone(text);
+    }
+    if text.starts_with("pg:jaro_winkler(") {
+        return try_parse_similarity_two_arg(text, "pg:jaro_winkler(", |a, b, op, rhs| {
+            StringBuiltin::JaroWinkler(a, b, op, rhs)
+        });
+    }
     None
+}
+
+/// Parse `pg:X(?a, ?b) OP ?rhs` where X takes two term arguments.
+fn try_parse_similarity_two_arg<F>(text: &str, prefix: &str, build: F) -> Option<BodyLiteral>
+where
+    F: Fn(Term, Term, CompareOp, Term) -> StringBuiltin,
+{
+    let inner_start = prefix.len();
+    let inner_end = text[inner_start..].find(')')? + inner_start;
+    let inner = &text[inner_start..inner_end];
+    let parts = split_body(inner);
+    if parts.len() < 2 {
+        return None;
+    }
+    let a = parse_term_simple(parts[0].trim()).ok()?;
+    let b = parse_term_simple(parts[1].trim()).ok()?;
+    let rest = text[inner_end + 1..].trim();
+    let (op, rhs_str) = parse_compare_op_rest(rest)?;
+    let rhs = parse_term_simple(rhs_str).ok()?;
+    Some(BodyLiteral::StringBuiltin(build(a, b, op, rhs)))
+}
+
+/// Parse `pg:soundex(?s) OP ?rhs`.
+fn try_parse_soundex(text: &str) -> Option<BodyLiteral> {
+    let inner_start = "pg:soundex(".len();
+    let inner_end = text[inner_start..].find(')')? + inner_start;
+    let inner = &text[inner_start..inner_end];
+    let s = parse_term_simple(inner.trim()).ok()?;
+    let rest = text[inner_end + 1..].trim();
+    let (op, rhs_str) = parse_compare_op_rest(rest)?;
+    let rhs = parse_term_simple(rhs_str).ok()?;
+    Some(BodyLiteral::StringBuiltin(StringBuiltin::Soundex(
+        s, op, rhs,
+    )))
+}
+
+/// Parse `pg:metaphone(?s, 4) OP ?rhs`.
+fn try_parse_metaphone(text: &str) -> Option<BodyLiteral> {
+    let inner_start = "pg:metaphone(".len();
+    let inner_end = text[inner_start..].find(')')? + inner_start;
+    let inner = &text[inner_start..inner_end];
+    let parts = split_body(inner);
+    if parts.len() < 2 {
+        return None;
+    }
+    let s = parse_term_simple(parts[0].trim()).ok()?;
+    let maxlen: i64 = parts[1].trim().trim_matches('"').parse().ok()?;
+    let rest = text[inner_end + 1..].trim();
+    let (op, rhs_str) = parse_compare_op_rest(rest)?;
+    let rhs = parse_term_simple(rhs_str).ok()?;
+    Some(BodyLiteral::StringBuiltin(StringBuiltin::Metaphone(
+        s, maxlen, op, rhs,
+    )))
+}
+
+/// Parse a comparison operator and the remainder RHS string.
+fn parse_compare_op_rest(rest: &str) -> Option<(CompareOp, &str)> {
+    let parts: Vec<&str> = rest.splitn(2, char::is_whitespace).collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    let op = match parts[0] {
+        ">" => CompareOp::Gt,
+        ">=" => CompareOp::Gte,
+        "<" => CompareOp::Lt,
+        "<=" => CompareOp::Lte,
+        "=" => CompareOp::Eq,
+        "!=" => CompareOp::Neq,
+        _ => return None,
+    };
+    Some((op, parts[1].trim()))
 }
 
 /// Parse a variable name from `?var` or `?_` (wildcard).

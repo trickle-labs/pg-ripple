@@ -117,6 +117,22 @@ pub fn validate_rule(rule: &str) -> pgrx::JsonB {
                         StringBuiltin::Regex(t, _) => {
                             collect_var_from_term(t, &mut all_body_vars);
                         }
+                        // v0.109.0 NS-RL string similarity built-ins
+                        StringBuiltin::TrigramSimilarity(a, b, _, r)
+                        | StringBuiltin::Levenshtein(a, b, _, r)
+                        | StringBuiltin::JaroWinkler(a, b, _, r) => {
+                            collect_var_from_term(a, &mut all_body_vars);
+                            collect_var_from_term(b, &mut all_body_vars);
+                            collect_var_from_term(r, &mut all_body_vars);
+                        }
+                        StringBuiltin::Soundex(s, _, r) => {
+                            collect_var_from_term(s, &mut all_body_vars);
+                            collect_var_from_term(r, &mut all_body_vars);
+                        }
+                        StringBuiltin::Metaphone(s, _, _, r) => {
+                            collect_var_from_term(s, &mut all_body_vars);
+                            collect_var_from_term(r, &mut all_body_vars);
+                        }
                     }
                 }
                 BodyLiteral::Aggregate(agg) => {

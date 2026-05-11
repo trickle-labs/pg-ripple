@@ -237,6 +237,18 @@ pub(super) fn guard_fully_bound(guard: &BodyLiteral, var_map: &VarMap) -> bool {
         BodyLiteral::StringBuiltin(sb) => match sb {
             StringBuiltin::Strlen(t, _, r) => check_term(t) && check_term(r),
             StringBuiltin::Regex(t, _) => check_term(t),
+            // v0.109.0 NS-RL:
+            StringBuiltin::TrigramSimilarity(a, b, _, r) => {
+                check_term(a) && check_term(b) && check_term(r)
+            }
+            StringBuiltin::Levenshtein(a, b, _, r) => {
+                check_term(a) && check_term(b) && check_term(r)
+            }
+            StringBuiltin::Soundex(s, _, r) => check_term(s) && check_term(r),
+            StringBuiltin::Metaphone(s, _, _, r) => check_term(s) && check_term(r),
+            StringBuiltin::JaroWinkler(a, b, _, r) => {
+                check_term(a) && check_term(b) && check_term(r)
+            }
         },
         _ => false,
     }
@@ -275,6 +287,50 @@ pub(super) fn compile_guard_sql(guard: &BodyLiteral, var_map: &VarMap) -> Option
                 let col = render_comparison_term(term, var_map);
                 let escaped = pattern.replace('\'', "''");
                 Some(format!("{col}::text ~ '{escaped}'"))
+            }
+            // v0.109.0 NS-RL string similarity built-ins
+            StringBuiltin::TrigramSimilarity(a_term, b_term, op, rhs_term) => {
+                let a_col = render_comparison_term(a_term, var_map);
+                let b_col = render_comparison_term(b_term, var_map);
+                let r = render_comparison_term(rhs_term, var_map);
+                Some(format!(
+                    "pg_ripple._fuzzy_match_guard({a_col}::text, {b_col}::text) {} {r}",
+                    compare_op_sql(op)
+                ))
+            }
+            StringBuiltin::Levenshtein(a_term, b_term, op, rhs_term) => {
+                let a_col = render_comparison_term(a_term, var_map);
+                let b_col = render_comparison_term(b_term, var_map);
+                let r = render_comparison_term(rhs_term, var_map);
+                Some(format!(
+                    "levenshtein({a_col}::text, {b_col}::text) {} {r}",
+                    compare_op_sql(op)
+                ))
+            }
+            StringBuiltin::Soundex(s_term, op, rhs_term) => {
+                let s_col = render_comparison_term(s_term, var_map);
+                let r = render_comparison_term(rhs_term, var_map);
+                Some(format!(
+                    "soundex({s_col}::text) {} {r}::text",
+                    compare_op_sql(op)
+                ))
+            }
+            StringBuiltin::Metaphone(s_term, maxlen, op, rhs_term) => {
+                let s_col = render_comparison_term(s_term, var_map);
+                let r = render_comparison_term(rhs_term, var_map);
+                Some(format!(
+                    "metaphone({s_col}::text, {maxlen}) {} {r}::text",
+                    compare_op_sql(op)
+                ))
+            }
+            StringBuiltin::JaroWinkler(a_term, b_term, op, rhs_term) => {
+                let a_col = render_comparison_term(a_term, var_map);
+                let b_col = render_comparison_term(b_term, var_map);
+                let r = render_comparison_term(rhs_term, var_map);
+                Some(format!(
+                    "jarowinkler({a_col}::text, {b_col}::text) {} {r}",
+                    compare_op_sql(op)
+                ))
             }
         },
         _ => None,
