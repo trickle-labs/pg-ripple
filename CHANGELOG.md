@@ -13,6 +13,35 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.104.0] — 2026-05-10 — Domain Rule Library Infrastructure
+
+**Package, share, and install domain-specific Datalog rule sets as versioned libraries — like npm packages, but for Datalog rules and SHACL shapes.**
+
+### Added
+
+- **LIB-01**: `_pg_ripple.rule_libraries` catalog table — one row per installed external rule library with columns: `name TEXT PRIMARY KEY`, `version TEXT`, `installed_at TIMESTAMPTZ`, `description TEXT`, `license_iri TEXT`, `source_url TEXT`, `dependencies TEXT[]`, `shape_iris TEXT[]`.
+- **LIB-02**: `pg_ripple.install_rule_library(source TEXT, accept_license BOOLEAN DEFAULT FALSE) → TEXT` — install a rule library from a URL or absolute local file path.
+  - URL sources are validated against the SSRF allowlist before any network request (raises PT0452 if blocked).
+  - Parses the Turtle file to extract metadata (`dcterms:title`, `dcterms:description`, `dcterms:license`, `owl:versionInfo`), Datalog rules (`pg:rules` property), and SHACL shapes.
+  - Resolves `pg:dependsOn` dependencies in topological order (raises PT0453 on cycles, PT0454 on fetch failures).
+  - Raises PT0455 when `accept_license = FALSE` and the library's license IRI is not a permissive SPDX license (MIT, Apache-2.0, PostgreSQL).
+  - Raises PT0459 when the library name conflicts with a built-in bundle.
+  - Idempotent: re-installing the same version is a no-op.
+- **LIB-03**: `pg_ripple.upgrade_rule_library(name TEXT) → TEXT` — re-fetch from `source_url` and replace rules, shapes, and version; raises PT0456 if a dependent library is installed.
+- **LIB-04**: `pg_ripple.uninstall_rule_library(name TEXT) → VOID` — removes all rules and shapes installed by this library; raises PT0456 if a dependent library is installed.
+- **LIB-05**: `pg_ripple.list_rule_libraries() → TABLE(name, version, installed_at, description, license_iri)` — lists all installed libraries.
+- **LIB-06**: Error codes PT0452–PT0459 documented in `src/rule_library.rs`.
+- **LIB-07**: `GET /rule-libraries` REST endpoint in `pg_ripple_http` — returns `list_rule_libraries()` result as a JSON array.
+- **LIB-08**: Documentation chapter `docs/src/cookbook/rule-libraries.md` — format specification, authoring guide, license and disclaimer requirements.
+- **LIB-09**: Rule library format: a Turtle file with `pg:RuleLibrary` resource, required metadata triples, and optional `pg:rules` / SHACL shapes.
+- **LIB-10**: pg_regress test `tests/pg_regress/sql/v0104_rule_libraries.sql` covering install, idempotency, uninstall, PT0452, PT0455, and Datalog rule activation.
+
+### Migration
+
+- `sql/pg_ripple--0.103.0--0.104.0.sql`: creates `_pg_ripple.rule_libraries` catalog table.
+
+---
+
 ## [0.103.0] — 2026-05-10 — Conflict Detection
 
 **Find contradictory Datalog rules before they cause problems. Two detection modes: static structural analysis and live runtime scanning of derived facts.**

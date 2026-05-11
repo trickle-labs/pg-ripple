@@ -1,0 +1,11 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix pg: <http://pg-ripple.org/lib/> .
+
+<urn:pg-ripple:test-v0104-nonfree-library> a pg:RuleLibrary ;
+    dcterms:title "test-v0104-nonfree-library" ;
+    dcterms:description "A library with a non-permissive license for testing PT0455." ;
+    dcterms:license <https://spdx.org/licenses/GPL-3.0-only.html> ;
+    owl:versionInfo "1.0.0" ;
+    pg:rules """?x <http://v0104test.org/nonfreeKnows> ?z :- ?x <http://v0104test.org/knows> ?z .""" .
