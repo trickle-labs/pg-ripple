@@ -31,6 +31,17 @@ const MOCK_SPARQL: &str = "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10";
 ///
 /// Uses an OpenAI-compatible `/v1/chat/completions` JSON API.
 /// Returns `Err` with a human-readable message on any network or HTTP error.
+/// Public (crate-internal) wrapper so that `rule_authoring` and other modules
+/// can reuse the same HTTP call without duplicating the implementation.
+pub(crate) fn call_llm_endpoint_pub(
+    endpoint: &str,
+    model: &str,
+    api_key: &str,
+    prompt: &str,
+) -> Result<String, String> {
+    call_llm_endpoint(endpoint, model, api_key, prompt)
+}
+
 fn call_llm_endpoint(
     endpoint: &str,
     model: &str,

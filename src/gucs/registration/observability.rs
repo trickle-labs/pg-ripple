@@ -113,4 +113,17 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.105.0 GUCs — Rule Authoring ───────────────────────────────────────
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.suggest_rules_max_candidates",
+        c"Maximum number of candidate rules returned by suggest_rules() (v0.105.0). \
+          Default: 20. Range: 1–200.",
+        c"",
+        &crate::gucs::llm::SUGGEST_RULES_MAX_CANDIDATES,
+        1,
+        200,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

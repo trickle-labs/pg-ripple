@@ -13,6 +13,32 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.105.0] — 2026-05-17 — Guided Rule Authoring & LLM Rule Extraction
+
+**Translate natural-language descriptions into Datalog rules, validate rules statically, and discover candidate rules from co-occurrence patterns in the graph.**
+
+### Added
+
+- **RA-01**: `pg_ripple.validate_rule(rule TEXT) → JSONB` — static analysis of a Datalog rule without loading it. Returns `{"valid": true}` or `{"valid": false, "errors": [...], "warnings": [...]}`. Error codes: `SYNTAX_ERROR`, `UNBOUND_HEAD_VARIABLE`, `UNSAFE_NEGATION`, `STRATIFICATION_CYCLE`. Warning codes: `UNUSED_BODY_VARIABLE`.
+- **RA-02**: `pg_ripple.draft_rule_from_nl(description TEXT, candidates INT DEFAULT 3) → TABLE(rank INT, rule TEXT, explanation TEXT)` — calls the configured LLM endpoint to translate a natural-language rule description into Datalog. Returns up to `candidates` candidate rules ranked by estimated quality.
+  - Raises PT0457 when `candidates` is outside [1, 10].
+  - Raises PT0458 when `pg_ripple.llm_endpoint` is not configured.
+  - Mock mode: set `pg_ripple.llm_endpoint = 'mock'` for deterministic test output.
+- **RA-03**: `pg_ripple.suggest_rules(graph_iri TEXT, examples JSONB DEFAULT NULL) → TABLE(rule TEXT, support BIGINT, explanation TEXT)` — **experimental** — scans VP tables for predicate co-occurrence patterns and proposes candidate Datalog rules for expert review. Results require domain expert validation before committing.
+- **RA-04**: New GUC `pg_ripple.suggest_rules_max_candidates` (INT, default: 20, range: 1–200) — maximum candidates returned by `suggest_rules()`.
+- **RA-05**: REST endpoints in `pg_ripple_http`:
+  - `POST /rules/draft` — request: `{"description": "...", "candidates": 3}`, response: `[{"rank": 1, "rule": "...", "explanation": "..."}]`
+  - `POST /rules/validate` — request: `{"rule": "..."}`, response: `{"valid": true|false, "errors": [...], "warnings": [...]}`
+- **RA-06**: pg_regress tests `tests/pg_regress/sql/v0105_rule_authoring.sql` (10 test cases: RA-01 through RA-10).
+- **RA-07**: Proptest suite `tests/proptest/rule_authoring.rs` — 5 pure-Rust property tests verifying the validation algorithm.
+- **RA-08**: Error codes PT0457–PT0458 documented in `src/rule_authoring.rs`.
+
+### Migration
+
+`sql/pg_ripple--0.104.0--0.105.0.sql` — comment-only; no schema changes (all changes are Rust function additions).
+
+---
+
 ## [0.104.0] — 2026-05-10 — Domain Rule Library Infrastructure
 
 **Package, share, and install domain-specific Datalog rule sets as versioned libraries — like npm packages, but for Datalog rules and SHACL shapes.**

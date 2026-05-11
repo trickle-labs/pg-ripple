@@ -1,0 +1,25 @@
+-- Migration 0.104.0 → 0.105.0: Guided Rule Authoring & LLM Rule Extraction
+--
+-- New SQL functions (compiled from Rust — no DDL required):
+--   pg_ripple.validate_rule(rule TEXT) → JSONB
+--     Static analysis of a Datalog rule without loading it.  Returns
+--     {"valid": true} or {"valid": false, "errors": [...], "warnings": [...]}.
+--
+--   pg_ripple.draft_rule_from_nl(description TEXT, candidates INT DEFAULT 3)
+--   → TABLE(rank INT, rule TEXT, explanation TEXT)
+--     Translates a natural-language rule description to Datalog candidate
+--     rules via the configured LLM endpoint (pg_ripple.llm_endpoint).
+--     Raises PT0457 if candidates ∉ [1, 10].
+--     Raises PT0458 if pg_ripple.llm_endpoint is not configured.
+--
+--   pg_ripple.suggest_rules(graph_iri TEXT, examples JSONB DEFAULT NULL)
+--   → TABLE(rule TEXT, support BIGINT, explanation TEXT)
+--     **Experimental**: scans VP tables for co-occurrence patterns and
+--     proposes candidate Datalog rules.  API may change; results require
+--     domain expert validation before committing.
+--
+-- New GUC:
+--   pg_ripple.suggest_rules_max_candidates (INT, default: 20, range: 1–200)
+--     Maximum number of candidates returned by suggest_rules().
+--
+-- No schema changes (no ALTER TABLE, CREATE TABLE, or CREATE INDEX).

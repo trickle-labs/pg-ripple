@@ -89,6 +89,9 @@ pub(crate) mod hypothetical;
 // v0.104.0 modules — Domain rule library infrastructure
 mod rule_library;
 
+// v0.105.0 modules — Guided rule authoring & LLM rule extraction
+mod rule_authoring;
+
 // Re-export all GUC statics at the crate root so that `crate::SOME_GUC` paths
 // in existing code continue to work after the split.
 pub(crate) use gucs::*;

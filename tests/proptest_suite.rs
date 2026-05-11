@@ -51,5 +51,7 @@ mod jsonld_framing;
 mod ntriples_oxigraph;
 #[path = "proptest/pagerank_oracle.rs"]
 mod pagerank_oracle;
+#[path = "proptest/rule_authoring.rs"]
+mod rule_authoring;
 #[path = "proptest/sparql_roundtrip.rs"]
 mod sparql_roundtrip;

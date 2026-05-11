@@ -116,6 +116,7 @@ pub(crate) mod explain_handler;
 pub(crate) mod hypothetical_handler;
 pub(crate) mod pagerank_handlers;
 pub(crate) mod rag_handler;
+pub(crate) mod rule_authoring_handler;
 pub(crate) mod rule_library_handler;
 pub(crate) mod sparql_handlers;
 
@@ -293,6 +294,15 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/rule-libraries",
             get(rule_library_handler::list_rule_libraries),
+        )
+        // v0.105.0: Guided rule authoring & LLM rule extraction
+        .route(
+            "/rules/draft",
+            post(rule_authoring_handler::draft_rules_post),
+        )
+        .route(
+            "/rules/validate",
+            post(rule_authoring_handler::validate_rule_post),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)
