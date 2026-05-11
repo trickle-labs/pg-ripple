@@ -174,3 +174,8 @@ That four-line chain is the kind of evidence a regulated industry needs and a bl
 - [CDC Subscriptions](cdc-subscriptions.md) — push *changes* in real time, complementary to point-in-time *replay*.
 - [Multi-Tenant Graphs](multi-tenant-graphs.md) — pair the audit log with RLS to attribute every change to a tenant role.
 - [Cookbook: Audit trail with PROV-O and temporal queries](../cookbook/audit-trail.md)
+
+## Further reading
+
+- [Blog: Temporal Time-Travel Queries](../../blog/temporal-time-travel-queries.md) — point-in-time replay of your knowledge graph
+- [Blog: Provenance Tracking with PROV-O](../../blog/provenance-tracking-prov-o.md) — tracing where every fact came from

@@ -530,3 +530,10 @@ SELECT * FROM pg_ripple.rule_plan_cache_stats();
 - **[§2.4 Validating Data Quality](../features/validating-data-quality.md)** — SHACL shapes interact with inference; validate derived facts.
 - **[§2.6 Exporting and Sharing](../features/exporting-and-sharing.md)** — export inferred facts; Datalog enrichment for GraphRAG.
 - **[§2.3 Querying with SPARQL](../features/querying-with-sparql.md)** — query both explicit and inferred facts with SPARQL.
+
+## Further reading
+
+- [Blog: Datalog Inside PostgreSQL](../../blog/datalog-inside-postgresql.md) — how the Datalog engine works under the hood
+- [Blog: Built-in Reasoning Rules Explained](../../blog/builtin-reasoning-rules-explained.md) — the RDFS and OWL RL rule sets
+- [Blog: Magic Sets for Goal-Directed Inference](../../blog/magic-sets-goal-directed.md) — how demand-driven evaluation speeds up queries
+- [Blog: Well-Founded Semantics](../../blog/well-founded-semantics.md) — handling negation in cyclic rules

@@ -153,6 +153,12 @@ You never need to interact with dictionary IDs directly — `sparql()` and `find
 | SHACL shape | CHECK constraint / trigger |
 | Datalog rule | Materialized view definition |
 
+## Further reading
+
+- [Blog: Why RDF Inside PostgreSQL?](../../blog/why-rdf-in-postgresql.md) — the design philosophy behind pg_ripple
+- [Blog: Dictionary Encoding and Integer Joins](../../blog/dictionary-encoding-integer-joins.md) — how pg_ripple achieves fast query performance
+- [Blog: Vertical Partitioning Explained](../../blog/vertical-partitioning-explained.md) — why one table per predicate works
+
 ## Next steps
 
 - [Storing Knowledge](../features/storing-knowledge.md) — data modeling with triples

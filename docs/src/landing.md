@@ -101,6 +101,16 @@ Every IRI, literal, and blank node is mapped to a compact integer ID by the dict
 
 ---
 
+## Start here — pick your path
+
+| Your role | Start with | Then explore | Go deeper |
+|---|---|---|---|
+| **PostgreSQL DBA** — you know PostgreSQL, new to RDF | [Installation](getting-started/installation.md) → [Hello World](getting-started/hello-world.md) | [Key Concepts (RDF for PG users)](getting-started/key-concepts.md) | [Operations](operations/configuration.md), [Tuning](operations/tuning.md) |
+| **Data / AI Engineer** — building RAG or knowledge pipelines | [AI Overview](features/ai-overview.md) → [Grounded Chatbot](cookbook/grounded-chatbot.md) | [Vector + Hybrid Search](features/vector-and-hybrid-search.md) | [GraphRAG](features/graphrag.md), [NL-to-SPARQL](features/nl-to-sparql.md) |
+| **Semantic Web / RDF Engineer** — you know SPARQL and OWL | [SPARQL Features](features/querying-with-sparql.md) → [Datalog](features/reasoning-and-inference.md) | [SHACL Validation](features/validating-data-quality.md) | [Federation](features/apis-and-integration.md), [OWL Profiles](features/owl-profiles.md) |
+
+---
+
 ## Next steps
 
 - **Evaluating?** [When to Use pg_ripple](evaluate/when-to-use.md), [Comparison vs Alternatives](evaluate/comparison.md), and [Performance Results](evaluate/performance-results.md) have what you need.

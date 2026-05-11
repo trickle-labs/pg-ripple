@@ -6,7 +6,28 @@
 
 **Change Data Capture (CDC) subscriptions** let your application subscribe to a real-time stream of RDF triple changes — filtered by SPARQL pattern or SHACL shape — without polling the database.
 
-When a matching triple is inserted or deleted, pg_ripple sends a PostgreSQL `NOTIFY` message on a named channel. Listeners receive a JSON payload describing the change. The `pg_ripple_http` companion service exposes these subscriptions as WebSocket endpoints for web and streaming applications.
+When a matching triple is inserted or deleted, pg_ripple sends a PostgreSQL `NOTIFY` message on a named channel. Listeners receive a JSON payload describing the change. The `pg_ripple_http` companion service exposes these subscriptions as Server-Sent Events (SSE) streams for web and streaming applications.
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant pg_ripple_http
+    participant PostgreSQL
+    participant pg_ripple_ext as pg_ripple extension
+
+    App->>pg_ripple_http: GET /subscribe/{id}
+    pg_ripple_http->>PostgreSQL: LISTEN pg_ripple_sub_{id}
+    Note over App,pg_ripple_http: SSE connection established
+
+    loop Triple Changes
+        App->>PostgreSQL: INSERT triple (via SPARQL or SQL)
+        pg_ripple_ext->>PostgreSQL: NOTIFY pg_ripple_sub_{id}, payload
+        PostgreSQL->>pg_ripple_http: async notification
+        pg_ripple_http->>App: event: row\ndata: {...}
+    end
+```
+
+
 
 ## Creating a Subscription
 
@@ -146,3 +167,7 @@ ws.onmessage = (event) => {
 | `pg_ripple.list_subscriptions()` | List all named subscriptions |
 | `pg_ripple.subscribe(pattern, channel)` | Low-level subscription (v0.6.0 API) |
 | `pg_ripple.unsubscribe(channel)` | Remove low-level subscription |
+
+## Further reading
+
+- [Blog: CDC and Knowledge Graphs](../../blog/cdc-knowledge-graphs.md) — real-time event streaming from your knowledge graph

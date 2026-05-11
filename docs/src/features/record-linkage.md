@@ -223,3 +223,8 @@ Most record-linkage systems force a choice between *neural* (high-recall, opaque
 | `apply_sameas_candidates(min_similarity)` | Insert `owl:sameAs` for accepted pairs | This page |
 | `load_shacl()` | Load hard-rule shapes that veto unsafe merges | [Validating Data Quality](validating-data-quality.md) |
 | `point_in_time(ts)` | Replay record-linkage decisions as of a past timestamp | [Temporal & Provenance](temporal-and-provenance.md) |
+
+## Further reading
+
+- [Blog: Neuro-Symbolic Entity Resolution](../../blog/neuro-symbolic-entity-resolution.md) — combining embeddings with symbolic rules for deduplication
+- [Blog: owl:sameAs Entity Resolution](../../blog/owl-sameas-entity-resolution.md) — how equivalence canonicalization works

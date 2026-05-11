@@ -49,10 +49,10 @@ Find all movies and their directors:
 SELECT * FROM pg_ripple.sparql('
   PREFIX schema: <http://schema.org/>
   PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-  SELECT ?movie ?director WHERE {
+  SELECT ?movieName ?directorName WHERE {
     ?movie schema:director ?person .
-    ?movie schema:name ?movie .
-    ?person foaf:name ?director .
+    ?movie schema:name ?movieName .
+    ?person foaf:name ?directorName .
   }
 ');
 ```

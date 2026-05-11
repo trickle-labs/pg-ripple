@@ -182,3 +182,7 @@ SELECT pg_ripple.shacl_validate();
 - [Loading Data](loading-data.md) — for direct RDF formats.
 - [Validating Data Quality](validating-data-quality.md) — pair every R2RML run with SHACL.
 - [Cookbook: Knowledge graph from a relational catalogue](../cookbook/relational-to-rdf.md)
+
+## Further reading
+
+- [Blog: R2RML — Relational to Graph](../../blog/r2rml-relational-to-graph.md) — mapping existing PostgreSQL tables to RDF
