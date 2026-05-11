@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.4",
   "version": 1,
-  "serialNumber": "urn:uuid:0d12b259-42d0-40c2-bec8-5720a4826a2e",
+  "serialNumber": "urn:uuid:34828452-9c23-45b8-9289-9413b4bf944f",
   "metadata": {
-    "timestamp": "2026-05-11T16:46:04.625051000Z",
+    "timestamp": "2026-05-11T19:38:15.248010000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.108.0",
+      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.109.0",
       "name": "pg_ripple",
-      "version": "0.108.0",
+      "version": "0.109.0",
       "description": "High-performance RDF triple store with native SPARQL query execution for PostgreSQL 18",
       "scope": "required",
       "licenses": [
@@ -24,7 +24,7 @@
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/pg_ripple@0.108.0?download_url=file://.",
+      "purl": "pkg:cargo/pg_ripple@0.109.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -34,10 +34,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.108.0 bin-target-0",
+          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.109.0 bin-target-0",
           "name": "pg_ripple",
-          "version": "0.108.0",
-          "purl": "pkg:cargo/pg_ripple@0.108.0?download_url=file://.#src/lib.rs"
+          "version": "0.109.0",
+          "purl": "pkg:cargo/pg_ripple@0.109.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -3120,16 +3120,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#parquet@58.2.0",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#parquet@58.3.0",
       "author": "Apache Arrow <dev@arrow.apache.org>",
       "name": "parquet",
-      "version": "58.2.0",
+      "version": "58.3.0",
       "description": "Apache Parquet implementation in Rust",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "43d7efd3052f7d6ef601085559a246bc991e9a8cc77e02753737df6322ce35f1"
+          "content": "5dafa7d01085b62a47dd0c1829550a0a36710ea9c4fe358a05a85477cec8a908"
         }
       ],
       "licenses": [
@@ -3137,7 +3137,7 @@
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/parquet@58.2.0",
+      "purl": "pkg:cargo/parquet@58.3.0",
       "externalReferences": [
         {
           "type": "website",
@@ -6201,7 +6201,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.108.0",
+      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.109.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.44",
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
@@ -6209,7 +6209,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186",
         "registry+https://github.com/rust-lang/crates.io-index#lru@0.18.0",
         "registry+https://github.com/rust-lang/crates.io-index#oxrdf@0.3.3",
-        "registry+https://github.com/rust-lang/crates.io-index#parquet@58.2.0",
+        "registry+https://github.com/rust-lang/crates.io-index#parquet@58.3.0",
         "registry+https://github.com/rust-lang/crates.io-index#pgrx@0.18.0",
         "registry+https://github.com/rust-lang/crates.io-index#rio_api@0.8.6",
         "registry+https://github.com/rust-lang/crates.io-index#rio_turtle@0.8.6",
@@ -6792,7 +6792,7 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#parquet@58.2.0",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#parquet@58.3.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#ahash@0.8.12",
         "registry+https://github.com/rust-lang/crates.io-index#bytes@1.11.1",
