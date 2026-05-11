@@ -20,7 +20,7 @@
 
 use crate::datalog::{
     AggFunc, AggregateLiteral, ArithOp, Atom, BodyLiteral, CompareOp, Rule, RuleSet, StringBuiltin,
-    Term,
+    TemporalFilter, Term,
 };
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -267,6 +267,11 @@ fn parse_body_literal(text: &str) -> Result<BodyLiteral, String> {
         return Ok(BodyLiteral::Negated(atom));
     }
 
+    // Temporal operators (v0.106.0): AFTER(...), BEFORE(...), DURING(...)
+    if let Some(tf) = try_parse_temporal_filter(text) {
+        return Ok(BodyLiteral::TemporalFilter(tf));
+    }
+
     // Aggregate literal: COUNT(?y WHERE ...) = ?n, SUM(...), MIN(...), MAX(...), AVG(...)
     if let Some(agg) = try_parse_aggregate(text) {
         return Ok(BodyLiteral::Aggregate(agg));
@@ -290,6 +295,63 @@ fn parse_body_literal(text: &str) -> Result<BodyLiteral, String> {
     // Positive atom
     let atom = parse_atom(text)?;
     Ok(BodyLiteral::Positive(atom))
+}
+
+/// Try parsing a temporal filter body literal (v0.106.0).
+///
+/// Recognized forms:
+/// - `AFTER('2025-01-01'::timestamptz)` or `AFTER('2025-01-01'::xsd:dateTime)`
+/// - `BEFORE('2025-01-01'::timestamptz)`
+/// - `DURING('2025-01-01', '2025-12-31')`
+fn try_parse_temporal_filter(text: &str) -> Option<TemporalFilter> {
+    let upper = text.to_uppercase();
+    let trim_cast = |s: &str| -> String {
+        // Remove cast suffixes like `::timestamptz`, `::xsd:dateTime`.
+        if let Some(pos) = s.rfind("::") {
+            s[..pos].trim().to_owned()
+        } else {
+            s.trim().to_owned()
+        }
+    };
+
+    if upper.starts_with("AFTER(") && text.ends_with(')') {
+        let inner = &text[6..text.len() - 1];
+        let ts = trim_cast(inner);
+        return Some(TemporalFilter::After(ts));
+    }
+
+    if upper.starts_with("BEFORE(") && text.ends_with(')') {
+        let inner = &text[7..text.len() - 1];
+        let ts = trim_cast(inner);
+        return Some(TemporalFilter::Before(ts));
+    }
+
+    if upper.starts_with("DURING(") && text.ends_with(')') {
+        let inner = &text[7..text.len() - 1];
+        // Split on the first comma that is outside a string literal.
+        let mut depth = 0i32;
+        let mut in_str = false;
+        let mut split_pos = None;
+        for (i, c) in inner.char_indices() {
+            match c {
+                '\'' => in_str = !in_str,
+                '(' if !in_str => depth += 1,
+                ')' if !in_str => depth -= 1,
+                ',' if !in_str && depth == 0 => {
+                    split_pos = Some(i);
+                    break;
+                }
+                _ => {}
+            }
+        }
+        if let Some(pos) = split_pos {
+            let from_ts = trim_cast(&inner[..pos]);
+            let to_ts = trim_cast(&inner[pos + 1..]);
+            return Some(TemporalFilter::During(from_ts, to_ts));
+        }
+    }
+
+    None
 }
 
 /// Try parsing an aggregate body literal.

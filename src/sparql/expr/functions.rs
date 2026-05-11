@@ -10,9 +10,9 @@ use spargebra::algebra::{Expression, Function};
 use super::super::sqlgen::Ctx;
 use super::cast::{xsd_cast_datatype, xsd_cast_sql};
 use super::{
-    PG_CONFIDENCE_IRI, PG_FUZZY_MATCH_IRI, PG_SIMILAR_IRI, PG_TOKEN_SET_RATIO_IRI,
-    decode_lexical_sql, encode_preserving_lang, postgis_available, translate_arg_text,
-    translate_arg_value,
+    PG_CONFIDENCE_IRI, PG_FUZZY_MATCH_IRI, PG_SIMILAR_IRI, PG_TEMPORAL_WINDOW_IRI,
+    PG_TOKEN_SET_RATIO_IRI, decode_lexical_sql, encode_preserving_lang, postgis_available,
+    translate_arg_text, translate_arg_value,
 };
 
 // ─── Value context ────────────────────────────────────────────────────────────
@@ -982,6 +982,28 @@ pub(crate) fn translate_function_value(
                     let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
                     Some(format!(
                         "pg_ripple._token_set_ratio_guard({a_text}, {b_text})"
+                    ))
+                }
+
+                // ── v0.106.0: pg:temporal_window(?subject, ?predicate, ?start, ?end) ──
+                // Returns TRUE when a temporal fact for (?subject, ?predicate, *) exists
+                // with a validity interval overlapping [?start, ?end].
+                // Compiles to a correlated EXISTS subquery against _pg_ripple.temporal_facts.
+                PG_TEMPORAL_WINDOW_IRI => {
+                    *is_numeric = false;
+                    let s_sql = translate_arg_value(args.first()?, bindings, ctx)?;
+                    let p_sql = translate_arg_value(args.get(1)?, bindings, ctx)?;
+                    let start_sql = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let end_sql = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!(
+                        "EXISTS( \
+                           SELECT 1 FROM _pg_ripple.temporal_facts tf \
+                           WHERE tf.s = ({s_sql}) \
+                             AND tf.p = ({p_sql}) \
+                             AND tstzrange(tf.valid_from, tf.valid_to, '[)') \
+                               && tstzrange(({start_sql})::timestamptz, \
+                                            ({end_sql})::timestamptz, '[)') \
+                         )"
                     ))
                 }
 

@@ -409,6 +409,12 @@ pub(super) fn parse_shape_statement(
                     message: None,
                 });
             }
+            // v0.106.0: sh:validFor "P1Y"^^xsd:duration
+            "http://www.w3.org/ns/shacl#validFor" => {
+                let duration_val =
+                    extract_string_literal(obj_rest.trim()).unwrap_or_else(|_| obj_rest.trim().to_owned());
+                constraints.push(ShapeConstraint::ValidFor(duration_val));
+            }
             _ => {}
         }
     }

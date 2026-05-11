@@ -598,6 +598,9 @@ fn compile_rule_with_one_delta_atom(
             },
             // Aggregate literals are handled by compile_aggregate_rule, not here.
             BodyLiteral::Aggregate(_) => {}
+            // v0.106.0: temporal filters are applied to the temporal_facts table expression;
+            // they do not generate separate WHERE clauses in the delta variant compiler.
+            BodyLiteral::TemporalFilter(_) => {}
         }
     }
 

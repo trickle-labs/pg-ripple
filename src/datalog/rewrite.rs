@@ -260,6 +260,8 @@ fn rewrite_body_literal(lit: &BodyLiteral, map: &HashMap<i64, i64>) -> BodyLiter
             };
             BodyLiteral::Aggregate(new_agg)
         }
+        // v0.106.0: temporal filters carry no Const terms — pass through unchanged.
+        BodyLiteral::TemporalFilter(_) => lit.clone(),
     }
 }
 

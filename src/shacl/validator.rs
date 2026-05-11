@@ -258,6 +258,10 @@ fn dispatch_constraint(
                 violations,
             );
         }
+        // v0.106.0: sh:validFor duration constraint.
+        ShapeConstraint::ValidFor(duration_str) => {
+            constraints::count::check_valid_for(duration_str, args, violations);
+        }
     }
 }
 
@@ -1165,7 +1169,9 @@ pub(crate) fn validate_sync_with_shapes(
                     | ShapeConstraint::MaxExclusive(_)
                     | ShapeConstraint::MinInclusive(_)
                     | ShapeConstraint::MaxInclusive(_)
-                    | ShapeConstraint::SparqlConstraint { .. } => {}
+                    | ShapeConstraint::SparqlConstraint { .. }
+                    // v0.106.0: sh:validFor — not applicable to insert-time guard; skip.
+                    | ShapeConstraint::ValidFor(_) => {}
                 }
             }
         }

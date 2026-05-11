@@ -299,3 +299,21 @@ pub static BULK_LOAD_USE_COPY: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>
 /// Set to 0 to disable automatic post-encode VACUUM.
 /// Default: 10000. (M15-07 v0.95.0)
 pub static DICT_VACUUM_THRESHOLD: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(10_000);
+
+// ─── v0.106.0 temporal GUCs ───────────────────────────────────────────────────
+
+/// GUC: default data model for `pg_ripple.mark_temporal()` when `data_model` is
+/// omitted.  One of `'snapshot'` or `'versioned'`.  Default: `'snapshot'`.
+/// - `snapshot`: each fact has at most one currently-open interval; asserting a
+///   new value closes the previous one automatically.
+/// - `versioned`: every assertion always creates a new row; full version history
+///   is preserved.
+pub static TEMPORAL_DATA_MODEL: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+/// GUC: gate for temporal parse extensions in Datalog rules.
+/// Must be `on` to use `AFTER`, `BEFORE`, or `DURING` operators in Datalog.
+/// Default: `off`.
+pub static ENABLE_TEMPORAL_OPERATORS: pgrx::GucSetting<bool> =
+    pgrx::GucSetting::<bool>::new(false);
+

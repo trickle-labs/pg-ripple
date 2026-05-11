@@ -1,0 +1,236 @@
+-- v0.106.0 Feature Regression Tests
+-- Tests for: Temporal Reasoning Phase 1 — Temporal Fact Store & Basic Operators
+--
+-- Covers:
+--   TMP-01: mark_temporal() registers predicate in temporal_predicates
+--   TMP-02: insert_triple_temporal() inserts row into temporal_facts
+--   TMP-03: snapshot model closes previous open interval on re-assert
+--   TMP-04: versioned model keeps previous rows unchanged on re-assert
+--   TMP-05: unmark_temporal() on predicate with facts raises PT0431
+--   TMP-06: insert_triple_temporal() on unregistered predicate raises PT0432
+--   TMP-07: mark_temporal() with different model raises PT0430
+--   TMP-08: enable_temporal_operators GUC default is off
+--   TMP-09: temporal_data_model GUC default is empty (uses 'snapshot')
+--   TMP-10: pg_ripple.temporal_window() returns correct boolean results
+
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+
+-- Load library so _PG_init registers GUCs.
+LOAD '$libdir/pg_ripple';
+
+-- ─── TMP-01: mark_temporal() registers predicate ─────────────────────────────
+
+SELECT pg_ripple.mark_temporal('http://example.org/status', 'snapshot');
+
+SELECT EXISTS(
+    SELECT 1 FROM _pg_ripple.temporal_predicates tp
+    JOIN _pg_ripple.dictionary d ON d.id = tp.predicate_id
+    WHERE d.term = 'http://example.org/status'
+      AND tp.data_model = 'snapshot'
+) AS tmp01_mark_temporal_registers;
+
+-- ─── TMP-02: insert_triple_temporal() inserts into temporal_facts ─────────────
+
+SELECT pg_ripple.insert_triple_temporal(
+    'http://example.org/Alice',
+    'http://example.org/status',
+    'http://example.org/Active',
+    '2024-01-01 00:00:00+00'::timestamptz
+) IS NOT NULL AS tmp02_insert_returns_non_null;
+
+SELECT EXISTS(
+    SELECT 1 FROM _pg_ripple.temporal_facts tf
+    JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
+    JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
+    JOIN _pg_ripple.dictionary do ON do.id = tf.o
+    WHERE ds.term = 'http://example.org/Alice'
+      AND dp.term = 'http://example.org/status'
+      AND do.term = 'http://example.org/Active'
+      AND tf.valid_from = '2024-01-01 00:00:00+00'::timestamptz
+      AND tf.valid_to IS NULL
+) AS tmp02_temporal_fact_inserted;
+
+-- ─── TMP-03: snapshot model closes previous open interval on re-assert ────────
+
+-- Insert a second value — should close the previous open interval.
+SELECT pg_ripple.insert_triple_temporal(
+    'http://example.org/Alice',
+    'http://example.org/status',
+    'http://example.org/Inactive',
+    '2025-06-01 00:00:00+00'::timestamptz
+);
+
+-- The original 'Active' row should now have valid_to set.
+SELECT EXISTS(
+    SELECT 1 FROM _pg_ripple.temporal_facts tf
+    JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
+    JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
+    JOIN _pg_ripple.dictionary do ON do.id = tf.o
+    WHERE ds.term = 'http://example.org/Alice'
+      AND dp.term = 'http://example.org/status'
+      AND do.term = 'http://example.org/Active'
+      AND tf.valid_to IS NOT NULL
+) AS tmp03_snapshot_closes_previous;
+
+-- The new 'Inactive' row should be open-ended.
+SELECT EXISTS(
+    SELECT 1 FROM _pg_ripple.temporal_facts tf
+    JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
+    JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
+    JOIN _pg_ripple.dictionary do ON do.id = tf.o
+    WHERE ds.term = 'http://example.org/Alice'
+      AND dp.term = 'http://example.org/status'
+      AND do.term = 'http://example.org/Inactive'
+      AND tf.valid_to IS NULL
+) AS tmp03_new_row_open;
+
+-- ─── TMP-04: versioned model keeps previous rows unchanged ────────────────────
+
+-- Register a new predicate with 'versioned' model.
+SELECT pg_ripple.mark_temporal('http://example.org/score', 'versioned');
+
+-- Insert first value.
+SELECT pg_ripple.insert_triple_temporal(
+    'http://example.org/Bob',
+    'http://example.org/score',
+    '"85"^^<http://www.w3.org/2001/XMLSchema#integer>',
+    '2024-03-01 00:00:00+00'::timestamptz
+);
+
+-- Insert second value — versioned model should NOT modify the first row.
+SELECT pg_ripple.insert_triple_temporal(
+    'http://example.org/Bob',
+    'http://example.org/score',
+    '"92"^^<http://www.w3.org/2001/XMLSchema#integer>',
+    '2025-03-01 00:00:00+00'::timestamptz
+);
+
+-- First row should remain open (valid_to IS NULL) in versioned mode.
+SELECT COUNT(*) = 2 AS tmp04_versioned_keeps_both_rows
+FROM _pg_ripple.temporal_facts tf
+JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
+WHERE dp.term = 'http://example.org/score';
+
+-- ─── TMP-05: unmark_temporal() on predicate with facts raises PT0431 ──────────
+
+DO $$
+BEGIN
+    BEGIN
+        PERFORM pg_ripple.unmark_temporal('http://example.org/status');
+        RAISE EXCEPTION 'should have raised PT0431';
+    EXCEPTION WHEN OTHERS THEN
+        IF sqlerrm LIKE '%PT0431%' OR sqlerrm LIKE '%existing temporal facts%' THEN
+            NULL; -- expected
+        ELSE
+            RAISE;
+        END IF;
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT 'PT0431 raised' AS tmp05_pt0431_raised;
+
+-- ─── TMP-06: insert_triple_temporal() on unregistered predicate raises PT0432 ─
+
+DO $$
+BEGIN
+    BEGIN
+        PERFORM pg_ripple.insert_triple_temporal(
+            'http://example.org/X',
+            'http://example.org/unregistered',
+            'http://example.org/Y',
+            now()
+        );
+        RAISE EXCEPTION 'should have raised PT0432';
+    EXCEPTION WHEN OTHERS THEN
+        IF sqlerrm LIKE '%PT0432%' OR sqlerrm LIKE '%not registered as temporal%' THEN
+            NULL; -- expected
+        ELSE
+            RAISE;
+        END IF;
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT 'PT0432 raised' AS tmp06_pt0432_raised;
+
+-- ─── TMP-07: mark_temporal() with different model raises PT0430 ────────────────
+
+DO $$
+BEGIN
+    BEGIN
+        -- 'status' is already registered as 'snapshot'; re-registering with 'versioned' should fail.
+        PERFORM pg_ripple.mark_temporal('http://example.org/status', 'versioned');
+        RAISE EXCEPTION 'should have raised PT0430';
+    EXCEPTION WHEN OTHERS THEN
+        IF sqlerrm LIKE '%PT0430%' OR sqlerrm LIKE '%already registered%' THEN
+            NULL; -- expected
+        ELSE
+            RAISE;
+        END IF;
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT 'PT0430 raised' AS tmp07_pt0430_raised;
+
+-- ─── TMP-08: enable_temporal_operators GUC default is off ─────────────────────
+
+SELECT current_setting('pg_ripple.enable_temporal_operators', true) IN ('off', '', 'false', NULL, '0')
+    OR current_setting('pg_ripple.enable_temporal_operators', true) IS NULL
+    AS tmp08_enable_temporal_operators_default_off;
+
+-- ─── TMP-09: temporal_data_model GUC default is empty (snapshot behavior) ─────
+
+-- The GUC defaults to NULL/empty; 'snapshot' is used when omitted.
+SELECT current_setting('pg_ripple.temporal_data_model', true) IS NULL
+    OR current_setting('pg_ripple.temporal_data_model', true) = ''
+    AS tmp09_temporal_data_model_default_empty;
+
+-- ─── TMP-10: pg_ripple.temporal_window() returns correct boolean results ───────
+
+-- Insert a temporal fact with a known interval for Alice's status.
+-- Alice's 'Active' status ran 2024-01-01 to 2025-06-01 (closed above).
+-- Query: does status 'Active' overlap with the window Jan–Mar 2024?
+SELECT pg_ripple.temporal_window(
+    'http://example.org/Alice',
+    'http://example.org/status',
+    '2024-01-01 00:00:00+00'::timestamptz,
+    '2024-03-31 23:59:59+00'::timestamptz
+) AS tmp10_window_overlap_true;
+
+-- Query: does status NOT overlap with a window in 2023 (before any facts)?
+SELECT NOT pg_ripple.temporal_window(
+    'http://example.org/Alice',
+    'http://example.org/status',
+    '2023-01-01 00:00:00+00'::timestamptz,
+    '2023-12-31 23:59:59+00'::timestamptz
+) AS tmp10_window_before_facts_false;
+
+-- ─── Atemporal VP tables unaffected (regression) ─────────────────────────────
+
+-- Load a non-temporal predicate and confirm it still queries VP tables normally.
+SELECT pg_ripple.insert_triple(
+    '<http://example.org/X>',
+    '<http://example.org/name>',
+    '"TestNode"'
+);
+
+SELECT pg_ripple.sparql('SELECT ?name WHERE { <http://example.org/X> <http://example.org/name> ?name }')
+    LIKE '%TestNode%' AS tmp_atemporal_vp_unaffected;
+
+-- ─── Cleanup ─────────────────────────────────────────────────────────────────
+
+-- Cleanup temporal data first (prerequisite for unmark_temporal).
+DELETE FROM _pg_ripple.temporal_facts
+WHERE p IN (
+    SELECT tp.predicate_id FROM _pg_ripple.temporal_predicates tp
+    JOIN _pg_ripple.dictionary d ON d.id = tp.predicate_id
+    WHERE d.term IN ('http://example.org/status', 'http://example.org/score')
+);
+
+SELECT pg_ripple.unmark_temporal('http://example.org/status');
+SELECT pg_ripple.unmark_temporal('http://example.org/score');

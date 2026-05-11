@@ -78,6 +78,10 @@ pub enum ShapeConstraint {
         sparql_query: String,
         message: Option<String>,
     },
+    /// v0.106.0: `sh:validFor "P1Y"^^xsd:duration` — no temporal fact for the
+    /// constrained predicate may have a `valid_to - valid_from` interval
+    /// exceeding the XSD duration string.
+    ValidFor(String),
 }
 
 /// A SHACL PropertyShape (associated with a path via `sh:path`).

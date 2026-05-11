@@ -13,6 +13,37 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.106.0] — 2026-05-24 — Temporal Reasoning Phase 1: Temporal Fact Store & Basic Operators
+
+**Introduces a first-class temporal fact store backed by `_pg_ripple.temporal_facts`, temporal predicate registration, basic time operators in Datalog rules, a `pg:temporal_window()` SPARQL function, and an `sh:validFor` SHACL constraint.**
+
+### Added
+
+- **TMP-01**: `pg_ripple.mark_temporal(predicate_iri TEXT, data_model TEXT DEFAULT 'snapshot') → VOID` — registers a predicate as temporal. Raises PT0430 if the predicate is already registered with a different model.
+- **TMP-02**: `pg_ripple.unmark_temporal(predicate_iri TEXT) → VOID` — removes a predicate from temporal management. Raises PT0431 if existing temporal facts reference it.
+- **TMP-03**: `pg_ripple.insert_triple_temporal(s TEXT, p TEXT, o TEXT, valid_from TIMESTAMPTZ) → BIGINT` — inserts a temporal fact into `_pg_ripple.temporal_facts`. Raises PT0432 if the predicate is not registered as temporal. In `snapshot` mode, closes any previous open interval for `(s, p)`.
+- **TMP-04**: `_pg_ripple.temporal_predicates` catalog table — columns: `predicate_id BIGINT PK`, `data_model TEXT`, `registered_at TIMESTAMPTZ`.
+- **TMP-05**: `_pg_ripple.temporal_facts` store table — columns: `id BIGINT PK`, `s BIGINT`, `p BIGINT`, `o BIGINT`, `g BIGINT DEFAULT 0`, `valid_from TIMESTAMPTZ`, `valid_to TIMESTAMPTZ`.
+- **TMP-06**: Datalog temporal filters — `AFTER(ts)`, `BEFORE(ts)`, `DURING(from, to)` syntax in rule bodies for temporal predicates.
+- **TMP-07**: `pg_ripple.temporal_window(s TEXT, p TEXT, from_ts TIMESTAMPTZ, to_ts TIMESTAMPTZ) → BOOLEAN` — returns `true` if any temporal fact for `(s, p)` overlaps the given range.
+- **TMP-08**: `sh:validFor` SHACL constraint — validates that temporal facts for a predicate are closed within the specified XSD duration.
+- **TMP-09**: GUC `pg_ripple.enable_temporal_operators` (BOOL, default: `false`) — enables AFTER/BEFORE/DURING filter pushdown in the Datalog compiler.
+- **TMP-10**: GUC `pg_ripple.temporal_data_model` (STRING, default: `''`) — override the default temporal data model (`'snapshot'` or `'versioned'`) at the session level.
+- **TMP-11**: Migration `sql/pg_ripple--0.105.0--0.106.0.sql` — creates `_pg_ripple.temporal_predicates`, `_pg_ripple.temporal_facts`, and three indexes.
+- **TMP-12**: pg_regress tests `tests/pg_regress/sql/v0106_temporal_basic.sql` — 10 test cases (TMP-01 through TMP-10) covering store DDL, snapshot/versioned semantics, error codes, GUC defaults, and temporal_window correctness.
+
+### Error Codes
+
+- **PT0430** — `mark_temporal` called for already-registered predicate with a different model.
+- **PT0431** — `unmark_temporal` called while temporal facts for predicate still exist.
+- **PT0432** — `insert_triple_temporal` called for predicate not registered as temporal.
+
+### Migration
+
+`sql/pg_ripple--0.105.0--0.106.0.sql` — creates `_pg_ripple.temporal_predicates`, `_pg_ripple.temporal_facts`, and three indexes; no breaking changes.
+
+---
+
 ## [0.105.0] — 2026-05-17 — Guided Rule Authoring & LLM Rule Extraction
 
 **Translate natural-language descriptions into Datalog rules, validate rules statically, and discover candidate rules from co-occurrence patterns in the graph.**
