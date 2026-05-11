@@ -298,7 +298,6 @@ WHERE p IN (
     JOIN _pg_ripple.dictionary d ON d.id = tp.predicate_id
     WHERE d.value IN ('http://example.org/status', 'http://example.org/score')
 );
-DELETE 4
 SELECT pg_ripple.unmark_temporal('http://example.org/status');
  unmark_temporal 
 -----------------

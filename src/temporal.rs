@@ -385,17 +385,17 @@ pub fn insert_triple_temporal(
         }
     };
 
-    // For 'snapshot' model: close any existing open-ended row for (s, p, o, g).
+    // For 'snapshot' model: close any existing open-ended row for (s, p, g),
+    // regardless of the object value (snapshot = at most one current value).
     if data_model == "snapshot" {
         Spi::run_with_args(
             "UPDATE _pg_ripple.temporal_facts \
              SET valid_to = $1 \
-             WHERE s = $2 AND p = $3 AND o = $4 AND g = $5 AND valid_to IS NULL",
+             WHERE s = $2 AND p = $3 AND g = $4 AND valid_to IS NULL",
             &[
                 pgrx::datum::DatumWithOid::from(valid_from),
                 pgrx::datum::DatumWithOid::from(s_id),
                 pgrx::datum::DatumWithOid::from(p_id),
-                pgrx::datum::DatumWithOid::from(o_id),
                 pgrx::datum::DatumWithOid::from(g_id),
             ],
         )
