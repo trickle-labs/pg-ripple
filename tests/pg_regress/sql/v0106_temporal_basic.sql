@@ -28,7 +28,7 @@ SELECT pg_ripple.mark_temporal('http://example.org/status', 'snapshot');
 SELECT EXISTS(
     SELECT 1 FROM _pg_ripple.temporal_predicates tp
     JOIN _pg_ripple.dictionary d ON d.id = tp.predicate_id
-    WHERE d.term = 'http://example.org/status'
+    WHERE d.value = 'http://example.org/status'
       AND tp.data_model = 'snapshot'
 ) AS tmp01_mark_temporal_registers;
 
@@ -46,9 +46,9 @@ SELECT EXISTS(
     JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
     JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
     JOIN _pg_ripple.dictionary dobj ON dobj.id = tf.o
-    WHERE ds.term = 'http://example.org/Alice'
-      AND dp.term = 'http://example.org/status'
-      AND dobj.term = 'http://example.org/Active'
+    WHERE ds.value = 'http://example.org/Alice'
+      AND dp.value = 'http://example.org/status'
+      AND dobj.value = 'http://example.org/Active'
       AND tf.valid_from = '2024-01-01 00:00:00+00'::timestamptz
       AND tf.valid_to IS NULL
 ) AS tmp02_temporal_fact_inserted;
@@ -69,9 +69,9 @@ SELECT EXISTS(
     JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
     JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
     JOIN _pg_ripple.dictionary dobj ON dobj.id = tf.o
-    WHERE ds.term = 'http://example.org/Alice'
-      AND dp.term = 'http://example.org/status'
-      AND dobj.term = 'http://example.org/Active'
+    WHERE ds.value = 'http://example.org/Alice'
+      AND dp.value = 'http://example.org/status'
+      AND dobj.value = 'http://example.org/Active'
       AND tf.valid_to IS NOT NULL
 ) AS tmp03_snapshot_closes_previous;
 
@@ -81,9 +81,9 @@ SELECT EXISTS(
     JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
     JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
     JOIN _pg_ripple.dictionary dobj ON dobj.id = tf.o
-    WHERE ds.term = 'http://example.org/Alice'
-      AND dp.term = 'http://example.org/status'
-      AND dobj.term = 'http://example.org/Inactive'
+    WHERE ds.value = 'http://example.org/Alice'
+      AND dp.value = 'http://example.org/status'
+      AND dobj.value = 'http://example.org/Inactive'
       AND tf.valid_to IS NULL
 ) AS tmp03_new_row_open;
 
@@ -112,7 +112,7 @@ SELECT pg_ripple.insert_triple_temporal(
 SELECT COUNT(*) = 2 AS tmp04_versioned_keeps_both_rows
 FROM _pg_ripple.temporal_facts tf
 JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
-WHERE dp.term = 'http://example.org/score';
+WHERE dp.value = 'http://example.org/score';
 
 -- ─── TMP-05: unmark_temporal() on predicate with facts raises PT0431 ──────────
 
@@ -233,7 +233,7 @@ DELETE FROM _pg_ripple.temporal_facts
 WHERE p IN (
     SELECT tp.predicate_id FROM _pg_ripple.temporal_predicates tp
     JOIN _pg_ripple.dictionary d ON d.id = tp.predicate_id
-    WHERE d.term IN ('http://example.org/status', 'http://example.org/score')
+    WHERE d.value IN ('http://example.org/status', 'http://example.org/score')
 );
 
 SELECT pg_ripple.unmark_temporal('http://example.org/status');
