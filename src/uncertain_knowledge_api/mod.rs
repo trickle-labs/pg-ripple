@@ -6,12 +6,16 @@
 //! - `pg_ripple.shacl_score(graph_iri)` — weighted SHACL quality score
 //! - `pg_ripple.shacl_report_scored(graph_iri)` — per-violation scored report
 //! - `pg_ripple.log_shacl_score(graph_iri)` — log the score to the history table
+//! - `pg_ripple.update_confidence(subject, predicate, object, evidence)` — Bayesian belief update (v0.108.0)
+//! - `pg_ripple.bulk_update_confidence(data, format)` — batch evidence ingestion (v0.108.0)
+//! - `pg_ripple.vacuum_evidence_log()` — prune expired evidence log rows (v0.108.0)
 //!
 //! ## Sub-module layout (v0.90.0 CQ-04)
 //! - `confidence_table` — bulk loader and vacuum helpers
 //! - `fuzzy` — `pg:fuzzy_match()` / `pg:token_set_ratio()` guard functions
 //! - `shacl` — SHACL scoring and reporting
 //! - `prov` — PROV-O provenance-derived confidence (stub)
+//! - `bayesian` — Bayesian confidence update engine (v0.108.0)
 
 //! - `pg_ripple.shacl_score(graph_iri)` — weighted SHACL quality score
 //! - `pg_ripple.shacl_report_scored(graph_iri)` — per-violation scored report
@@ -33,6 +37,10 @@ pub mod prov;
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]
 pub mod shacl;
+// v0.108.0 BAYES-01: Bayesian confidence update engine.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
+#[allow(dead_code)]
+pub mod bayesian;
 
 #[pgrx::pg_schema]
 mod pg_ripple {
@@ -319,5 +327,76 @@ mod pg_ripple {
                 max_len
             );
         }
+    }
+
+    // ── v0.108.0 BAYES-01: Bayesian confidence update ─────────────────────────
+
+    /// Update the confidence of a triple using Bayesian belief revision.
+    ///
+    /// `evidence` JSON format: `{"source": "...", "likelihood_ratio": 2.5}`
+    /// where `likelihood_ratio = P(evidence | fact true) / P(evidence | fact false)`.
+    ///
+    /// Returns a row with the prior and posterior confidence values.
+    ///
+    /// Error codes:
+    /// - PT0440: `likelihood_ratio` ≤ 0.0
+    /// - PT0441: `confidence_update_strategy` = `'manual'`
+    ///
+    /// ```sql
+    /// SELECT * FROM pg_ripple.update_confidence(
+    ///   'http://example.org/alice',
+    ///   'http://example.org/worksAt',
+    ///   'http://example.org/acme',
+    ///   '{"source":"doc42","likelihood_ratio":2.5}'
+    /// );
+    /// ```
+    #[pg_extern]
+    fn update_confidence(
+        subject: &str,
+        predicate: &str,
+        object: &str,
+        evidence: &str,
+    ) -> TableIterator<'static, (name!(prior, f64), name!(posterior, f64))> {
+        let (prior, posterior) = crate::uncertain_knowledge_api::bayesian::update_confidence_impl(
+            subject, predicate, object, evidence,
+        );
+        TableIterator::once((prior, posterior))
+    }
+
+    // ── v0.108.0 BAYES-05: bulk evidence ingestion ────────────────────────────
+
+    /// Batch evidence ingestion — update confidence for many triples at once.
+    ///
+    /// `format` may be `'csv'` (default) or `'json'`/`'jsonl'`.
+    ///
+    /// CSV row format: `subject,predicate,object,source,likelihood_ratio`
+    /// JSON-L format: one JSON object per line with the same fields.
+    ///
+    /// Returns the number of triples updated.
+    ///
+    /// ```sql
+    /// SELECT pg_ripple.bulk_update_confidence(
+    ///   E'http://ex.org/alice,http://ex.org/knows,http://ex.org/bob,src1,2.5\n',
+    ///   'csv'
+    /// );
+    /// ```
+    #[pg_extern]
+    fn bulk_update_confidence(data: &str, format: default!(&str, "'csv'")) -> i64 {
+        crate::uncertain_knowledge_api::bayesian::bulk_update_confidence_impl(data, format)
+    }
+
+    // ── v0.108.0 BAYES-04: evidence log vacuum ────────────────────────────────
+
+    /// Prune expired rows from `_pg_ripple.evidence_log`.
+    ///
+    /// Uses the `pg_ripple.evidence_log_retention` GUC (default: `'1 year'`).
+    /// Returns the number of rows deleted.
+    ///
+    /// ```sql
+    /// SELECT pg_ripple.vacuum_evidence_log();
+    /// ```
+    #[pg_extern]
+    fn vacuum_evidence_log() -> i64 {
+        crate::uncertain_knowledge_api::bayesian::vacuum_evidence_log_impl()
     }
 }

@@ -306,3 +306,159 @@ pub(crate) async fn vacuum_confidence(
         }
     }
 }
+
+// ─── v0.108.0 Bayesian confidence update endpoints ───────────────────────────
+
+/// Request body for `POST /confidence/update`.
+#[derive(serde::Deserialize)]
+pub(crate) struct UpdateConfidenceRequest {
+    pub subject: String,
+    pub predicate: String,
+    pub object: String,
+    pub evidence: serde_json::Value,
+}
+
+/// POST /confidence/update
+///
+/// Body: `{"subject":"...","predicate":"...","object":"...","evidence":{"source":"...","likelihood_ratio":2.5}}`
+/// Response: `{"prior": 0.75, "posterior": 0.86, "elapsed_ms": N}`
+pub(crate) async fn update_confidence(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: Body,
+) -> Response {
+    if let Err(r) = check_auth_write(&state, &headers) {
+        return r;
+    }
+    let start = Instant::now();
+
+    let body_str = match read_body(body).await {
+        Ok(s) => s,
+        Err(r) => return r,
+    };
+
+    let req: UpdateConfidenceRequest = match serde_json::from_str(&body_str) {
+        Ok(r) => r,
+        Err(e) => {
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "invalid_json", "detail": format!("{e}")}),
+            );
+        }
+    };
+
+    let evidence_str = req.evidence.to_string();
+
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "service_unavailable",
+                &format!("pool error: {e}"),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+
+    match client
+        .query_one(
+            "SELECT prior, posterior FROM pg_ripple.update_confidence($1, $2, $3, $4)",
+            &[&req.subject, &req.predicate, &req.object, &evidence_str],
+        )
+        .await
+    {
+        Ok(row) => {
+            let prior: f64 = row.try_get(0).unwrap_or(0.0);
+            let posterior: f64 = row.try_get(1).unwrap_or(0.0);
+            json_response(
+                StatusCode::OK,
+                serde_json::json!({
+                    "prior": prior,
+                    "posterior": posterior,
+                    "elapsed_ms": start.elapsed().as_millis()
+                }),
+            )
+        }
+        Err(e) => {
+            state.metrics.record_error();
+            redacted_error(
+                "update_confidence_error",
+                &format!("update_confidence failed: {e}"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+        }
+    }
+}
+
+/// Query parameters for `POST /confidence/bulk-update`.
+#[derive(Debug, serde::Deserialize)]
+pub(crate) struct BulkUpdateConfidenceParams {
+    /// Data format: `csv` (default) or `json` / `jsonl`.
+    #[serde(default = "default_bulk_format")]
+    pub format: String,
+}
+
+fn default_bulk_format() -> String {
+    "csv".to_owned()
+}
+
+/// POST /confidence/bulk-update
+///
+/// Body: CSV or JSON-L data (format selected by `?format=`).
+/// Response: `{"updated": N, "elapsed_ms": Y}`
+pub(crate) async fn bulk_update_confidence(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    axum::extract::Query(params): axum::extract::Query<BulkUpdateConfidenceParams>,
+    body: Body,
+) -> Response {
+    if let Err(r) = check_auth_write(&state, &headers) {
+        return r;
+    }
+    let start = Instant::now();
+
+    let data = match read_body(body).await {
+        Ok(s) => s,
+        Err(r) => return r,
+    };
+
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "service_unavailable",
+                &format!("pool error: {e}"),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+
+    match client
+        .query_one(
+            "SELECT pg_ripple.bulk_update_confidence($1, $2)",
+            &[&data, &params.format],
+        )
+        .await
+    {
+        Ok(row) => {
+            let updated: i64 = row.try_get(0).unwrap_or(0);
+            json_response(
+                StatusCode::OK,
+                serde_json::json!({
+                    "updated": updated,
+                    "elapsed_ms": start.elapsed().as_millis()
+                }),
+            )
+        }
+        Err(e) => {
+            state.metrics.record_error();
+            redacted_error(
+                "bulk_update_confidence_error",
+                &format!("bulk_update_confidence failed: {e}"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+        }
+    }
+}

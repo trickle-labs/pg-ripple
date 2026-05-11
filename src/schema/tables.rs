@@ -581,3 +581,47 @@ CREATE INDEX IF NOT EXISTS idx_temporal_facts_open
     name = "v0106_temporal_store",
     requires = ["v0101_explanation_cache"]
 );
+
+// v0.108.0: Bayesian confidence updates — evidence log and stale-confidence table.
+pgrx::extension_sql!(
+    r#"
+-- Evidence log (v0.108.0 BAYES-01)
+-- Append-only log of every evidence event that updates a fact's confidence.
+-- Rows older than pg_ripple.evidence_log_retention are pruned by the background
+-- worker.
+-- No FK constraint on sid — dictionary IDs are hash-based and do not support FK.
+CREATE TABLE IF NOT EXISTS _pg_ripple.evidence_log (
+    id                  BIGSERIAL   PRIMARY KEY,
+    sid                 BIGINT      NOT NULL,
+    event_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    source_iri          BIGINT,
+    likelihood_ratio    FLOAT8      NOT NULL,
+    prior_confidence    FLOAT8      NOT NULL,
+    posterior_confidence FLOAT8     NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_evidence_log_sid
+    ON _pg_ripple.evidence_log (sid);
+CREATE INDEX IF NOT EXISTS idx_evidence_log_event_at
+    ON _pg_ripple.evidence_log (event_at);
+COMMENT ON TABLE _pg_ripple.evidence_log IS
+    'Bayesian confidence update log (v0.108.0). '
+    'One row per evidence event. TTL controlled by '
+    'pg_ripple.evidence_log_retention (default 1 year). '
+    'Vacuum with pg_ripple.vacuum_evidence_log().';
+
+-- Confidence stale queue (v0.108.0 BAYES-02)
+-- Derived facts whose confidence update was capped by
+-- pg_ripple.confidence_propagation_max_depth are recorded here and
+-- reprocessed by the confidence_reprocessing background worker.
+CREATE TABLE IF NOT EXISTS _pg_ripple.confidence_stale (
+    sid        BIGINT      NOT NULL PRIMARY KEY,
+    marked_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE _pg_ripple.confidence_stale IS
+    'Queue of derived facts whose confidence has not been propagated '
+    'because the cascade exceeded pg_ripple.confidence_propagation_max_depth. '
+    'Drained by the confidence_reprocessing background worker.';
+"#,
+    name = "v0108_bayesian_confidence",
+    requires = ["v0106_temporal_store"]
+);

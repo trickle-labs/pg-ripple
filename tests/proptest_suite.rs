@@ -1,4 +1,4 @@
-/// Property-based test suite for pg_ripple (v0.46.0 + v0.78.0 + v0.83.0 + v0.89.0 + v0.90.0).
+/// Property-based test suite for pg_ripple (v0.46.0 + v0.78.0 + v0.83.0 + v0.89.0 + v0.90.0 + v0.108.0).
 ///
 /// Suites:
 ///
@@ -22,6 +22,9 @@
 ///    (Erdős–Rényi model), verifies pure-Rust reference PageRank satisfies:
 ///    sum invariant (scores ≈ 1.0), positivity, fixed-point stability,
 ///    damping monotonicity, and sink handling (isolated nodes).
+/// 8. **Bayesian confidence** (v0.108.0 BAYES-01) — verifies algebraic properties
+///    of the Bayesian update formula: monotone increase/decrease, neutral LR,
+///    sequential = joint update, posterior clamping, order independence.
 ///
 /// No database connection is required — all tests run in pure Rust.
 ///
@@ -37,6 +40,8 @@
 #[path = "proptest/sqlgen_bridge.rs"]
 mod sqlgen_bridge;
 
+#[path = "proptest/bayesian_confidence.rs"]
+mod bayesian_confidence;
 #[path = "proptest/bidi_convergence.rs"]
 mod bidi_convergence;
 #[path = "proptest/confidence_algebra.rs"]

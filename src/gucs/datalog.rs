@@ -196,3 +196,40 @@ pub static RULE_CONFLICT_CHECK_ON_LOAD: pgrx::GucSetting<bool> =
 /// committing derived facts.  Off by default.
 /// (v0.103.0 CONFLICT-02)
 pub static BLOCK_ON_CONFLICT: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
+
+// ─── v0.108.0 Bayesian Confidence Update GUCs ────────────────────────────────
+
+/// GUC: confidence update strategy for `update_confidence()` (v0.108.0 BAYES-01).
+/// `'bayesian'`  — apply Bayes' theorem in odds form (default).
+/// `'noisy-or'`  — delegate to the existing v0.87 noisy-OR combiner.
+/// `'manual'`    — raise PT0441; caller must set confidence directly via insert_triple().
+pub static CONFIDENCE_UPDATE_STRATEGY: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+/// GUC: maximum Bayesian cascade depth when propagating a base-fact confidence
+/// change downstream through the derivation DAG (v0.108.0 BAYES-02).
+/// Facts at depth > max are queued in `_pg_ripple.confidence_stale` for background
+/// reprocessing.  Default: 10.
+pub static CONFIDENCE_PROPAGATION_MAX_DEPTH: pgrx::GucSetting<i32> =
+    pgrx::GucSetting::<i32>::new(10);
+
+/// GUC: polling interval for the confidence reprocessing background worker that
+/// drains `_pg_ripple.confidence_stale` (v0.108.0 BAYES-03).
+/// Default: `'30 seconds'`.
+pub static CONFIDENCE_REPROCESSING_INTERVAL: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+/// GUC: retention period for `_pg_ripple.evidence_log` rows (v0.108.0 BAYES-04).
+/// Rows older than this are pruned by the background worker.
+/// Default: `'1 year'`.
+pub static EVIDENCE_LOG_RETENTION: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+/// GUC: batch size for `bulk_update_confidence()` — number of evidence rows
+/// processed per transaction (v0.108.0 BAYES-05).  Default: 1000.
+pub static CONFIDENCE_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(1000);
+
+/// GUC: confidence attenuation penalty applied when two conflicting rules are
+/// detected.  Attenuation = `1.0 - conflict_severity * penalty` (v0.108.0 BAYES-06).
+/// Must be in [0.0, 1.0].  Default: 0.3.
+pub static CONFLICT_CONFIDENCE_PENALTY: pgrx::GucSetting<f64> = pgrx::GucSetting::<f64>::new(0.3);

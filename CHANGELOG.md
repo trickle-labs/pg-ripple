@@ -13,6 +13,35 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.108.0] — 2026-06-07 — Bayesian Confidence Updates
+
+**Adds a Bayesian belief-revision engine for dynamic confidence updates, an append-only evidence log, bulk update ingestion, downstream propagation through the derivation DAG, and six new GUC parameters.**
+
+### Added
+
+- **BAYES-01**: `pg_ripple.update_confidence(subject TEXT, predicate TEXT, object TEXT, evidence JSONB) → TABLE(prior FLOAT8, posterior FLOAT8)` — applies Bayes' theorem in odds form: `posterior = (λ · prior) / (λ · prior + (1 − prior))`. Raises PT0440 when `likelihood_ratio ≤ 0.0`; PT0441 when `confidence_update_strategy = 'manual'`. Falls back to noisy-OR when `confidence_update_strategy = 'noisy-or'`.
+- **BAYES-02**: `pg_ripple.bulk_update_confidence(data TEXT, format TEXT DEFAULT 'csv') → BIGINT` — ingests CSV (`subject,predicate,object,source,likelihood_ratio`) or JSON-L updates in batches; returns count of facts updated.
+- **BAYES-03**: `pg_ripple.vacuum_evidence_log() → BIGINT` — prunes expired rows from `_pg_ripple.evidence_log` using `pg_ripple.evidence_log_retention`; returns rows deleted.
+- **BAYES-04**: `_pg_ripple.evidence_log` — append-only audit table recording every confidence update (`sid`, `event_at`, `source_iri`, `likelihood_ratio`, `prior_confidence`, `posterior_confidence`).
+- **BAYES-05**: `_pg_ripple.confidence_stale` — table for tracking derived facts beyond the cascade depth that require background reprocessing.
+- **BAYES-06**: Downstream confidence propagation — after updating a base fact, `update_confidence()` walks `_pg_ripple.derivations` up to `pg_ripple.confidence_propagation_max_depth` levels using noisy-OR over antecedent confidences.
+- **BAYES-07**: GUC `pg_ripple.confidence_update_strategy` (TEXT, default `'bayesian'`) — `'bayesian'`, `'noisy-or'`, or `'manual'`.
+- **BAYES-08**: GUC `pg_ripple.confidence_propagation_max_depth` (INT, default `10`, range `1–1000`) — maximum derivation cascade depth.
+- **BAYES-09**: GUC `pg_ripple.confidence_reprocessing_interval` (TEXT, default `'1 hour'`) — how often stale derived confidences are reprocessed.
+- **BAYES-10**: GUC `pg_ripple.evidence_log_retention` (TEXT, default `'1 year'`) — retention window for `vacuum_evidence_log()`.
+- **BAYES-11**: GUC `pg_ripple.confidence_batch_size` (INT, default `1000`, range `1–1,000,000`) — batch size for `bulk_update_confidence()`.
+- **BAYES-12**: GUC `pg_ripple.conflict_confidence_penalty` (FLOAT8, default `0.3`, range `0.0–1.0`) — confidence penalty applied to conflicting triples detected by SHACL validation.
+- **BAYES-13**: Feature-status entries for `bayesian_confidence_update`, `evidence_log`, `bulk_confidence_update` in `pg_ripple.feature_status()`.
+- **BAYES-14**: HTTP `POST /confidence/update` and `POST /confidence/bulk-update` handlers in `pg_ripple_http`.
+- **BAYES-15**: pg_regress tests `tests/pg_regress/sql/v0108_confidence.sql` — 14 test cases (BAYES-01 through BAYES-14).
+- **BAYES-16**: Property-based tests `tests/proptest/bayesian_confidence.rs` — 11 algebraic properties: monotonicity, neutral LR, sequential = joint (restricted to clamp-safe inputs), clamping, noisy-OR variants.
+
+### Migration
+
+`sql/pg_ripple--0.107.0--0.108.0.sql` — creates `_pg_ripple.evidence_log` and `_pg_ripple.confidence_stale` tables if not present.
+
+---
+
 ## [0.107.0] — 2026-05-31 — Temporal Reasoning Phase 2: Sequential Patterns & CDC Integration
 
 **Adds three sequential temporal operators (`WITHIN`, `SEQUENCE`, `CONSECUTIVE`), CDC auto-recording of temporal facts via `insert_triple()`, snapshot/versioned retraction via `retract_triple_temporal()`, and a new `pg_ripple.temporal_cdc_enabled` GUC.**
