@@ -236,3 +236,8 @@ Since noisy-OR is monotone and the sequence $\{c_i^{(k)}\}$ is non-decreasing an
 above by 1.0, by the Knaster–Tarski fixed-point theorem the iteration converges to the
 **least fixed point** of the probability propagation operator.
 
+## Further reading
+
+- [Blog: Probabilistic Datalog](../../blog/probabilistic-datalog.md) — noisy-OR, confidence propagation, and soft reasoning in pg_ripple
+- [Blog: Uncertain Knowledge](../../blog/uncertain-knowledge.md) — practical patterns for probabilistic reasoning
+

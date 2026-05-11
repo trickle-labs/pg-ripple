@@ -288,3 +288,7 @@ targeting a non-pg_ripple endpoint will fail with `SPARQL function not found`.
 SELECT feature, status, version FROM pg_ripple.feature_status()
 WHERE feature LIKE 'pagerank%' OR feature LIKE 'centrality%';
 ```
+
+## Further reading
+
+- [Blog: PageRank in pg_ripple](../../blog/pagerank.md) — Datalog-native PageRank with IVM and Prometheus integration

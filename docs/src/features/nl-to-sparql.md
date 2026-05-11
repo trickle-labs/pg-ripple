@@ -134,3 +134,7 @@ BEGIN
 END;
 $$;
 ```
+
+## Further reading
+
+- [Blog: Natural Language to SPARQL](../../blog/natural-language-to-sparql.md) — how pg_ripple translates plain-English questions into SPARQL queries

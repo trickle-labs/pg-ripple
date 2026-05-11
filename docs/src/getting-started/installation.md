@@ -4,6 +4,10 @@ pg_ripple is a PostgreSQL 18 extension written in Rust. Choose the installation 
 
 ## Docker (recommended)
 
+```admonish tip title="Fastest path — zero build tools required"
+`docker compose up -d` gets you a working pg_ripple instance in under a minute. No Rust compiler, no PostgreSQL development headers — just Docker.
+```
+
 The fastest path to a working pg_ripple instance. No build tools required.
 
 ```bash

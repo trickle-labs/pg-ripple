@@ -146,3 +146,7 @@ ws.onmessage = (event) => {
 | `pg_ripple.list_subscriptions()` | List all named subscriptions |
 | `pg_ripple.subscribe(pattern, channel)` | Low-level subscription (v0.6.0 API) |
 | `pg_ripple.unsubscribe(channel)` | Remove low-level subscription |
+
+## Further reading
+
+- [Blog: CDC and Knowledge Graphs](../../blog/cdc-knowledge-graphs.md) — real-time event streaming from your knowledge graph

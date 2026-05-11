@@ -587,3 +587,7 @@ may use significant memory. Switch to streaming variants or `COPY ... TO` with s
 - **[§2.7 AI Retrieval and GraphRAG](../features/graphrag.md)** — vector embeddings and RAG retrieval pipelines.
 - **[§2.8 APIs and Integration](../features/apis-and-integration.md)** — serve exported data via the HTTP endpoint.
 - **[§2.3 Querying with SPARQL](../features/querying-with-sparql.md)** — CONSTRUCT and DESCRIBE queries for selective export.
+
+## Further reading
+
+- [Blog: JSON-LD Framing for Nested JSON](../../blog/json-ld-framing-nested-json.md) — shaping graph data into API-ready JSON documents

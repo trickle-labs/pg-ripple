@@ -135,3 +135,9 @@ None of them requires configuration. They are part of the engine's normal operat
 - [Lattice Datalog](lattice-datalog.md) — when your reasoning needs to propagate *values*, not just facts.
 - [OWL 2 Profiles](owl-profiles.md) — the specific built-in rule sets.
 - [SPARQL Query Debugger](../user-guide/explain-sparql.md) — inspect which join strategy the planner chose.
+
+## Further reading
+
+- [Blog: Leapfrog Triejoin](../../blog/leapfrog-triejoin.md) — how worst-case optimal joins accelerate cyclic patterns
+- [Blog: Well-Founded Semantics](../../blog/well-founded-semantics.md) — three-valued logic for cyclic rules
+- [Blog: Magic Sets for Goal-Directed Inference](../../blog/magic-sets-goal-directed.md) — demand-driven evaluation

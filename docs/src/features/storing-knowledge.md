@@ -491,3 +491,8 @@ insert returns the existing SID. Use `deduplicate_all()` to clean up historical 
 - **[§2.2 Loading Data](../features/loading-data.md)** — bulk loading in all RDF formats with performance tuning.
 - **[§2.3 Querying with SPARQL](../features/querying-with-sparql.md)** — query the triples you stored.
 - **[§2.4 Validating Data Quality](../features/validating-data-quality.md)** — enforce schema constraints with SHACL.
+
+## Further reading
+
+- [Blog: RDF-star — Statements About Statements](../../blog/rdf-star-statements-about-statements.md) — edge properties and provenance on triples
+- [Blog: Vertical Partitioning Explained](../../blog/vertical-partitioning-explained.md) — why pg_ripple stores one table per predicate

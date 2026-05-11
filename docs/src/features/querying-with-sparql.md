@@ -746,3 +746,9 @@ graph modifications. Use `delete_triple()` for programmatic single-triple deleti
 - **[§2.4 Validating Data Quality](../features/validating-data-quality.md)** — enforce constraints on your data with SHACL.
 - **[§2.5 Reasoning and Inference](../features/reasoning-and-inference.md)** — derive new facts with Datalog rules.
 - **[§2.8 APIs and Integration](../features/apis-and-integration.md)** — access SPARQL from application code via the HTTP endpoint.
+
+## Further reading
+
+- [Blog: SPARQL-to-SQL Translation](../../blog/sparql-to-sql-translation.md) — how pg_ripple compiles SPARQL into optimized PostgreSQL SQL
+- [Blog: Property Paths and Recursive CTEs](../../blog/property-paths-recursive-ctes.md) — the implementation of `*` and `+` path operators
+- [Blog: Explain SPARQL Query Plans](../../blog/explain-sparql-query-plans.md) — understanding the SPARQL query debugger

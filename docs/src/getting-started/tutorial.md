@@ -16,6 +16,12 @@ pg_ripple is installed and you are connected to a PostgreSQL database with the e
 
 ## Segment 1: Load and Explore (10 min)
 
+```admonish tip title="What you'll learn"
+- How to register prefixes and load Turtle data into pg_ripple
+- How to write SPARQL queries with filters, aggregates, and graph traversals
+- How data is organized as triples (subject–predicate–object)
+```
+
 ### Register prefixes
 
 ```sql
@@ -127,6 +133,12 @@ SELECT * FROM pg_ripple.sparql('
 
 ## Segment 2: Validate (10 min)
 
+```admonish tip title="What you'll learn"
+- How to define data quality rules using SHACL shapes
+- How to validate your knowledge graph and catch constraint violations
+- How SHACL shapes act like CHECK constraints for graph data
+```
+
 SHACL (Shapes Constraint Language) lets you define data quality rules. You will create a shape that requires every `ScholarlyArticle` to have a title and at least one creator.
 
 ### Load a SHACL shape
@@ -180,6 +192,12 @@ The report now shows a violation: the article has no title and no creator.
 
 ## Segment 3: Reason (10 min)
 
+```admonish tip title="What you'll learn"
+- How to write Datalog rules that derive new facts from existing data
+- How transitive inference works (if A connects to B and B connects to C, then A connects to C)
+- How inference compares to SQL materialized views
+```
+
 Datalog rules let you derive new facts. You will write a rule that infers transitive co-authorship: if Alice co-authored a paper with Bob, and Bob co-authored with Carol, then Alice and Carol are indirectly connected.
 
 ### Write and load a rule
@@ -220,6 +238,12 @@ Alice is now connected to Bob (direct co-author on paper1), Carol (through Bob o
 ---
 
 ## Segment 4: Export (10 min)
+
+```admonish tip title="What you'll learn"
+- How to export your knowledge graph in Turtle and JSON-LD formats
+- How SPARQL CONSTRUCT queries shape output for API consumers
+- How JSON-LD framing produces nested, API-ready JSON documents
+```
 
 Export your knowledge graph as JSON-LD, shaped for an API using a frame template.
 

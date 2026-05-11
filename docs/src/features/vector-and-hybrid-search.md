@@ -180,3 +180,7 @@ Every vector function in pg_ripple checks for pgvector at call time. If pgvector
 - [Knowledge-Graph Embeddings](knowledge-graph-embeddings.md) — graph-structural embeddings, complementary to text embeddings.
 - [Vector Index Trade-offs](../reference/vector-index-tradeoffs.md)
 - [Embedding function reference](../reference/embedding-functions.md)
+
+## Further reading
+
+- [Blog: Vector + SPARQL Hybrid Search](../../blog/vector-sparql-hybrid-search.md) — combining graph traversal with similarity search

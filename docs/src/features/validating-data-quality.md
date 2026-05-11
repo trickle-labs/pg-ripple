@@ -503,3 +503,7 @@ FROM jsonb_array_elements(
 - **[§2.5 Reasoning and Inference](../features/reasoning-and-inference.md)** — derive new facts from rules; SHACL shapes interact with inference.
 - **[§2.6 Exporting and Sharing](../features/exporting-and-sharing.md)** — SHACL quality enforcement for GraphRAG exports.
 - **[§2.7 AI Retrieval and GraphRAG](../features/graphrag.md)** — embedding completeness shapes.
+
+## Further reading
+
+- [Blog: SHACL Data Quality](../../blog/shacl-data-quality.md) — a deep dive into how SHACL shapes protect your data

@@ -228,3 +228,7 @@ Pass `''` for the default graph or a named-graph IRI to scope the export.
 - [Cookbook: Chatbot grounded in a knowledge graph](../cookbook/grounded-chatbot.md)
 - [GraphRAG function reference](../reference/graphrag-functions.md)
 - [GraphRAG ontology reference](../reference/graphrag-ontology.md)
+
+## Further reading
+
+- [Blog: GraphRAG Knowledge Export](../../blog/graphrag-knowledge-export.md) — building a Microsoft GraphRAG pipeline with pg_ripple

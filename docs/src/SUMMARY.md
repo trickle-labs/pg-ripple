@@ -91,6 +91,7 @@
 # Operations
 
 - [Architecture Overview](operations/architecture.md)
+- [Production Readiness Checklist](operations/production-checklist.md)
 - [Deployment Models](operations/deployment.md)
 - [Docker (Batteries-Included)](operations/docker.md)
 - [Kubernetes & Helm](operations/kubernetes.md)

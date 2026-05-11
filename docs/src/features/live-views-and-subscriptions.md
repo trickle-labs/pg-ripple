@@ -161,3 +161,8 @@ The two compose: build a view of *what is currently true*, and a subscription of
 
 - [APIs and Integration](apis-and-integration.md) — `pg_ripple_http` and WebSocket access.
 - [Cookbook: CDC → Kafka via JSON-LD outbox](../cookbook/cdc-to-kafka.md)
+
+## Further reading
+
+- [Blog: CONSTRUCT Views — Live Transformations](../../blog/construct-views-live-transformations.md) — incremental materialization of SPARQL views
+- [Blog: IVM with pg-trickle Integration](../../blog/ivm-pg-trickle-integration.md) — how pg_ripple keeps views up to date

@@ -159,3 +159,7 @@ TO '/tmp/acme.nq';
 - [Operations → Security](../operations/security.md) — the deeper PostgreSQL RLS background.
 - [Temporal & Provenance](temporal-and-provenance.md) — audit-log capture for tenant attribution.
 - [Cookbook: Audit trail with PROV-O and temporal queries](../cookbook/audit-trail.md)
+
+## Further reading
+
+- [Blog: Multi-Tenant Knowledge Graphs](../../blog/multi-tenant-knowledge-graphs.md) — isolation, quotas, and RLS patterns for SaaS deployments
