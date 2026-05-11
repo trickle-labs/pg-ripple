@@ -61,9 +61,7 @@ pub async fn list_rule_libraries(
             // Table may not exist on older versions — return empty array.
             let msg = e.to_string();
             if msg.contains("does not exist") {
-                state
-                    .metrics
-                    .record_datalog_query(start.elapsed());
+                state.metrics.record_datalog_query(start.elapsed());
                 return json_response(StatusCode::OK, serde_json::json!([]));
             }
             return redacted_error("database_error", &msg, StatusCode::INTERNAL_SERVER_ERROR);

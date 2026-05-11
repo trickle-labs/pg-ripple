@@ -272,8 +272,9 @@ fn derive_name(meta: &LibraryMeta) -> String {
 ///
 /// Returns `Err` with a PT0452 message when blocked.
 fn check_ssrf(url: &str) -> Result<(), String> {
-    crate::sparql::federation::policy::check_endpoint_policy(url)
-        .map_err(|e| format!("install_rule_library: URL '{url}' is blocked by the SSRF allowlist (PT0452): {e}"))
+    crate::sparql::federation::policy::check_endpoint_policy(url).map_err(|e| {
+        format!("install_rule_library: URL '{url}' is blocked by the SSRF allowlist (PT0452): {e}")
+    })
 }
 
 // ─── Source fetching ──────────────────────────────────────────────────────────
@@ -303,9 +304,8 @@ fn fetch_source(source: &str) -> Result<String, String> {
             })
     } else {
         // Local file path.
-        std::fs::read_to_string(source).map_err(|e| {
-            format!("install_rule_library: could not read file '{source}': {e}")
-        })
+        std::fs::read_to_string(source)
+            .map_err(|e| format!("install_rule_library: could not read file '{source}': {e}"))
     }
 }
 
@@ -479,8 +479,7 @@ fn load_shapes_from_turtle(turtle: &str, _lib_name: &str) -> Vec<String> {
         .collect::<Vec<String>>()
     });
 
-    let before_set: std::collections::HashSet<&str> =
-        before.iter().map(|s| s.as_str()).collect();
+    let before_set: std::collections::HashSet<&str> = before.iter().map(|s| s.as_str()).collect();
 
     after
         .into_iter()
@@ -508,10 +507,7 @@ mod pg_ripple {
     /// - PT0455: non-permissive license without explicit acceptance
     /// - PT0459: name conflicts with a built-in bundle
     #[pg_extern]
-    pub fn install_rule_library(
-        source: &str,
-        accept_license: default!(bool, "false"),
-    ) -> String {
+    pub fn install_rule_library(source: &str, accept_license: default!(bool, "false")) -> String {
         super::ensure_catalog();
         let mut visiting: Vec<String> = Vec::new();
         match super::install_library_inner(source, accept_license, &mut visiting) {
@@ -596,9 +592,7 @@ mod pg_ripple {
         .unwrap_or(false);
 
         if !exists {
-            pgrx::error!(
-                "uninstall_rule_library: library '{name}' is not installed"
-            );
+            pgrx::error!("uninstall_rule_library: library '{name}' is not installed");
         }
 
         // Check that nothing depends on this library (PT0456).
