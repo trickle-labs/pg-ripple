@@ -306,7 +306,7 @@ fn propagate_downstream(sid: i64, max_depth: i32) {
 
 /// Main `update_confidence` implementation.
 ///
-/// Called from the `#[pg_extern]` wrapper in `mod.rs`.
+/// Called from the `pg_extern` wrapper in `mod.rs`.
 ///
 /// Returns `(prior, posterior)`.
 pub(crate) fn update_confidence_impl(
