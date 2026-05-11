@@ -61,7 +61,7 @@ SELECT pg_ripple.insert_triple_temporal(
     'http://example.org/status',
     'http://example.org/Inactive',
     '2025-06-01 00:00:00+00'::timestamptz
-);
+) IS NOT NULL AS tmp03_second_insert_ok;
 
 -- The original 'Active' row should now have valid_to set.
 SELECT EXISTS(
@@ -98,7 +98,7 @@ SELECT pg_ripple.insert_triple_temporal(
     'http://example.org/score',
     '"85"^^<http://www.w3.org/2001/XMLSchema#integer>',
     '2024-03-01 00:00:00+00'::timestamptz
-);
+) IS NOT NULL AS tmp04_first_insert_ok;
 
 -- Insert second value — versioned model should NOT modify the first row.
 SELECT pg_ripple.insert_triple_temporal(
@@ -106,7 +106,7 @@ SELECT pg_ripple.insert_triple_temporal(
     'http://example.org/score',
     '"92"^^<http://www.w3.org/2001/XMLSchema#integer>',
     '2025-03-01 00:00:00+00'::timestamptz
-);
+) IS NOT NULL AS tmp04_second_insert_ok;
 
 -- First row should remain open (valid_to IS NULL) in versioned mode.
 SELECT COUNT(*) = 2 AS tmp04_versioned_keeps_both_rows
@@ -217,10 +217,14 @@ SELECT pg_ripple.insert_triple(
     '<http://example.org/X>',
     '<http://example.org/name>',
     '"TestNode"'
-);
+) IS NOT NULL AS tmp_atemporal_vp_insert_ok;
 
-SELECT pg_ripple.sparql('SELECT ?name WHERE { <http://example.org/X> <http://example.org/name> ?name }')
-    LIKE '%TestNode%' AS tmp_atemporal_vp_unaffected;
+SELECT EXISTS(
+    SELECT 1 FROM pg_ripple.sparql(
+        'SELECT ?name WHERE { <http://example.org/X> <http://example.org/name> ?name }'
+    )
+    WHERE result::text LIKE '%TestNode%'
+) AS tmp_atemporal_vp_unaffected;
 
 -- ─── Cleanup ─────────────────────────────────────────────────────────────────
 

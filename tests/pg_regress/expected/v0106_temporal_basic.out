@@ -72,10 +72,10 @@ SELECT pg_ripple.insert_triple_temporal(
     'http://example.org/status',
     'http://example.org/Inactive',
     '2025-06-01 00:00:00+00'::timestamptz
-);
- insert_triple_temporal 
+) IS NOT NULL AS tmp03_second_insert_ok;
+ tmp03_second_insert_ok 
 ------------------------
-                      1
+ t
 (1 row)
 
 -- The original 'Active' row should now have valid_to set.
@@ -124,10 +124,10 @@ SELECT pg_ripple.insert_triple_temporal(
     'http://example.org/score',
     '"85"^^<http://www.w3.org/2001/XMLSchema#integer>',
     '2024-03-01 00:00:00+00'::timestamptz
-);
- insert_triple_temporal 
-------------------------
-                      1
+) IS NOT NULL AS tmp04_first_insert_ok;
+ tmp04_first_insert_ok 
+-----------------------
+ t
 (1 row)
 
 -- Insert second value — versioned model should NOT modify the first row.
@@ -136,10 +136,10 @@ SELECT pg_ripple.insert_triple_temporal(
     'http://example.org/score',
     '"92"^^<http://www.w3.org/2001/XMLSchema#integer>',
     '2025-03-01 00:00:00+00'::timestamptz
-);
- insert_triple_temporal 
+) IS NOT NULL AS tmp04_second_insert_ok;
+ tmp04_second_insert_ok 
 ------------------------
-                      1
+ t
 (1 row)
 
 -- First row should remain open (valid_to IS NULL) in versioned mode.
@@ -169,8 +169,8 @@ END;
 $$ LANGUAGE plpgsql;
 DO
 SELECT 'PT0431 raised' AS tmp05_pt0431_raised;
-  tmp05_pt0431_raised  
------------------------
+ tmp05_pt0431_raised 
+---------------------
  PT0431 raised
 (1 row)
 
@@ -196,8 +196,8 @@ END;
 $$ LANGUAGE plpgsql;
 DO
 SELECT 'PT0432 raised' AS tmp06_pt0432_raised;
-  tmp06_pt0432_raised  
------------------------
+ tmp06_pt0432_raised 
+---------------------
  PT0432 raised
 (1 row)
 
@@ -219,8 +219,8 @@ END;
 $$ LANGUAGE plpgsql;
 DO
 SELECT 'PT0430 raised' AS tmp07_pt0430_raised;
-  tmp07_pt0430_raised  
------------------------
+ tmp07_pt0430_raised 
+---------------------
  PT0430 raised
 (1 row)
 
@@ -276,16 +276,20 @@ SELECT pg_ripple.insert_triple(
     '<http://example.org/X>',
     '<http://example.org/name>',
     '"TestNode"'
-);
- insert_triple 
----------------
- 
+) IS NOT NULL AS tmp_atemporal_vp_insert_ok;
+ tmp_atemporal_vp_insert_ok 
+----------------------------
+ t
 (1 row)
 
-SELECT pg_ripple.sparql('SELECT ?name WHERE { <http://example.org/X> <http://example.org/name> ?name }')
-    LIKE '%TestNode%' AS tmp_atemporal_vp_unaffected;
+SELECT EXISTS(
+    SELECT 1 FROM pg_ripple.sparql(
+        'SELECT ?name WHERE { <http://example.org/X> <http://example.org/name> ?name }'
+    )
+    WHERE result::text LIKE '%TestNode%'
+) AS tmp_atemporal_vp_unaffected;
  tmp_atemporal_vp_unaffected 
-------------------------------
+-----------------------------
  t
 (1 row)
 
