@@ -45,10 +45,10 @@ SELECT EXISTS(
     SELECT 1 FROM _pg_ripple.temporal_facts tf
     JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
     JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
-    JOIN _pg_ripple.dictionary do ON do.id = tf.o
+    JOIN _pg_ripple.dictionary dobj ON dobj.id = tf.o
     WHERE ds.term = 'http://example.org/Alice'
       AND dp.term = 'http://example.org/status'
-      AND do.term = 'http://example.org/Active'
+      AND dobj.term = 'http://example.org/Active'
       AND tf.valid_from = '2024-01-01 00:00:00+00'::timestamptz
       AND tf.valid_to IS NULL
 ) AS tmp02_temporal_fact_inserted;
@@ -68,10 +68,10 @@ SELECT EXISTS(
     SELECT 1 FROM _pg_ripple.temporal_facts tf
     JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
     JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
-    JOIN _pg_ripple.dictionary do ON do.id = tf.o
+    JOIN _pg_ripple.dictionary dobj ON dobj.id = tf.o
     WHERE ds.term = 'http://example.org/Alice'
       AND dp.term = 'http://example.org/status'
-      AND do.term = 'http://example.org/Active'
+      AND dobj.term = 'http://example.org/Active'
       AND tf.valid_to IS NOT NULL
 ) AS tmp03_snapshot_closes_previous;
 
@@ -80,10 +80,10 @@ SELECT EXISTS(
     SELECT 1 FROM _pg_ripple.temporal_facts tf
     JOIN _pg_ripple.dictionary ds ON ds.id = tf.s
     JOIN _pg_ripple.dictionary dp ON dp.id = tf.p
-    JOIN _pg_ripple.dictionary do ON do.id = tf.o
+    JOIN _pg_ripple.dictionary dobj ON dobj.id = tf.o
     WHERE ds.term = 'http://example.org/Alice'
       AND dp.term = 'http://example.org/status'
-      AND do.term = 'http://example.org/Inactive'
+      AND dobj.term = 'http://example.org/Inactive'
       AND tf.valid_to IS NULL
 ) AS tmp03_new_row_open;
 

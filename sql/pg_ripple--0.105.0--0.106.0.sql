@@ -20,9 +20,10 @@
 -- ─── temporal_predicates registry ────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS _pg_ripple.temporal_predicates (
-    predicate_id BIGINT PRIMARY KEY,
-    data_model   TEXT NOT NULL
-                 CHECK (data_model IN ('snapshot', 'versioned'))
+    predicate_id  BIGINT NOT NULL PRIMARY KEY,
+    data_model    TEXT   NOT NULL
+                  CHECK (data_model IN ('snapshot', 'versioned')),
+    registered_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ─── temporal_facts table ─────────────────────────────────────────────────────
