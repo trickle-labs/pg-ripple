@@ -10,6 +10,25 @@ protection, and parallel remote execution. Local graphs can be mapped to
 `SERVICE` endpoints so the planner transparently rewrites remote-looking queries
 to local scans.
 
+```mermaid
+flowchart TD
+    Q[SPARQL query\nwith SERVICE clause] --> P[Cost-based planner\nVoID statistics]
+    P --> L[Local VP tables\nPostgreSQL scan]
+    P --> R1[Remote endpoint A\nHTTP/SPARQL]
+    P --> R2[Remote endpoint B\nHTTP/SPARQL]
+    L --> J[Result join\n& DISTINCT]
+    R1 --> C1[Cache\n_pg_ripple.federation_cache]
+    R2 --> C2[Cache\n_pg_ripple.federation_cache]
+    C1 --> J
+    C2 --> J
+    J --> Out[Final result set]
+
+    CB1[Circuit breaker] -. guards .-> R1
+    CB2[Circuit breaker] -. guards .-> R2
+```
+
+
+
 ## Status
 
 ```sql

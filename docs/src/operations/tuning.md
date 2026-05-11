@@ -98,3 +98,89 @@ PostgreSQL's `shared_buffers`.
 
 Set `pg_ripple.max_path_depth` going forward. The old name is still accepted
 but emits a deprecation notice in the server log.
+
+---
+
+## Ready-to-Use Configuration Profiles
+
+Copy-paste these blocks into `postgresql.conf` (then `SELECT pg_reload_conf()`).
+
+### Small Instance Profile (≤8 cores, ≤32 GB RAM)
+
+Suitable for development, staging, or a small-scale production deployment:
+
+```ini
+# pg_ripple — small instance profile
+pg_ripple.dictionary_cache_size     = 65536
+pg_ripple.cache_budget_mb           = 64
+pg_ripple.merge_threshold           = 10000
+pg_ripple.merge_workers             = 1
+pg_ripple.merge_interval_secs       = 60
+pg_ripple.datalog_parallel_workers  = 2
+pg_ripple.sparql_max_rows           = 50000
+pg_ripple.export_max_rows           = 100000
+pg_ripple.plan_cache_capacity       = 256
+pg_ripple.federation_timeout        = 30
+pg_ripple.federation_parallel_max   = 2
+```
+
+### Large Instance Profile (≥32 cores, ≥128 GB RAM)
+
+Suitable for large-scale SPARQL analytics, high-throughput ingestion, or intensive Datalog reasoning:
+
+```ini
+# pg_ripple — large instance profile
+pg_ripple.dictionary_cache_size     = 1000000
+pg_ripple.cache_budget_mb           = 512
+pg_ripple.merge_threshold           = 50000
+pg_ripple.merge_workers             = 4
+pg_ripple.merge_interval_secs       = 120
+pg_ripple.datalog_parallel_workers  = 8
+pg_ripple.sparql_max_rows           = 500000
+pg_ripple.export_max_rows           = 1000000
+pg_ripple.plan_cache_capacity       = 2048
+pg_ripple.federation_timeout        = 60
+pg_ripple.federation_parallel_max   = 8
+pg_ripple.pagerank_max_iterations   = 200
+pg_ripple.topn_pushdown             = on
+```
+
+### High-Security / Multi-Tenant Profile
+
+Applies strict resource limits for shared or multi-tenant deployments:
+
+```ini
+# pg_ripple — high-security profile
+pg_ripple.sparql_max_rows           = 10000
+pg_ripple.sparql_overflow_action    = 'error'
+pg_ripple.sparql_max_algebra_depth  = 128
+pg_ripple.sparql_max_triple_patterns = 1024
+pg_ripple.export_max_rows           = 10000
+pg_ripple.federation_endpoint_policy = 'allowlist'
+pg_ripple.federation_allow_unregistered_service_endpoints = off
+pg_ripple.arrow_unsigned_tickets_allowed = off
+pg_ripple.strict_sparql_filters     = on
+pg_ripple.datalog_max_derived       = 1000000
+pg_ripple.wfs_max_iterations        = 50
+pg_ripple.rls_bypass                = off
+```
+
+### Datalog Reasoning Profile
+
+Optimized for intensive OWL RL / Datalog materialization workloads:
+
+```ini
+# pg_ripple — datalog reasoning profile
+pg_ripple.inference_mode            = 'materialized'
+pg_ripple.magic_sets                = on
+pg_ripple.datalog_cost_reorder      = on
+pg_ripple.dred_enabled              = on
+pg_ripple.datalog_parallel_workers  = 8
+pg_ripple.datalog_parallel_threshold = 5000
+pg_ripple.owl_profile               = 'RL'
+pg_ripple.tabling                   = on
+pg_ripple.tabling_ttl               = 600
+pg_ripple.rule_plan_cache           = on
+pg_ripple.rule_plan_cache_size      = 128
+pg_ripple.wfs_max_iterations        = 200
+```

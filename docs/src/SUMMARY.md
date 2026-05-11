@@ -78,6 +78,8 @@
 - [SHACL + Datalog Data Quality Pipeline](cookbook/shacl-datalog-quality.md)
 - [SKOS Thesaurus Management](cookbook/skos-thesaurus.md)
 - [Common Vocabulary Bundles: DCTERMS, Schema.org, FOAF](cookbook/common-vocabularies.md)
+- [Migrate from Neo4j](cookbook/migrate-from-neo4j.md)
+- [Build a RAG Pipeline from Scratch](cookbook/rag-pipeline-from-scratch.md)
 
 ---
 
@@ -163,6 +165,7 @@
 - [GeoSPARQL Functions](reference/geosparql.md)
 - [Lattice-Based Datalog](reference/lattice-datalog.md)
 - [HTTP API Reference](reference/http-api.md)
+- [Limits and Quotas](reference/limits.md)
 - [Approximate Aggregates (HLL)](reference/approximate-aggregates.md)
 - [Arrow Flight Reference](reference/arrow-flight.md)
 - [Citus SERVICE Shard Pruning](reference/citus-service-pruning.md)

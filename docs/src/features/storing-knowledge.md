@@ -95,6 +95,37 @@ Every IRI, blank node, and literal is mapped to a `BIGINT` (i64) via XXH3-128 ha
 before storage. VP tables contain only integers — this makes joins fast and storage
 compact. You never need to think about encoding; pg_ripple handles it transparently.
 
+### HTAP Storage Architecture
+
+pg_ripple uses a Hybrid Transactional/Analytical Processing (HTAP) split to serve fast
+writes and analytical reads concurrently:
+
+```mermaid
+flowchart LR
+    subgraph Write Path
+        A[INSERT triple] --> B[vp_{id}_delta\nheap + B-tree]
+    end
+    subgraph Read Path
+        C[SPARQL query] --> D["(main EXCEPT tombstones)\nUNION ALL delta"]
+    end
+    subgraph Background Merge Worker
+        E[vp_{id}_main\nBRIN index] --> F[Fresh vp_{id}_main]
+        B --> F
+        G[vp_{id}_tombstones] --> F
+    end
+    B --> D
+    E --> D
+    G --> D
+    F --> E
+```
+
+- **Delta table** (`vp_{id}_delta`): receives all new writes via heap + B-tree.
+- **Main table** (`vp_{id}_main`): historical BRIN-indexed partition, read-optimized.
+- **Tombstones** (`vp_{id}_tombstones`): deleted main-resident triples are recorded here.
+- **Merge worker**: periodically combines main + delta (minus tombstones) into a new main, then drops the old delta.
+
+Reads always see the full consistent view: `(main EXCEPT tombstones) UNION ALL delta`.
+
 ---
 
 ## Worked Examples
