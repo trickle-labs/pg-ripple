@@ -26,7 +26,7 @@ SELECT current_setting('pg_ripple.record_sameas_anomalies') = 'on'
 SELECT current_setting('pg_ripple.sameas_anomaly_log_retention', true) IS DISTINCT FROM 'impossible_value'
     AS anomaly02_retention_guc_accessible;
  anomaly02_retention_guc_accessible 
--------------------------------------
+------------------------------------
  t
 (1 row)
 
@@ -93,6 +93,7 @@ SELECT pg_ripple.insert_triple(
 
 -- Run OWL RL inference to trigger union-find canonicalization (and thus PT550).
 SELECT pg_ripple.infer('owl-rl') >= 0 AS anomaly05_infer_ran;
+WARNING:  PT550: owl:sameAs equivalence class of 3 members exceeds pg_ripple.sameas_max_cluster_size (2); canonicalization skipped — check for data quality issues
  anomaly05_infer_ran 
 ---------------------
  t

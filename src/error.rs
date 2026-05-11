@@ -292,9 +292,7 @@ pub enum ShAFError {
 #[derive(Debug, Error)]
 pub enum NsrlEvaluationError {
     /// PT0461 — `evaluate_resolution()` gold graph is empty or does not exist.
-    #[error(
-        "evaluate_resolution: gold graph '{graph}' is empty or does not exist (PT0461)"
-    )]
+    #[error("evaluate_resolution: gold graph '{graph}' is empty or does not exist (PT0461)")]
     GoldGraphEmpty { graph: String },
 
     /// PT0462 — `explain_rule()` rule not found.

@@ -74,14 +74,11 @@ mod pg_ripple {
                 None,
                 &[pgrx::datum::DatumWithOid::from(rule_id)],
             )?;
-            let row_opt = result
-                .into_iter()
-                .next()
-                .map(|row| {
-                    let rule_text = row.get::<String>(1).ok().flatten();
-                    let rule_set = row.get::<String>(2).ok().flatten();
-                    (rule_text, rule_set)
-                });
+            let row_opt = result.into_iter().next().map(|row| {
+                let rule_text = row.get::<String>(1).ok().flatten();
+                let rule_set = row.get::<String>(2).ok().flatten();
+                (rule_text, rule_set)
+            });
             Ok::<Option<(Option<String>, Option<String>)>, pgrx::spi::Error>(row_opt)
         })
         .unwrap_or(None);
@@ -89,10 +86,7 @@ mod pg_ripple {
         let (rule_text, rule_set_name) = match rule_row {
             Some((Some(rt), rs)) => (rt, rs.unwrap_or_else(|| "unnamed".to_owned())),
             _ => {
-                pgrx::error!(
-                    "explain_rule: rule {} not found (PT0462)",
-                    rule_id
-                );
+                pgrx::error!("explain_rule: rule {} not found (PT0462)", rule_id);
             }
         };
 

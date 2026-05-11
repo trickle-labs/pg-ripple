@@ -77,9 +77,7 @@ mod pg_ripple {
             )",
         )
         .unwrap_or_else(|e| {
-            pgrx::warning!(
-                "enable_er_monitoring: could not create er_resolution_dashboard: {e}"
-            )
+            pgrx::warning!("enable_er_monitoring: could not create er_resolution_dashboard: {e}")
         });
 
         Spi::run(
@@ -108,9 +106,7 @@ mod pg_ripple {
              VALUES (0, 0, $1, 0, 0, now())",
             &[pgrx::datum::DatumWithOid::from(total_links)],
         )
-        .unwrap_or_else(|e| {
-            pgrx::warning!("enable_er_monitoring: could not seed dashboard: {e}")
-        });
+        .unwrap_or_else(|e| pgrx::warning!("enable_er_monitoring: could not seed dashboard: {e}"));
     }
 
     // ── disable_er_monitoring() ───────────────────────────────────────────────

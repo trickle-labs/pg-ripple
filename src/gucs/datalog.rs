@@ -251,8 +251,7 @@ pub static STRING_SIMILARITY_EXTENSIONS_OK: pgrx::GucSetting<bool> =
 /// GUC: when `true`, any `owl:sameAs` assertion that would exceed
 /// `pg_ripple.sameas_max_cluster_size` is logged to `_pg_ripple.sameas_anomaly_log`
 /// before PT550 is raised (v0.110.0 ANOMALY-01).  Default: `true`.
-pub static RECORD_SAMEAS_ANOMALIES: pgrx::GucSetting<bool> =
-    pgrx::GucSetting::<bool>::new(true);
+pub static RECORD_SAMEAS_ANOMALIES: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(true);
 
 /// GUC: retention period for `_pg_ripple.sameas_anomaly_log` rows (v0.110.0 ANOMALY-02).
 /// Rows older than this are pruned by a background worker pass.

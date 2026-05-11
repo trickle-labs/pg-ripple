@@ -124,6 +124,7 @@ FROM (
 
 -- ERMON-10: evaluate_resolution() raises PT0461 for empty/nonexistent gold graph
 
+SET client_min_messages = notice;
 DO $$
 BEGIN
     PERFORM pg_ripple.evaluate_resolution('http://example.org/nonExistentGoldGraph');

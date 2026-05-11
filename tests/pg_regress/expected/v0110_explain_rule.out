@@ -25,6 +25,7 @@ SELECT current_setting('pg_ripple.rule_explanation_cache_ttl', true) IS DISTINCT
 (1 row)
 
 -- EXPLAIN-02: explain_rule() raises PT0462 for non-existent rule ID
+SET client_min_messages = notice;
 DO $$
 BEGIN
     PERFORM pg_ripple.explain_rule(999999999::bigint);
@@ -38,14 +39,13 @@ NOTICE:  EXPLAIN-02 ok: caught error for nonexistent rule
 -- EXPLAIN-03: explain_rule() returns non-empty text for a real rule
 -- First load a rule set so we have a rule in the catalog.
 SELECT pg_ripple.load_rules(
-    'v0110_test_rules',
-    'parent(?x, ?z) :- parent(?x, ?y) . parent(?y, ?z) .'
-);
+    '?x <https://v0110.test/parent> ?z :- ?x <https://v0110.test/parent> ?y , ?y <https://v0110.test/parent> ?z .',
+    'v0110_test_rules'
+) AS load_rules;
  load_rules 
 ------------
           1
 (1 row)
-
 SELECT
     length(expl) > 0  AS explain03_non_empty,
     expl IS NOT NULL  AS explain03_not_null

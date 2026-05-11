@@ -231,20 +231,31 @@ mod pg_ripple {
     ) -> pgrx::JsonB {
         let owl_sameas = "http://www.w3.org/2002/07/owl#sameAs";
 
-        // ── Count gold pairs ──────────────────────────────────────────────────
-        let gold_count: i64 = Spi::get_one_with_args::<i64>(
-            "SELECT COUNT(*)::bigint
-             FROM _pg_ripple.vp_rare vr
-             JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
-             WHERE dp.value = $1
-               AND vr.g = pg_ripple.encode_term($2, 0::smallint)",
-            &[
-                pgrx::datum::DatumWithOid::from(owl_sameas),
-                pgrx::datum::DatumWithOid::from(gold_graph),
-            ],
+        // ── Resolve graph IRI to dictionary ID ───────────────────────────────
+        let gold_graph_id: Option<i64> = Spi::get_one_with_args::<i64>(
+            "SELECT id FROM _pg_ripple.dictionary WHERE value = $1 LIMIT 1",
+            &[pgrx::datum::DatumWithOid::from(gold_graph)],
         )
-        .unwrap_or(None)
-        .unwrap_or(0);
+        .unwrap_or(None);
+
+        // ── Count gold pairs ──────────────────────────────────────────────────
+        let gold_count: i64 = if let Some(gid) = gold_graph_id {
+            Spi::get_one_with_args::<i64>(
+                "SELECT COUNT(*)::bigint
+                 FROM _pg_ripple.vp_rare vr
+                 JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
+                 WHERE dp.value = $1
+                   AND vr.g = $2",
+                &[
+                    pgrx::datum::DatumWithOid::from(owl_sameas),
+                    pgrx::datum::DatumWithOid::from(gid),
+                ],
+            )
+            .unwrap_or(None)
+            .unwrap_or(0)
+        } else {
+            0
+        };
 
         if gold_count == 0 {
             pgrx::error!(
@@ -270,49 +281,50 @@ mod pg_ripple {
         // If result_graph provided, count owl:sameAs in that graph; otherwise
         // count all owl:sameAs across all non-gold graphs.
         let predicted_count: i64 = if let Some(ref rg) = result_graph {
-            Spi::get_one_with_args::<i64>(
-                "SELECT COUNT(*)::bigint
-                 FROM _pg_ripple.vp_rare vr
-                 JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
-                 WHERE dp.value = $1
-                   AND vr.g = pg_ripple.encode_term($2, 0::smallint)",
-                &[
-                    pgrx::datum::DatumWithOid::from(owl_sameas),
-                    pgrx::datum::DatumWithOid::from(rg.as_str()),
-                ],
+            let rg_id: Option<i64> = Spi::get_one_with_args::<i64>(
+                "SELECT id FROM _pg_ripple.dictionary WHERE value = $1 LIMIT 1",
+                &[pgrx::datum::DatumWithOid::from(rg.as_str())],
             )
-            .unwrap_or(None)
-            .unwrap_or(0)
+            .unwrap_or(None);
+            if let Some(rid) = rg_id {
+                Spi::get_one_with_args::<i64>(
+                    "SELECT COUNT(*)::bigint
+                     FROM _pg_ripple.vp_rare vr
+                     JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
+                     WHERE dp.value = $1
+                       AND vr.g = $2",
+                    &[
+                        pgrx::datum::DatumWithOid::from(owl_sameas),
+                        pgrx::datum::DatumWithOid::from(rid),
+                    ],
+                )
+                .unwrap_or(None)
+                .unwrap_or(0)
+            } else {
+                0
+            }
         } else {
             // Count all owl:sameAs triples not in the gold graph.
-            Spi::get_one_with_args::<i64>(
-                "SELECT COUNT(*)::bigint
-                 FROM _pg_ripple.vp_rare vr
-                 JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
-                 WHERE dp.value = $1
-                   AND vr.g != pg_ripple.encode_term($2, 0::smallint)",
-                &[
-                    pgrx::datum::DatumWithOid::from(owl_sameas),
-                    pgrx::datum::DatumWithOid::from(gold_graph),
-                ],
-            )
-            .unwrap_or(None)
-            .unwrap_or(0)
+            if let Some(gid) = gold_graph_id {
+                Spi::get_one_with_args::<i64>(
+                    "SELECT COUNT(*)::bigint
+                     FROM _pg_ripple.vp_rare vr
+                     JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
+                     WHERE dp.value = $1
+                       AND vr.g != $2",
+                    &[
+                        pgrx::datum::DatumWithOid::from(owl_sameas),
+                        pgrx::datum::DatumWithOid::from(gid),
+                    ],
+                )
+                .unwrap_or(None)
+                .unwrap_or(0)
+            } else {
+                0
+            }
         };
 
         // ── Count true positives (gold ∩ predicted) ───────────────────────────
-        // Both (s,o) and (o,s) are considered matches.
-        let gold_g = format!("pg_ripple.encode_term('{}', 0::smallint)", gold_graph);
-        let pred_g = result_graph
-            .as_deref()
-            .map(|rg| format!("pg_ripple.encode_term('{}', 0::smallint)", rg))
-            .unwrap_or_else(|| {
-                format!(
-                    "ANY(SELECT DISTINCT g FROM _pg_ripple.vp_rare WHERE g != pg_ripple.encode_term('{}', 0::smallint))",
-                    gold_graph
-                )
-            });
-
         // Simple TP approximation: min(gold, predicted) for now (conservative).
         // A full cross-join on dictionary IDs would be expensive; we use the
         // known-correct formula for datasets where gold is the ground truth.
@@ -326,8 +338,6 @@ mod pg_ripple {
         };
         let fp: i64 = predicted_count - tp;
         let fn_: i64 = gold_count - tp;
-        let _ = gold_g; // used above in format! — suppress unused warning
-        let _ = pred_g;
 
         // ── Pairwise metrics ──────────────────────────────────────────────────
         let precision = if tp + fp == 0 {
@@ -365,8 +375,7 @@ mod pg_ripple {
         let f_pq = if pairs_completeness + reduction_ratio == 0.0 {
             0.0_f64
         } else {
-            2.0 * pairs_completeness * reduction_ratio
-                / (pairs_completeness + reduction_ratio)
+            2.0 * pairs_completeness * reduction_ratio / (pairs_completeness + reduction_ratio)
         };
 
         // ── B³ cluster metrics ────────────────────────────────────────────────
