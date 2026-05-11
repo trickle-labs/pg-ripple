@@ -95,6 +95,10 @@ mod rule_authoring;
 // v0.109.0 modules — NS-RL foundation: entity resolution orchestrator
 pub(crate) mod entity_resolution;
 
+// v0.110.0 modules — NS-RL evaluation harness, monitoring, rule explainability
+mod er_monitoring;
+mod rule_explain;
+
 // Re-export all GUC statics at the crate root so that `crate::SOME_GUC` paths
 // in existing code continue to work after the split.
 pub(crate) use gucs::*;

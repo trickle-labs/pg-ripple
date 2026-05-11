@@ -121,6 +121,22 @@ bench-bsbm-100m db="pg_ripple_bsbm100m": (bench-bsbm-load "30")
     psql -h /tmp -p 5432 -d {{db}} -f benchmarks/bsbm/bsbm_queries.sql 2>&1 | tee -a /tmp/pg_ripple_bsbm_100m_results.txt
     @echo "BSBM 100M results written to /tmp/pg_ripple_bsbm_100m_results.txt"
 
+# ── ER Benchmarks (v0.110.0) ──────────────────────────────────────────────────
+
+# Run both ER benchmarks: Magellan (correctness gate) + freshness latency
+[group: "bench"]
+bench-er: bench-er-magellan bench-er-freshness
+
+# Run the Magellan ER benchmark (Abt-Buy F1 >= 0.78, DBLP-ACM F1 >= 0.90)
+[group: "bench"]
+bench-er-magellan:
+    bash benchmarks/er_magellan.sh
+
+# Run the ER freshness benchmark (p95 insert-to-match latency < 500 ms)
+[group: "bench"]
+bench-er-freshness:
+    bash benchmarks/er_freshness.sh
+
 # ── Crash Recovery ────────────────────────────────────────────────────────
 
 # Run the crash-recovery test suite (nightly; requires cargo pgrx start pg18)

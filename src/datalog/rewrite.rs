@@ -173,6 +173,25 @@ pub fn compute_sameas_map() -> HashMap<i64, i64> {
                 max_seen = component_size;
             }
             if max_seen > max_cluster as usize {
+                // ── v0.110.0 ANOMALY-01: log to sameas_anomaly_log ────────────
+                if crate::RECORD_SAMEAS_ANOMALIES.get() {
+                    // Use the first pair that contributed to the oversized cluster
+                    // as the representative entity pair for forensic logging.
+                    let (e1, e2) = pairs.first().copied().unwrap_or((0, 0));
+                    let _ = pgrx::Spi::run_with_args(
+                        "INSERT INTO _pg_ripple.sameas_anomaly_log
+                             (entity1, entity2, cluster_size_before,
+                              cluster_size_after, trigger, transaction_xid)
+                         VALUES ($1, $2, 0, $3, 'PT550:sameas_max_cluster_size exceeded',
+                                 pg_current_xact_id())
+                         ON CONFLICT DO NOTHING",
+                        &[
+                            pgrx::datum::DatumWithOid::from(e1),
+                            pgrx::datum::DatumWithOid::from(e2),
+                            pgrx::datum::DatumWithOid::from(max_seen as i32),
+                        ],
+                    );
+                }
                 pgrx::warning!(
                     "PT550: owl:sameAs equivalence class of {} members exceeds \
                      pg_ripple.sameas_max_cluster_size ({}); \

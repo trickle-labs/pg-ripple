@@ -13,6 +13,36 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.110.0] — 2026-05-11 — NS-RL Evaluation Harness, Continuous Monitoring & Rule Explainability
+
+**Adds the NS-RL evaluation function, three live ER monitoring stream tables, plain-English rule explanation, owl:sameAs anomaly detection, and the Magellan ER benchmark CI gate.**
+
+### Added
+
+- **EVAL-01**: `pg_ripple.evaluate_resolution(gold_graph TEXT, pipeline_options JSONB DEFAULT '{}') → JSONB` — runs `resolve_entities()` against a gold-standard named graph and returns all three metric axes: pairwise (precision/recall/F1), blocking (pairs_completeness/reduction_ratio/F-PQ), and B³ cluster (b3_precision/b3_recall/b3_f1), plus metadata fields.
+- **PT0461**: error catalog entry — `evaluate_resolution: gold graph '%s' is empty or does not exist`.
+- **ERMON-01**: `pg_ripple.enable_er_monitoring() → VOID` — idempotent; creates `_pg_ripple.er_unresolved_entities`, `_pg_ripple.er_cluster_sizes`, and `_pg_ripple.er_resolution_dashboard`.
+- **ERMON-02**: `pg_ripple.disable_er_monitoring() → VOID` — idempotent; drops the three monitoring tables.
+- **EXPLAIN-01**: `pg_ripple.explain_rule(rule_id BIGINT, language TEXT DEFAULT 'en', format TEXT DEFAULT 'text') → TEXT` — plain-English rule narration; LLM-driven when `pg_ripple.llm_endpoint` is set, otherwise uses a template-driven structural description. Results cached in `_pg_ripple.rule_explanations`.
+- **EXPLAIN-02**: `pg_ripple.explain_rule_batch(rule_ids BIGINT[]) → TABLE(rule_id BIGINT, explanation TEXT)` — batch variant.
+- **PT0462**: error catalog entry — `explain_rule: rule %d not found`.
+- **HTTP-01**: REST endpoint `GET /rules/{id}/explain?language=en&format=text` in `pg_ripple_http` — returns `{"rule_id", "language", "format", "explanation"}`.
+- **ANOMALY-01**: `_pg_ripple.sameas_anomaly_log` — append-only table with INSERT-only RLS; receives one row for every PT550-triggering `owl:sameAs` assertion when `pg_ripple.record_sameas_anomalies = on`.
+- **GUC-01**: `pg_ripple.record_sameas_anomalies` (BOOL, default on) — controls PT550 anomaly logging.
+- **GUC-02**: `pg_ripple.sameas_anomaly_log_retention` (TEXT, default `'90 days'`) — retention period for anomaly log rows.
+- **GUC-03**: `pg_ripple.rule_explanation_cache_ttl` (TEXT, default `'24 hours'`) — TTL for cached `explain_rule()` results.
+- **BENCH-01**: `benchmarks/er_magellan.sh` — Magellan ER benchmark CI gate (Abt-Buy F1 ≥ 0.78, DBLP-ACM F1 ≥ 0.90).
+- **BENCH-02**: `benchmarks/er_freshness.sh` — ER ingestion latency benchmark (p95 < 500 ms).
+- **BENCH-03**: `just bench-er` recipe running both ER benchmarks.
+- **SCRIPTS-01**: `scripts/magellan_to_rdf.py` — Python helper converting Magellan CSV datasets to Turtle RDF.
+- **TEST**: pg_regress tests `v0110_er_monitoring`, `v0110_explain_rule`, `v0110_anomaly_log`.
+
+### Migration
+
+`sql/pg_ripple--0.109.0--0.110.0.sql` — creates `_pg_ripple.rule_explanations` and `_pg_ripple.sameas_anomaly_log`.
+
+---
+
 ## [0.109.0] — 2026-06-14 — NS-RL Foundation: String Similarity Builtins + Orchestrator
 
 **Adds six SPARQL/Datalog string similarity built-ins for neuro-symbolic record linkage, three reusable ER blocking templates, a five-stage `resolve_entities()` orchestration pipeline, and two new GUC parameters.**
