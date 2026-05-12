@@ -50,8 +50,6 @@ EXCEPTION
         RAISE NOTICE 'DPPRIV-03 ok: caught PT0472 for epsilon=0';
 END;
 $$;
-NOTICE:  DPPRIV-03 ok: caught PT0472 for epsilon=0
-DO
 -- DPPRIV-04: dp_noisy_count() raises PT0472 for epsilon > 10
 DO $$
 BEGIN
@@ -64,8 +62,6 @@ EXCEPTION
         RAISE NOTICE 'DPPRIV-04 ok: caught PT0472 for epsilon=11';
 END;
 $$;
-NOTICE:  DPPRIV-04 ok: caught PT0472 for epsilon=11
-DO
 -- DPPRIV-05: dp_noisy_count() raises PT0474 for UPDATE query
 DO $$
 BEGIN
@@ -76,8 +72,6 @@ EXCEPTION
         RAISE NOTICE 'DPPRIV-05 ok: caught PT0474 for UPDATE';
 END;
 $$;
-NOTICE:  DPPRIV-05 ok: caught PT0474 for UPDATE
-DO
 -- DPPRIV-06: dp_noisy_count() raises PT0474 for query with semicolon
 DO $$
 BEGIN
@@ -90,8 +84,6 @@ EXCEPTION
         RAISE NOTICE 'DPPRIV-06 ok: caught PT0474 for semicolon injection';
 END;
 $$;
-NOTICE:  DPPRIV-06 ok: caught PT0474 for semicolon injection
-DO
 -- DPPRIV-07: dp_noisy_count() raises PT0474 for DROP query
 DO $$
 BEGIN
@@ -102,8 +94,6 @@ EXCEPTION
         RAISE NOTICE 'DPPRIV-07 ok: caught PT0474 for DROP';
 END;
 $$;
-NOTICE:  DPPRIV-07 ok: caught PT0474 for DROP
-DO
 -- DPPRIV-08: dp_noisy_histogram() returns non-negative counts
 -- Create a small test table for the histogram
 CREATE TEMP TABLE _pprl_hist_test (cat TEXT, n BIGINT);
@@ -134,8 +124,6 @@ EXCEPTION
         RAISE NOTICE 'DPPRIV-09 ok: caught PT0472 for histogram epsilon=0';
 END;
 $$;
-NOTICE:  DPPRIV-09 ok: caught PT0472 for histogram epsilon=0
-DO
 -- DPPRIV-10: dp_noisy_histogram() raises PT0474 for non-SELECT query
 DO $$
 BEGIN
@@ -148,6 +136,4 @@ EXCEPTION
         RAISE NOTICE 'DPPRIV-10 ok: caught PT0474 for non-SELECT histogram';
 END;
 $$;
-NOTICE:  DPPRIV-10 ok: caught PT0474 for non-SELECT histogram
-DO
 DROP TABLE IF EXISTS _pprl_hist_test;

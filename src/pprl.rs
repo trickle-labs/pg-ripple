@@ -60,8 +60,7 @@ mod pg_ripple {
         use sha2::Sha256;
 
         // ── Parameter validation (PT0471) ─────────────────────────────────────
-        if !(1..=256).contains(&hash_count) || !(64..=65536).contains(&length) || length % 8 != 0
-        {
+        if !(1..=256).contains(&hash_count) || !(64..=65536).contains(&length) || length % 8 != 0 {
             pgrx::error!(
                 "bloom_encode: hash_count {} or length {} outside valid range \
                  (hash_count: 1–256, length: 64–65536 and must be a multiple of 8) [PT0471]",
@@ -217,13 +216,9 @@ mod pg_ripple {
         super::validate_dp_query(query);
 
         // ── Execute read-only ──────────────────────────────────────────────────
-        let count: i64 = Spi::get_one(query)
-            .unwrap_or(None)
-            .unwrap_or_else(|| {
-                pgrx::error!(
-                    "dp_noisy_count: query must return a single INTEGER value [PT0473]"
-                )
-            });
+        let count: i64 = Spi::get_one(query).unwrap_or(None).unwrap_or_else(|| {
+            pgrx::error!("dp_noisy_count: query must return a single INTEGER value [PT0473]")
+        });
 
         // ── Add Laplace noise ──────────────────────────────────────────────────
         let noise = super::laplace_noise(1.0 / epsilon);
@@ -274,9 +269,9 @@ mod pg_ripple {
         let sensitivity = 1.0 / epsilon;
 
         let rows: Vec<(String, i64)> = Spi::connect(|client| {
-            let tup_table = client
-                .select(query, None, &[])
-                .unwrap_or_else(|e| pgrx::error!("dp_noisy_histogram: query execution failed: {e}"));
+            let tup_table = client.select(query, None, &[]).unwrap_or_else(|e| {
+                pgrx::error!("dp_noisy_histogram: query execution failed: {e}")
+            });
 
             let mut result = Vec::new();
             for row in tup_table {
@@ -316,8 +311,7 @@ fn validate_dp_query(query: &str) {
 
     // Reject dangerous keywords (case-insensitive)
     for kw in &[
-        ";", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "GRANT",
-        "REVOKE", "TRUNCATE",
+        ";", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "GRANT", "REVOKE", "TRUNCATE",
     ] {
         if upper.contains(kw) {
             pgrx::error!(

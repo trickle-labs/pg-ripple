@@ -413,8 +413,7 @@ pub(super) const PG_JARO_WINKLER_IRI: &str = "http://pg-ripple.org/functions/jar
 // ─── v0.111.0 PPRL Bloom-filter function ──────────────────────────────────────
 
 /// `pg:dice_similarity(a, b)` IRI — Dice coefficient on Bloom-filter hex strings (v0.111.0).
-pub(super) const PG_DICE_SIMILARITY_IRI: &str =
-    "http://pg-ripple.org/functions/dice_similarity";
+pub(super) const PG_DICE_SIMILARITY_IRI: &str = "http://pg-ripple.org/functions/dice_similarity";
 
 /// Translate an argument expression to a SQL text expression.
 ///

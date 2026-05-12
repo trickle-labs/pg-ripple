@@ -6,8 +6,8 @@
 --   BLOOM-02: bloom_encode() returns a non-null non-empty string
 --   BLOOM-03: bloom_encode() with default params returns 256-char hex string (1024 bits = 128 bytes = 256 hex chars)
 --   BLOOM-04: bloom_encode() is deterministic (same input → same output)
---   BLOOM-05: dice_similarity on identical bloom encodings = 1.0
---   BLOOM-06: dice_similarity on different inputs < 1.0
+--   BLOOM-05: bloom_encode() with same input produces dice_similarity = 1.0
+--   BLOOM-06: bloom_encode() with different inputs produces dice_similarity < 1.0
 --   BLOOM-07: bloom_encode() raises PT0471 for hash_count = 0
 --   BLOOM-08: bloom_encode() raises PT0471 for length = 32 (below minimum)
 --   BLOOM-09: bloom_encode() raises PT0471 for length not multiple of 8
@@ -83,8 +83,6 @@ EXCEPTION
         RAISE NOTICE 'BLOOM-07 ok: caught PT0471 for hash_count=0';
 END;
 $$;
-NOTICE:  BLOOM-07 ok: caught PT0471 for hash_count=0
-DO
 -- BLOOM-08: PT0471 raised for length = 32 (below minimum 64)
 DO $$
 BEGIN
@@ -95,8 +93,6 @@ EXCEPTION
         RAISE NOTICE 'BLOOM-08 ok: caught PT0471 for length=32';
 END;
 $$;
-NOTICE:  BLOOM-08 ok: caught PT0471 for length=32
-DO
 -- BLOOM-09: PT0471 raised for length not multiple of 8
 DO $$
 BEGIN
@@ -107,8 +103,6 @@ EXCEPTION
         RAISE NOTICE 'BLOOM-09 ok: caught PT0471 for length=100';
 END;
 $$;
-NOTICE:  BLOOM-09 ok: caught PT0471 for length=100
-DO
 -- BLOOM-10: PT0470 raised when value exceeds bloom_max_input_length
 -- Temporarily set a very small limit
 SET pg_ripple.bloom_max_input_length = 5;
@@ -121,7 +115,5 @@ EXCEPTION
         RAISE NOTICE 'BLOOM-10 ok: caught PT0470 for oversized input';
 END;
 $$;
-NOTICE:  BLOOM-10 ok: caught PT0470 for oversized input
-DO
 -- Restore default
 RESET pg_ripple.bloom_max_input_length;
