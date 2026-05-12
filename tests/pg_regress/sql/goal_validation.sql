@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS pg_ripple;
 -- Suppress the shared_preload_libraries WARNING from loading the library.
 SET client_min_messages = 'ERROR';
 SELECT pg_ripple.triple_count() >= 0 AS library_loaded;
-SET client_min_messages = 'NOTICE';
+SET client_min_messages = 'WARNING';
 
 SET search_path TO pg_ripple, public;
 
@@ -26,6 +26,7 @@ SET pg_ripple.strict_goal_validation = 'off';
 RESET pg_ripple.strict_goal_validation;
 
 -- Invalid value should be rejected.
+SET client_min_messages = 'NOTICE';
 DO $$
 BEGIN
     SET pg_ripple.strict_goal_validation = 'strict';
@@ -34,6 +35,7 @@ EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE 'OK: invalid GUC value correctly rejected';
 END;
 $$;
+SET client_min_messages = 'WARNING';
 
 -- ── 2. Load a rule set with a known derived predicate ─────────────────────────
 
@@ -54,7 +56,7 @@ SET pg_ripple.strict_goal_validation = 'warn';
 SELECT (pg_ripple.infer_goal('_gv_test_rules',
     '?x <http://example.org/reechable> ?y'))->>'matching' = '0'
     AS warn_mode_returns_zero_not_crash;
-SET client_min_messages = 'NOTICE';
+SET client_min_messages = 'WARNING';
 
 -- ── 4. 'off' mode: bad predicate causes no warning or error ──────────────────
 
@@ -66,6 +68,7 @@ SELECT (pg_ripple.infer_goal('_gv_test_rules',
 -- ── 5. 'error' mode: bad predicate raises an ERROR ───────────────────────────
 
 SET pg_ripple.strict_goal_validation = 'error';
+SET client_min_messages = 'NOTICE';
 DO $$
 BEGIN
     PERFORM pg_ripple.infer_goal('_gv_test_rules',
@@ -75,6 +78,7 @@ EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE 'OK: error mode raised error for unknown goal predicate';
 END;
 $$;
+SET client_min_messages = 'WARNING';
 
 -- ── 6. Free-variable goal predicate bypasses validation ──────────────────────
 
