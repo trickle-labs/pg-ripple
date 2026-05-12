@@ -807,10 +807,7 @@ pub fn validate_goal_predicate(rule_set: Option<&str>, pred_id: i64) {
             "SELECT EXISTS( \
                SELECT 1 FROM _pg_ripple.rules \
                WHERE rule_set = $1 AND active = true AND head_pred = $2)",
-            &[
-                DatumWithOid::from(rs),
-                DatumWithOid::from(pred_id),
-            ],
+            &[DatumWithOid::from(rs), DatumWithOid::from(pred_id)],
         )
         .unwrap_or(None)
         .unwrap_or(false);
@@ -833,22 +830,20 @@ pub fn validate_goal_predicate(rule_set: Option<&str>, pred_id: i64) {
     }
 
     // Unknown predicate — build the warning / error message.
-    let pred_iri = crate::dictionary::decode(pred_id)
-        .unwrap_or_else(|| format!("<id:{pred_id}>"));
+    let pred_iri = crate::dictionary::decode(pred_id).unwrap_or_else(|| format!("<id:{pred_id}>"));
 
     // Collect available derived predicates for the rule set to include in hint.
     let hint = if let Some(rs) = rule_set {
         let available: Vec<String> = pgrx::Spi::connect(|client| {
-            let rows = client
-                .select(
-                    "SELECT DISTINCT head_pred \
+            let rows = client.select(
+                "SELECT DISTINCT head_pred \
                      FROM _pg_ripple.rules \
                      WHERE rule_set = $1 AND active = true AND head_pred IS NOT NULL \
                      ORDER BY head_pred \
                      LIMIT 20",
-                    None,
-                    &[DatumWithOid::from(rs)],
-                );
+                None,
+                &[DatumWithOid::from(rs)],
+            );
             match rows {
                 Ok(tbl) => tbl
                     .filter_map(|row| {

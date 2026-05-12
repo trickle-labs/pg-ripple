@@ -156,10 +156,7 @@ fn predicate_table_expr(pred_iri: &str) -> Result<(i64, String), String> {
 
 /// Walk a spargebra `GraphPattern` and collect all bound (non-variable) predicate
 /// IRI strings from triple pattern predicates.
-fn collect_sparql_predicates(
-    pattern: &spargebra::algebra::GraphPattern,
-    out: &mut Vec<String>,
-) {
+fn collect_sparql_predicates(pattern: &spargebra::algebra::GraphPattern, out: &mut Vec<String>) {
     use spargebra::algebra::GraphPattern;
     use spargebra::term::NamedNodePattern;
 
