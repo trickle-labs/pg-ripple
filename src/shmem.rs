@@ -78,22 +78,23 @@ pub const ENCODE_CACHE_CAPACITY: usize = {
 const SHMEM_MAGIC: u32 = 0x70677269;
 
 /// Shared layout version.  Initialised to `SHMEM_MAGIC` on first startup.
-// SAFETY: PgAtomic::new requires a unique C-string name per slot; the name
-// literal is a compile-time constant and is distinct from all other slots.
 pub static LAYOUT_VERSION: PgAtomic<AtomicU32> =
+    // SAFETY: PgAtomic::new requires a unique C-string name per slot; the name
+    // literal is a compile-time constant and is distinct from all other slots.
     unsafe { PgAtomic::new(c"pg_ripple_layout_version") };
 
 // ─── Merge worker coordination ────────────────────────────────────────────────
 
 /// PID of the running merge background worker (0 when not running).
-// SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
-pub static MERGE_WORKER_PID: PgAtomic<AtomicI32> = unsafe { PgAtomic::new(c"pg_ripple_merge_pid") };
+pub static MERGE_WORKER_PID: PgAtomic<AtomicI32> =
+    // SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
+    unsafe { PgAtomic::new(c"pg_ripple_merge_pid") };
 
 // ─── Delta row tracker (bloom-filter substitute) ──────────────────────────────
 
 /// Total number of unmerged rows across all VP delta tables.
-// SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
 pub static TOTAL_DELTA_ROWS: PgAtomic<AtomicI64> =
+    // SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
     unsafe { PgAtomic::new(c"pg_ripple_delta_rows") };
 
 // ─── Bloom filter (per-bit reference counting, v0.22.0+) ──────────────────────
@@ -110,12 +111,12 @@ pub static DELTA_BLOOM_COUNTERS: PgLwLock<[u8; 1024]> =
 
 // ─── Shared-memory encode cache (1 shard × 1024 sets × 4 ways = 4096 capacity) ─
 
-// SAFETY: unique C-string name; PgLwLock is a pgrx-managed LWLock-protected slot.
 pub static ENCODE_CACHE_S0: PgLwLock<EncodeCacheShard> =
+    // SAFETY: unique C-string name; PgLwLock is a pgrx-managed LWLock-protected slot.
     unsafe { PgLwLock::new(c"pg_ripple_ec_s0") };
 
-// SAFETY: unique C-string name; PgLwLock is a pgrx-managed LWLock-protected slot.
 pub static ENCODE_CACHE_IDS: PgLwLock<EncodeCacheIds> =
+    // SAFETY: unique C-string name; PgLwLock is a pgrx-managed LWLock-protected slot.
     unsafe { PgLwLock::new(c"pg_ripple_ec_ids") };
 
 /// Cache statistics: hits counter.
@@ -127,23 +128,23 @@ pub static CACHE_HITS: PgAtomic<AtomicU64> = unsafe { PgAtomic::new(c"pg_ripple_
 pub static CACHE_MISSES: PgAtomic<AtomicU64> = unsafe { PgAtomic::new(c"pg_ripple_cache_misses") };
 
 /// Cache statistics: evictions counter.
-// SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
 pub static CACHE_EVICTIONS: PgAtomic<AtomicU64> =
+    // SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
     unsafe { PgAtomic::new(c"pg_ripple_cache_evictions") };
 
 /// v0.55.0 G-4: Federation call stats — total calls made to remote SERVICE endpoints.
-// SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
 pub static FED_CALL_COUNT: PgAtomic<AtomicU64> =
+    // SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
     unsafe { PgAtomic::new(c"pg_ripple_fed_call_count") };
 
 /// v0.55.0 G-4: Federation call stats — total calls that returned an error.
-// SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
 pub static FED_ERROR_COUNT: PgAtomic<AtomicU64> =
+    // SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
     unsafe { PgAtomic::new(c"pg_ripple_fed_error_count") };
 
 /// v0.55.0 G-4: Federation call stats — total calls that were blocked by policy (PT606).
-// SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
 pub static FED_BLOCKED_COUNT: PgAtomic<AtomicU64> =
+    // SAFETY: unique C-string name; PgAtomic is a pgrx-managed shared-memory slot.
     unsafe { PgAtomic::new(c"pg_ripple_fed_blocked_count") };
 
 // ─── Initialisation guard ────────────────────────────────────────────────────

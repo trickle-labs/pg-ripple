@@ -443,6 +443,7 @@ fn load_disjoint_pairs() -> Vec<(String, String, String)> {
 // ─── Unit tests (run in pg_test harness) ─────────────────────────────────────
 
 #[cfg(any(test, feature = "pg_test"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[pg_schema]
 mod tests {
     use super::*;

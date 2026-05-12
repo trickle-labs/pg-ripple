@@ -521,6 +521,12 @@ Storage precision for emStorage precision forngle` uses pgvectorStorage precisio
 
 Base URL for an OpenAI-compatible `/v1/chat/completions` API used by `sparql_from_nl()`. When empty, calling `sparql_from_nl()` immediately raises PT700. Set to `'mock'` to use the built-in test mock without a real LLM. Examples: `https://api.openai.com/v1`, `http://localhost:11434/v1` (Ollama).
 
+> **Note (H16-04, v0.112.0):** This GUC is a no-op within the pg_ripple extension itself. The
+> HTTP companion `pg_ripple_http` reads this GUC (via the database connection) when serving the
+> `/rules/{id}/explain` endpoint to handle LLM enrichment for Datalog rule explanations.
+> Direct extension functions such as `sparql_from_nl()` also respect this GUC. Do not set this
+> GUC to a raw API key — use `pg_ripple.llm_api_key_env` for secure key management.
+
 ---
 
 ### `pg_ripple.llm_model`

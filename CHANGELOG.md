@@ -13,6 +13,59 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.112.0] — 2026-05-12 — A16 Critical & High Remediation + Dependency Maintenance
+
+**Closes the sixth-consecutive COMPATIBLE_EXTENSION_MIN lag (C16-01), annotates all unsafe blocks,
+reduces unwrap/expect surface, wires the SHACL validation gate in entity resolution, and adds the
+v1.0.0 GA Entry Criteria to the roadmap.**
+
+### Changed
+
+- **(C16-01)** `pg_ripple_http/src/main.rs`: bump `COMPATIBLE_EXTENSION_MIN` from `"0.93.0"` to
+  `"0.111.0"` — closes the sixth-consecutive critical finding about the companion compatibility lag.
+- **(C16-01)** `release.yml`: add `compat-check` CI job that parses `COMPATIBLE_EXTENSION_MIN` and
+  the Cargo.toml version; fails if the compat floor is more than 1 minor version behind the
+  extension version — prevents the lag from recurring.
+- **(C16-01)** `RELEASE.md`: add "HTTP Companion Compatibility Window Policy" paragraph stating
+  that `pg_ripple_http` supports the prior 2 minor extension versions.
+- **(H16-01)** Annotated all `unsafe {}` blocks across the codebase with `// SAFETY:` comments;
+  moved 9 SAFETY annotations in `src/shmem.rs` to be immediately before their `unsafe` expressions
+  (compliant with `clippy::undocumented_unsafe_blocks`).
+- **(H16-01)** Added `clippy::undocumented_unsafe_blocks = "deny"` to `[workspace.lints.clippy]`
+  in `Cargo.toml` — prevents unannotated `unsafe` blocks from merging.
+- **(H16-02)** Added `// PANIC-SAFETY:` annotation to `src/sparql/plan_cache.rs` for the
+  `LruCache::new(NonZeroUsize::new(cap).expect(...))` call (`.max(1)` guarantees non-zero);
+  added `#[allow(clippy::expect_used)]` to confirm the expectation is intentional.
+- **(H16-02)** Added `#[allow(clippy::unwrap_used, clippy::expect_used)]` to test modules in
+  `kge.rs`, `datalog/{stratify,builtins,parser,conflict}.rs`, `flight.rs`,
+  `entity_resolution.rs`, `bidi/mod.rs`, and `dictionary/inline.rs`.
+- **(H16-03)** `src/entity_resolution.rs`: replaced the SHACL gate stub (`blocked_by_shacl = 0`)
+  with a new `count_shacl_blocked_candidates()` helper that calls `validate_sync()` for each
+  candidate `owl:sameAs` pair; wrapped Stage 4/5 in `BeginInternalSubTransaction` /
+  `ReleaseCurrentSubTransaction` so any panic rolls back Stage 1–3 side-effects atomically.
+- **(H16-04)** `src/gucs/registration/observability.rs`: updated `pg_ripple.llm_endpoint` GUC
+  description to clarify it is a no-op in the extension itself; the HTTP companion's
+  `/rules/{id}/explain` endpoint handles LLM enrichment.
+- **(H16-04)** `docs/src/reference/guc-reference.md`: added clarifying note for
+  `pg_ripple.llm_endpoint` directing users to `pg_ripple_http` for LLM enrichment.
+- **(H16-07)** `ROADMAP.md`: added `## v1.0.0 GA Entry Criteria` section enumerating the six
+  criteria (zero open Highs ×2, zero unannotated unsafe, compat window CI, pg_regress ≥271,
+  signed SBOM, external security audit).
+- `pg_ripple.control`: updated comment to reflect v0.112.0.
+- `docs/src/operations/compatibility.md`: added `pg_trickle ≥ 0.57.0` row.
+
+### Dependency Updates
+
+- `pg_trickle`: bumped to `0.57.0` in `.versions.toml` and `Dockerfile`.
+- `pg_tide`: updated to latest (`0.16.0`) in `.versions.toml` and `Dockerfile`.
+
+### Migration
+
+No schema changes in this release.
+See `sql/pg_ripple--0.111.0--0.112.0.sql`.
+
+---
+
 ## [0.111.0] — 2026-05-12 — Privacy-Preserving Record Linkage (PPRL) Primitives
 
 **Adds Bloom-filter CLK encoding, Dice coefficient similarity, and differential-privacy aggregates for cross-organization entity resolution without sharing raw PII.**

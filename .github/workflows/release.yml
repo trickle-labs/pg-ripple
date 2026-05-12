@@ -12,10 +12,59 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # ── 0. HTTP companion compatibility floor check (C16-01, v0.112.0) ──────────
+  compat-check:
+    name: Compat-check (COMPATIBLE_EXTENSION_MIN vs extension version)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Verify COMPATIBLE_EXTENSION_MIN is within 1 minor version
+        run: |
+          python3 - <<'PYEOF'
+          import re, sys
+
+          # Read extension version from Cargo.toml
+          with open("Cargo.toml") as f:
+              cargo = f.read()
+          m = re.search(r'^version\s*=\s*"([^"]+)"', cargo, re.MULTILINE)
+          if not m:
+              print("ERROR: cannot find version in Cargo.toml", file=sys.stderr)
+              sys.exit(1)
+          ext_ver = m.group(1)
+
+          # Read COMPATIBLE_EXTENSION_MIN from pg_ripple_http/src/main.rs
+          with open("pg_ripple_http/src/main.rs") as f:
+              main_rs = f.read()
+          m2 = re.search(r'COMPATIBLE_EXTENSION_MIN:\s*&str\s*=\s*"([^"]+)"', main_rs)
+          if not m2:
+              print("ERROR: cannot find COMPATIBLE_EXTENSION_MIN in pg_ripple_http/src/main.rs", file=sys.stderr)
+              sys.exit(1)
+          compat_floor = m2.group(1)
+
+          def parse_minor(ver):
+              parts = ver.split(".")
+              return (int(parts[0]), int(parts[1]), int(parts[2]))
+
+          ext = parse_minor(ext_ver)
+          floor = parse_minor(compat_floor)
+
+          # compat floor must be at most 1 minor version below current
+          ext_minor_abs = ext[0] * 10000 + ext[1]
+          floor_minor_abs = floor[0] * 10000 + floor[1]
+          diff = ext_minor_abs - floor_minor_abs
+          if diff > 1:
+              print(f"ERROR: COMPATIBLE_EXTENSION_MIN={compat_floor} is {diff} minor versions below extension version={ext_ver}. Must be at most 1 minor version behind.", file=sys.stderr)
+              sys.exit(1)
+          print(f"OK: extension={ext_ver}, compat_floor={compat_floor}, diff={diff} minor version(s)")
+          PYEOF
+
   # ── 1. Full test suite (same checks as CI) ───────────────────────────────────
   test:
     name: Test (pg18)
     runs-on: ubuntu-latest
+    needs: compat-check
 
     steps:
       - name: Checkout

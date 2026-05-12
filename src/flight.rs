@@ -255,6 +255,7 @@ mod pg_ripple {
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(any(test, feature = "pg_test"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[pgrx::pg_schema]
 mod tests {
     use super::*;

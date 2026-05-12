@@ -43,6 +43,8 @@ thread_local! {
             let cap = std::panic::catch_unwind(|| crate::PLAN_CACHE_CAPACITY.get())
                 .unwrap_or(DEFAULT_CAPACITY as i32)
                 .max(1) as usize;
+            // PANIC-SAFETY: .max(1) guarantees cap >= 1, so NonZeroUsize::new cannot return None.
+            #[allow(clippy::expect_used)]
             LruCache::new(NonZeroUsize::new(cap).expect("capacity > 0"))
         }
     );

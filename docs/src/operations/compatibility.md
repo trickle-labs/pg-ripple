@@ -107,6 +107,7 @@ pg_ripple integrates with two companion PostgreSQL extensions:
 
 | pg_ripple version | pg_trickle version | IVM status |
 |-------------------|--------------------|------------|
+| ≥ 0.112.0 | ≥ 0.57.0 | ✅ IVM only (relay features in pg_tide) |
 | ≥ 0.93.0 | ≥ 0.46.0 | ✅ IVM only (relay features in pg_tide) |
 | ≥ 0.93.0 | ≤ 0.45.0 | ⚠ IVM works; relay features require manual migration to pg_tide |
 | 0.52.0 – 0.92.0 | any | ✅ Full relay+IVM (pre-extraction) |

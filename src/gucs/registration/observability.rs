@@ -43,14 +43,17 @@ unsafe extern "C-unwind" fn assign_llm_api_key_env(
 pub fn register() {
     // ── v0.49.0 GUCs — AI & LLM Integration ──────────────────────────────────
     pgrx::GucRegistry::define_string_guc(
-    c"pg_ripple.llm_endpoint",
-    c"LLM API base URL for NL→SPARQL generation (empty = disabled, 'mock' = built-in test mock). \
-      Must be an OpenAI-compatible base URL. (v0.49.0)",
-    c"",
-    &LLM_ENDPOINT,
-    GucContext::Userset,
-    GucFlags::default(),
-);
+        c"pg_ripple.llm_endpoint",
+        c"LLM API base URL — no-op in the extension itself; the HTTP companion \
+      `pg_ripple_http` uses this GUC via the /rules/{id}/explain endpoint to \
+      handle LLM enrichment for rule explanations. \
+      Must be an OpenAI-compatible base URL (empty = disabled, 'mock' = built-in test mock). \
+      (v0.49.0, H16-04 v0.112.0)",
+        c"",
+        &LLM_ENDPOINT,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 
     pgrx::GucRegistry::define_string_guc(
         c"pg_ripple.llm_model",

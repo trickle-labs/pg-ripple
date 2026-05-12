@@ -67,6 +67,9 @@ lto = "thin"
 # ── PERF-03 (v0.90.0): workspace lint gate for unwrap/expect ─────────────────
 # Warn on new .unwrap() and .expect() calls. Legitimate uses are suppressed
 # per-callsite with #[allow(clippy::unwrap_used)] // CLIPPY-OK: <reason>
+# ── H16-01 (v0.112.0): deny undocumented unsafe blocks ───────────────────────
+# Every unsafe {} block must have a // SAFETY: comment immediately before it.
 [workspace.lints.clippy]
 unwrap_used = "warn"
 expect_used = "warn"
+undocumented_unsafe_blocks = "deny"

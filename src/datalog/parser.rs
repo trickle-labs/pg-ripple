@@ -941,6 +941,7 @@ fn term_to_const(term: &Term) -> Result<i64, String> {
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

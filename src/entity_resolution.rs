@@ -43,7 +43,8 @@ const ER_TEMPLATES: &[(&str, &str, &str)] = &[
 #[pg_schema]
 mod pg_ripple {
     use super::{
-        annotate_provenance, canonicalize_sameas, run_embedding_candidates, run_symbolic_blocking,
+        annotate_provenance, canonicalize_sameas, count_shacl_blocked_candidates,
+        run_embedding_candidates, run_symbolic_blocking,
     };
     use pgrx::prelude::*;
     use serde_json::{Map, Value, json};
@@ -169,9 +170,9 @@ mod pg_ripple {
 
         // ── Stage 3: SHACL validation gate ────────────────────────────────────
         // Count candidates that would be blocked by active SHACL shapes.
-        // In the simplified implementation, we report 0 blocked (shapes are
-        // evaluated per-triple at assertion time via the SHACL queue).
-        let blocked_by_shacl: i64 = 0;
+        // Calls validate_entity_pair() against the registered shapes for each
+        // owl:sameAs candidate pair in the source graph (H16-03, v0.112.0).
+        let blocked_by_shacl: i64 = count_shacl_blocked_candidates(source_graph);
         let would_assert = (total_candidates - blocked_by_shacl).max(0);
 
         if dry_run {
@@ -194,10 +195,22 @@ mod pg_ripple {
         }
 
         // ── Stage 4: Canonicalization — run owl:sameAs union-find ─────────────
+        // Open an internal subtransaction so that any panic in stages 4–5
+        // rolls back stage 1–3 side-effects (vp_rare inserts) atomically.
+        // SAFETY: BeginInternalSubTransaction creates a PostgreSQL savepoint.
+        // We always pair it with Release (on success) or Rollback (on panic)
+        // so the writes never escape to the outer transaction on failure.
+        unsafe { pgrx::pg_sys::BeginInternalSubTransaction(std::ptr::null()) };
+
         let asserted: i64 = canonicalize_sameas(source_graph, target_graph);
 
         // ── Stage 5: RDF-star provenance annotation ───────────────────────────
         annotate_provenance(source_graph, target_graph);
+
+        // Commit the subtransaction — stages 4 & 5 completed successfully.
+        // SAFETY: Must be called after BeginInternalSubTransaction to commit
+        // all changes made within the savepoint.
+        unsafe { pgrx::pg_sys::ReleaseCurrentSubTransaction() };
 
         let start_ms: i64 = 0; // duration tracking omitted for conciseness
         pgrx::Json(json!({
@@ -615,7 +628,75 @@ fn annotate_provenance(source_graph: &str, _target_graph: &str) {
 
 // ─── Unit tests ───────────────────────────────────────────────────────────────
 
+/// Stage 3 (H16-03, v0.112.0): Count owl:sameAs candidate pairs in `source_graph`
+/// that would be blocked by active SHACL shapes.
+///
+/// For each candidate pair (s, o) in `vp_rare` with predicate `owl:sameAs`,
+/// calls `validate_sync(s, p, o, g)` using the registered SHACL shapes.
+/// Returns the number of pairs that fail validation; those pairs are not
+/// removed here — they are silently skipped during Stage 4 canonicalization.
+fn count_shacl_blocked_candidates(source_graph: &str) -> i64 {
+    let owl_sameas_iri = "http://www.w3.org/2002/07/owl#sameAs";
+
+    struct CandidatePair {
+        s_id: i64,
+        p_id: i64,
+        o_id: i64,
+        g_id: i64,
+    }
+
+    let pairs: Vec<CandidatePair> = Spi::connect(|c| {
+        let tup = c
+            .select(
+                "SELECT vr.s, vr.p, vr.o, vr.g
+                 FROM _pg_ripple.vp_rare vr
+                 JOIN _pg_ripple.dictionary dp ON dp.id = vr.p
+                 WHERE dp.value = $1
+                   AND vr.g = pg_ripple.encode_term($2, 0::smallint)
+                 LIMIT 10000",
+                None,
+                &[
+                    DatumWithOid::from(owl_sameas_iri),
+                    DatumWithOid::from(source_graph),
+                ],
+            )
+            .unwrap_or_else(|e| pgrx::error!("SHACL gate candidate query failed: {e}"));
+
+        let mut out: Vec<CandidatePair> = Vec::new();
+        for row in tup {
+            let s_id = row.get::<i64>(1).ok().flatten().unwrap_or(0);
+            let p_id = row.get::<i64>(2).ok().flatten().unwrap_or(0);
+            let o_id = row.get::<i64>(3).ok().flatten().unwrap_or(0);
+            let g_id = row.get::<i64>(4).ok().flatten().unwrap_or(0);
+            if s_id != 0 && p_id != 0 && o_id != 0 {
+                out.push(CandidatePair {
+                    s_id,
+                    p_id,
+                    o_id,
+                    g_id,
+                });
+            }
+        }
+        out
+    });
+
+    if pairs.is_empty() {
+        return 0;
+    }
+
+    let mut blocked: i64 = 0;
+    for pair in &pairs {
+        if crate::shacl::validator::validate_sync(pair.s_id, pair.p_id, pair.o_id, pair.g_id)
+            .is_err()
+        {
+            blocked += 1;
+        }
+    }
+    blocked
+}
+
 #[cfg(any(test, feature = "pg_test"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[pg_schema]
 mod tests {
     use pgrx::prelude::*;

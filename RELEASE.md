@@ -136,6 +136,19 @@ The CHANGELOG.md should be written so that someone without deep knowledge of Rus
 
 ## Security Advisory Calendar
 
+### HTTP Companion Compatibility Window Policy (C16-01, v0.112.0)
+
+The `pg_ripple_http` HTTP companion supports the **prior 2 minor extension versions** at any given
+time. Concretely: if the current extension version is `0.X.Y`, the companion built from the same
+commit is guaranteed to work with extensions `0.(X-1).0` and `0.(X-2).0` (and any patch releases
+within those minors). Older extension versions are served in degraded mode with a startup warning.
+The `COMPATIBLE_EXTENSION_MIN` constant in `pg_ripple_http/src/main.rs` is updated atomically
+with every `just bump-version <new> <floor>` invocation, and the `release.yml` CI gate
+(`compat-check` job) enforces that this constant is never more than 1 minor version behind the
+current extension. Set `PG_RIPPLE_HTTP_STRICT_COMPAT=1` to convert the warning to a fatal error.
+
+### Security Advisory Calendar
+
 ### RSA timing side-channel advisories (SEC-06, v0.92.0)
 
 Two RUSTSEC advisories for the `rsa` crate are tracked in `audit.toml`:
