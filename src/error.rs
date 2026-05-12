@@ -286,6 +286,20 @@ pub enum ShAFError {
     SparqlConstraintFailed { detail: String },
 }
 
+/// NS-RL evaluation errors (PT0461–PT0462) — v0.110.0.
+// Q15-01: internal API field; kept for public API surface or future extension consumers.
+#[allow(dead_code)]
+#[derive(Debug, Error)]
+pub enum NsrlEvaluationError {
+    /// PT0461 — `evaluate_resolution()` gold graph is empty or does not exist.
+    #[error("evaluate_resolution: gold graph '{graph}' is empty or does not exist (PT0461)")]
+    GoldGraphEmpty { graph: String },
+
+    /// PT0462 — `explain_rule()` rule not found.
+    #[error("explain_rule: rule {rule_id} not found (PT0462)")]
+    RuleNotFound { rule_id: i64 },
+}
+
 /// Lattice errors (PT540–PT541) — v0.36.0 / v0.45.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
 #[allow(dead_code)]

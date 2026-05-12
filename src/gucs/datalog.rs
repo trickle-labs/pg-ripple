@@ -245,3 +245,21 @@ pub static SAMEAS_APPLY_RATE_LIMIT: pgrx::GucSetting<i32> = pgrx::GucSetting::<i
 /// Default: `false`.
 pub static STRING_SIMILARITY_EXTENSIONS_OK: pgrx::GucSetting<bool> =
     pgrx::GucSetting::<bool>::new(false);
+
+// ─── v0.110.0 NS-RL Evaluation & Explainability GUCs ─────────────────────────
+
+/// GUC: when `true`, any `owl:sameAs` assertion that would exceed
+/// `pg_ripple.sameas_max_cluster_size` is logged to `_pg_ripple.sameas_anomaly_log`
+/// before PT550 is raised (v0.110.0 ANOMALY-01).  Default: `true`.
+pub static RECORD_SAMEAS_ANOMALIES: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(true);
+
+/// GUC: retention period for `_pg_ripple.sameas_anomaly_log` rows (v0.110.0 ANOMALY-02).
+/// Rows older than this are pruned by a background worker pass.
+/// Default: `'90 days'` (stored as a string, cast to INTERVAL at runtime).
+pub static SAMEAS_ANOMALY_LOG_RETENTION: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+/// GUC: TTL for cached `explain_rule()` results in `_pg_ripple.rule_explanations`
+/// (v0.110.0 EXPLAIN-01).  Default: `'24 hours'`.
+pub static RULE_EXPLANATION_CACHE_TTL: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);

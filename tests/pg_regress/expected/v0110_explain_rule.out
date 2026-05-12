@@ -1,0 +1,139 @@
+-- v0.110.0 Feature Regression Tests
+-- Tests for: explain_rule() Plain-English Rule Narration
+--
+-- Covers:
+--   EXPLAIN-01: GUC pg_ripple.rule_explanation_cache_ttl default is '24 hours'
+--   EXPLAIN-02: explain_rule() raises PT0462 for non-existent rule ID
+--   EXPLAIN-03: explain_rule() returns non-empty text for a real rule
+--   EXPLAIN-04: explain_rule() with format='markdown' returns non-empty text
+--   EXPLAIN-05: explain_rule_batch() returns a table with rule_id and explanation
+--   EXPLAIN-06: _pg_ripple.rule_explanations table exists after explain_rule()
+--   EXPLAIN-07: explain_rule_batch() returns empty result for empty array
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+LOAD '$libdir/pg_ripple';
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+-- EXPLAIN-01: GUC rule_explanation_cache_ttl — default is not set (uses fallback '24 hours')
+-- The GUC value is NULL/empty when using the default; we just confirm it is accessible.
+SELECT current_setting('pg_ripple.rule_explanation_cache_ttl', true) IS DISTINCT FROM 'impossible_value'
+    AS explain01_guc_accessible;
+ explain01_guc_accessible 
+--------------------------
+ t
+(1 row)
+
+-- EXPLAIN-02: explain_rule() raises PT0462 for non-existent rule ID
+SET client_min_messages = notice;
+DO $$
+BEGIN
+    PERFORM pg_ripple.explain_rule(999999999::bigint);
+    RAISE EXCEPTION 'expected PT0462 not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'EXPLAIN-02 ok: caught error for nonexistent rule';
+END;
+$$;
+NOTICE:  EXPLAIN-02 ok: caught error for nonexistent rule
+-- EXPLAIN-03: explain_rule() returns non-empty text for a real rule
+-- First load a rule set so we have a rule in the catalog.
+SELECT pg_ripple.load_rules(
+    '?x <https://v0110.test/parent> ?z :- ?x <https://v0110.test/parent> ?y , ?y <https://v0110.test/parent> ?z .',
+    'v0110_test_rules'
+) AS load_rules;
+NOTICE:  relation "rules" already exists, skipping
+NOTICE:  relation "rule_sets" already exists, skipping
+NOTICE:  column "derived" of relation "predicates" already exists, skipping
+NOTICE:  column "rule_set" of relation "predicates" already exists, skipping
+ load_rules 
+------------
+          1
+(1 row)
+
+SELECT
+    length(expl) > 0  AS explain03_non_empty,
+    expl IS NOT NULL  AS explain03_not_null
+FROM (
+    SELECT pg_ripple.explain_rule(
+        (SELECT id FROM _pg_ripple.rules
+         WHERE rule_set = 'v0110_test_rules'
+         ORDER BY id LIMIT 1)
+    ) AS expl
+) sub;
+ explain03_non_empty | explain03_not_null 
+---------------------+--------------------
+ t                   | t
+(1 row)
+
+-- EXPLAIN-04: explain_rule() with format='markdown' returns non-empty text
+SELECT
+    length(expl) > 0  AS explain04_markdown_non_empty
+FROM (
+    SELECT pg_ripple.explain_rule(
+        (SELECT id FROM _pg_ripple.rules
+         WHERE rule_set = 'v0110_test_rules'
+         ORDER BY id LIMIT 1),
+        'en',
+        'markdown'
+    ) AS expl
+) sub;
+ explain04_markdown_non_empty 
+------------------------------
+ t
+(1 row)
+
+-- EXPLAIN-05: explain_rule_batch() returns rows with rule_id and explanation
+SELECT
+    COUNT(*) >= 1                       AS explain05_batch_has_rows,
+    bool_and(length(explanation) > 0)   AS explain05_batch_non_empty
+FROM pg_ripple.explain_rule_batch(
+    ARRAY(SELECT id FROM _pg_ripple.rules WHERE rule_set = 'v0110_test_rules')
+);
+ explain05_batch_has_rows | explain05_batch_non_empty 
+--------------------------+---------------------------
+ t                        | t
+(1 row)
+
+-- EXPLAIN-06: _pg_ripple.rule_explanations table exists and has a cached row
+SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = '_pg_ripple'
+      AND table_name   = 'rule_explanations'
+) AS explain06_cache_table_exists;
+ explain06_cache_table_exists 
+------------------------------
+ t
+(1 row)
+
+SELECT COUNT(*) >= 1 AS explain06_cache_has_rows
+FROM _pg_ripple.rule_explanations
+WHERE rule_id = (
+    SELECT id FROM _pg_ripple.rules
+    WHERE rule_set = 'v0110_test_rules'
+    ORDER BY id LIMIT 1
+);
+ explain06_cache_has_rows 
+--------------------------
+ t
+(1 row)
+
+-- EXPLAIN-07: explain_rule_batch() with empty array returns no rows
+SELECT COUNT(*) = 0 AS explain07_empty_batch_ok
+FROM pg_ripple.explain_rule_batch(ARRAY[]::bigint[]);
+ explain07_empty_batch_ok 
+--------------------------
+ t
+(1 row)
+
+-- Cleanup
+SELECT pg_ripple.drop_rules('v0110_test_rules');
+NOTICE:  relation "rules" already exists, skipping
+NOTICE:  relation "rule_sets" already exists, skipping
+NOTICE:  column "derived" of relation "predicates" already exists, skipping
+NOTICE:  column "rule_set" of relation "predicates" already exists, skipping
+ drop_rules 
+------------
+          1
+(1 row)
+

@@ -117,6 +117,8 @@ pub(crate) mod hypothetical_handler;
 pub(crate) mod pagerank_handlers;
 pub(crate) mod rag_handler;
 pub(crate) mod rule_authoring_handler;
+// v0.110.0: Rule explain handler
+pub(crate) mod rule_explain_handler;
 pub(crate) mod rule_library_handler;
 pub(crate) mod sparql_handlers;
 
@@ -312,6 +314,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/rules/validate",
             post(rule_authoring_handler::validate_rule_post),
+        )
+        // v0.110.0: Rule explainability — GET /rules/{id}/explain
+        .route(
+            "/rules/{id}/explain",
+            get(rule_explain_handler::explain_rule_get),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)

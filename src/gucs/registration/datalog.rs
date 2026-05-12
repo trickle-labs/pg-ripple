@@ -658,4 +658,38 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.110.0 NS-RL Evaluation & Explainability GUCs ──────────────────────
+
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.record_sameas_anomalies",
+        c"When on, any owl:sameAs assertion that would exceed \
+      pg_ripple.sameas_max_cluster_size is logged to \
+      _pg_ripple.sameas_anomaly_log before PT550 is raised. Default on. (v0.110.0)",
+        c"",
+        &crate::gucs::datalog::RECORD_SAMEAS_ANOMALIES,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.sameas_anomaly_log_retention",
+        c"Retention period for _pg_ripple.sameas_anomaly_log rows. \
+      Rows older than this are pruned by the background worker. \
+      Default '90 days'. (v0.110.0)",
+        c"",
+        &crate::gucs::datalog::SAMEAS_ANOMALY_LOG_RETENTION,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.rule_explanation_cache_ttl",
+        c"TTL for cached explain_rule() results in _pg_ripple.rule_explanations. \
+      Default '24 hours'. (v0.110.0)",
+        c"",
+        &crate::gucs::datalog::RULE_EXPLANATION_CACHE_TTL,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }
