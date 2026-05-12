@@ -255,7 +255,7 @@
 
 | Version | Theme | Status | Scope | Full details |
 |---------|-------|--------|-------|-------------- |
-| [v0.112.0](roadmap/v0.112.0.md) | **Dependency maintenance & supply-chain hygiene** — bump `pg_trickle` to `0.57.0` and `pg_tide` to latest in `.versions.toml` and `Dockerfile`; verify no breaking changes in `pg_trickle` 0.57 relay API against `src/bidi/relay.rs` call sites; update compatibility matrix in `docs/src/operations/compatibility.md` with `pg_trickle 0.57` row; migration script `sql/pg_ripple--0.111.0--0.112.0.sql` (comment-only: no schema changes) | ✅ Released | Patch | — |
+| [v0.112.0](roadmap/v0.112.0.md) | **Dependency maintenance & supply-chain hygiene** — bump `pg_trickle` to `0.57.0` and `pg_tide` to latest in `.versions.toml` and `Dockerfile`; verify no breaking changes in `pg_trickle` 0.57 relay API against `src/bidi/relay.rs` call sites; update compatibility matrix in `docs/src/operations/compatibility.md` with `pg_trickle 0.57` row; migration script `sql/pg_ripple--0.111.0--0.112.0.sql` (comment-only: no schema changes) | Planned | Patch | — |
 
 ### Assessment 16 Remediation (v0.113.0 – v0.118.0)
 
