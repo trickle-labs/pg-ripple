@@ -1,0 +1,171 @@
+#!/bin/bash
+#
+# pg-ripple-load — Load RDF data into a pg_ripple graph
+#
+# Usage:
+#   pg-ripple-load [options] <file>
+#
+# Options:
+#   -f, --format <fmt>     RDF format: turtle, ntriples, nquads, trig, rdfxml
+#                          (auto-detected from file extension if not specified)
+#   -g, --graph <iri>      Named graph URI (default: default graph)
+#   -h, --host <host>      PostgreSQL host (default: PGHOST or localhost)
+#   -d, --database <db>    Database name (default: PGDATABASE or postgres)
+#   -u, --user <user>      Database user (default: PGUSER or postgres)
+#   -p, --port <port>      PostgreSQL port (default: PGPORT or 5432)
+#   -w, --password <pwd>   Database password (default: PGPASSWORD env var)
+#   --help                 Show this message
+#
+# Examples:
+#   # Load with auto-detected format
+#   pg-ripple-load data.ttl
+#
+#   # Load into a named graph
+#   pg-ripple-load -g http://example.org/graphs/test data.ttl
+#
+#   # Explicit format with remote database and password
+#   pg-ripple-load -f ntriples -h db.example.com -u admin -w password data.nt
+#
+
+set -euo pipefail
+
+# ── Configuration ─────────────────────────────────────────────────────────
+
+FILE=""
+FORMAT=""
+GRAPH=""
+HOST="${PGHOST:-localhost}"
+DATABASE="${PGDATABASE:-postgres}"
+USER="${PGUSER:-postgres}"
+PORT="${PGPORT:-5432}"
+PASSWORD="${PGPASSWORD:-}"
+
+# ── Functions ─────────────────────────────────────────────────────────────
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+detect_format() {
+  local file=$1
+  case "${file##*.}" in
+    ttl) echo "turtle" ;;
+    nt) echo "ntriples" ;;
+    nq) echo "nquads" ;;
+    trig) echo "trig" ;;
+    rdf|xml) echo "rdfxml" ;;
+    *) die "unknown format for '$file' (specify with -f)" ;;
+  esac
+}
+
+loader_function() {
+  local format=$1
+  local graph=$2
+  
+  case "$format" in
+    turtle)   [ -z "$graph" ] && echo "load_turtle" || echo "load_turtle_into_graph" ;;
+    ntriples) [ -z "$graph" ] && echo "load_ntriples" || echo "load_ntriples_into_graph" ;;
+    nquads)   [ -z "$graph" ] && echo "load_nquads" || echo "load_nquads_into_graph" ;;
+    trig)     [ -z "$graph" ] && echo "load_trig" || echo "load_trig_into_graph" ;;
+    rdfxml)   [ -z "$graph" ] && echo "load_rdfxml" || echo "load_rdfxml_into_graph" ;;
+    *) die "unsupported format: $format" ;;
+  esac
+}
+
+# ── Parse arguments ───────────────────────────────────────────────────────
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -f|--format)
+      FORMAT="$2"
+      shift 2
+      ;;
+    -g|--graph)
+      GRAPH="$2"
+      shift 2
+      ;;
+    -h|--host)
+      HOST="$2"
+      shift 2
+      ;;
+    -d|--database)
+      DATABASE="$2"
+      shift 2
+      ;;
+    -u|--user)
+      USER="$2"
+      shift 2
+      ;;
+    -p|--port)
+      PORT="$2"
+      shift 2
+      ;;
+    -w|--password)
+      PASSWORD="$2"
+      shift 2
+      ;;
+    --help)
+      sed -n '/^#/!q;s/^# \?//p' "$0"
+      exit 0
+      ;;
+    -*)
+      die "unknown option: $1"
+      ;;
+    *)
+      if [ -z "$FILE" ]; then
+        FILE="$1"
+      else
+        die "only one file allowed"
+      fi
+      shift
+      ;;
+  esac
+done
+
+# ── Validate ──────────────────────────────────────────────────────────────
+
+[ -z "$FILE" ] && die "file argument required"
+[ -f "$FILE" ] || die "file not found: $FILE"
+
+# Auto-detect format if not specified
+[ -z "$FORMAT" ] && FORMAT=$(detect_format "$FILE")
+
+# Get the appropriate loader function
+LOADER=$(loader_function "$FORMAT" "$GRAPH")
+
+# ── Execute ───────────────────────────────────────────────────────────────
+
+# Build psql connection string
+PSQL_ARGS=()
+PSQL_ARGS+=(-h "$HOST")
+PSQL_ARGS+=(-d "$DATABASE")
+PSQL_ARGS+=(-p "$PORT")
+PSQL_ARGS+=(-U "$USER")
+[ -n "$PASSWORD" ] && export PGPASSWORD="$PASSWORD"
+
+# Read file content
+FILE_CONTENT=$(cat "$FILE")
+
+# Create a temporary SQL file to avoid quoting issues
+TMPFILE=$(mktemp /tmp/pg-ripple-load.XXXXXX.sql)
+trap "rm -f '$TMPFILE'" EXIT
+
+# Write the SQL query to a temp file using $$ delimiters
+{
+  printf "SELECT pg_ripple.%s(\n" "$LOADER"
+  printf "  \$\$%s\$\$" "$FILE_CONTENT"
+  if [ -n "$GRAPH" ]; then
+    printf ",\n  '%s'" "$(echo "$GRAPH" | sed "s/'/''/g")"
+  fi
+  printf "\n) AS triples_loaded;\n"
+} > "$TMPFILE"
+
+# Execute via psql
+echo "Loading $FILE ($FORMAT) into $DATABASE..."
+START_TIME=$(date +%s%N)
+RESULT=$(psql "${PSQL_ARGS[@]}" -t -f "$TMPFILE")
+END_TIME=$(date +%s%N)
+ELAPSED=$(( (END_TIME - START_TIME) / 1000000 ))
+
+echo "✓ Loaded $(echo "$RESULT" | tr -d ' ') triples in ${ELAPSED}ms"

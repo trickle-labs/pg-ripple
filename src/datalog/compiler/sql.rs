@@ -637,6 +637,16 @@ fn compile_rule_with_one_delta_atom(
                         "jarowinkler({a_col}::text, {b_col}::text) {op_str} {r}"
                     ));
                 }
+                // ── v0.111.0 PPRL Bloom-filter ────────────────────────────────
+                StringBuiltin::DiceSimilarity(a_term, b_term, op, rhs_term) => {
+                    let a_col = render_comparison_term(a_term, &var_map);
+                    let b_col = render_comparison_term(b_term, &var_map);
+                    let r = render_comparison_term(rhs_term, &var_map);
+                    let op_str = compare_op_sql(op);
+                    where_clauses.push(format!(
+                        "pg_ripple.dice_similarity({a_col}::text, {b_col}::text) {op_str} {r}"
+                    ));
+                }
             },
             // Aggregate literals are handled by compile_aggregate_rule, not here.
             BodyLiteral::Aggregate(_) => {}

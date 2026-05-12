@@ -410,6 +410,11 @@ pub(super) const PG_METAPHONE_IRI: &str = "http://pg-ripple.org/functions/metaph
 /// `pg:jaro_winkler(a, b)` IRI — fuzzystrmatch `jarowinkler(a, b)` (v0.109.0).
 pub(super) const PG_JARO_WINKLER_IRI: &str = "http://pg-ripple.org/functions/jaro_winkler";
 
+// ─── v0.111.0 PPRL Bloom-filter function ──────────────────────────────────────
+
+/// `pg:dice_similarity(a, b)` IRI — Dice coefficient on Bloom-filter hex strings (v0.111.0).
+pub(super) const PG_DICE_SIMILARITY_IRI: &str = "http://pg-ripple.org/functions/dice_similarity";
+
 /// Translate an argument expression to a SQL text expression.
 ///
 /// For variable arguments: decode the dictionary ID to lexical text.

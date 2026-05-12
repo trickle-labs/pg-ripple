@@ -187,6 +187,9 @@ pub enum StringBuiltin {
     Metaphone(Term, i64, CompareOp, Term),
     /// `pg:jaro_winkler(?a, ?b) > 0.9` — fuzzystrmatch `jarowinkler(a, b)`.
     JaroWinkler(Term, Term, CompareOp, Term),
+    // ── v0.111.0 PPRL Bloom-filter ────────────────────────────────────────────
+    /// `pg:dice_similarity(?a, ?b) > 0.85` — Dice coefficient on Bloom-filter hex strings.
+    DiceSimilarity(Term, Term, CompareOp, Term),
 }
 
 /// A Datalog rule: head :- body .

@@ -99,6 +99,9 @@ pub(crate) mod entity_resolution;
 mod er_monitoring;
 mod rule_explain;
 
+// v0.111.0 modules — Privacy-Preserving Record Linkage (PPRL) primitives
+mod pprl;
+
 // Re-export all GUC statics at the crate root so that `crate::SOME_GUC` paths
 // in existing code continue to work after the split.
 pub(crate) use gucs::*;

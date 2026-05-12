@@ -249,6 +249,10 @@ pub(super) fn guard_fully_bound(guard: &BodyLiteral, var_map: &VarMap) -> bool {
             StringBuiltin::JaroWinkler(a, b, _, r) => {
                 check_term(a) && check_term(b) && check_term(r)
             }
+            // v0.111.0 PPRL Bloom-filter
+            StringBuiltin::DiceSimilarity(a, b, _, r) => {
+                check_term(a) && check_term(b) && check_term(r)
+            }
         },
         _ => false,
     }
@@ -329,6 +333,16 @@ pub(super) fn compile_guard_sql(guard: &BodyLiteral, var_map: &VarMap) -> Option
                 let r = render_comparison_term(rhs_term, var_map);
                 Some(format!(
                     "jarowinkler({a_col}::text, {b_col}::text) {} {r}",
+                    compare_op_sql(op)
+                ))
+            }
+            // v0.111.0 PPRL Bloom-filter
+            StringBuiltin::DiceSimilarity(a_term, b_term, op, rhs_term) => {
+                let a_col = render_comparison_term(a_term, var_map);
+                let b_col = render_comparison_term(b_term, var_map);
+                let r = render_comparison_term(rhs_term, var_map);
+                Some(format!(
+                    "pg_ripple.dice_similarity({a_col}::text, {b_col}::text) {} {r}",
                     compare_op_sql(op)
                 ))
             }

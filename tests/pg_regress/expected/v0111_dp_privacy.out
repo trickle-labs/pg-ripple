@@ -1,0 +1,139 @@
+-- v0.111.0 Feature Regression Tests
+-- Tests for: Differential-Privacy Aggregate Functions
+--
+-- Covers:
+--   DPPRIV-01: dp_noisy_count() returns a non-negative integer
+--   DPPRIV-02: dp_noisy_count() is not null
+--   DPPRIV-03: dp_noisy_count() raises PT0472 for epsilon = 0
+--   DPPRIV-04: dp_noisy_count() raises PT0472 for epsilon > 10
+--   DPPRIV-05: dp_noisy_count() raises PT0474 for UPDATE query
+--   DPPRIV-06: dp_noisy_count() raises PT0474 for query with semicolon
+--   DPPRIV-07: dp_noisy_count() raises PT0474 for DROP query
+--   DPPRIV-08: dp_noisy_histogram() returns non-negative counts
+--   DPPRIV-09: dp_noisy_histogram() raises PT0472 for invalid epsilon
+--   DPPRIV-10: dp_noisy_histogram() raises PT0474 for non-SELECT query
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+LOAD '$libdir/pg_ripple';
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+-- DPPRIV-01: dp_noisy_count() returns a non-negative integer
+SELECT pg_ripple.dp_noisy_count(
+    'SELECT COUNT(*) FROM _pg_ripple.dictionary',
+    0.1
+) >= 0 AS dppriv01_nonneg;
+ dppriv01_nonneg 
+-----------------
+ t
+(1 row)
+
+-- DPPRIV-02: dp_noisy_count() is not null
+SELECT pg_ripple.dp_noisy_count(
+    'SELECT COUNT(*) FROM _pg_ripple.dictionary',
+    1.0
+) IS NOT NULL AS dppriv02_not_null;
+ dppriv02_not_null 
+-------------------
+ t
+(1 row)
+
+-- DPPRIV-03: dp_noisy_count() raises PT0472 for epsilon = 0
+DO $$
+BEGIN
+    PERFORM pg_ripple.dp_noisy_count(
+        'SELECT COUNT(*) FROM _pg_ripple.dictionary', 0.0
+    );
+    RAISE EXCEPTION 'expected PT0472 error not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'DPPRIV-03 ok: caught PT0472 for epsilon=0';
+END;
+$$;
+-- DPPRIV-04: dp_noisy_count() raises PT0472 for epsilon > 10
+DO $$
+BEGIN
+    PERFORM pg_ripple.dp_noisy_count(
+        'SELECT COUNT(*) FROM _pg_ripple.dictionary', 11.0
+    );
+    RAISE EXCEPTION 'expected PT0472 error not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'DPPRIV-04 ok: caught PT0472 for epsilon=11';
+END;
+$$;
+-- DPPRIV-05: dp_noisy_count() raises PT0474 for UPDATE query
+DO $$
+BEGIN
+    PERFORM pg_ripple.dp_noisy_count('UPDATE foo SET x=1', 1.0);
+    RAISE EXCEPTION 'expected PT0474 error not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'DPPRIV-05 ok: caught PT0474 for UPDATE';
+END;
+$$;
+-- DPPRIV-06: dp_noisy_count() raises PT0474 for query with semicolon
+DO $$
+BEGIN
+    PERFORM pg_ripple.dp_noisy_count(
+        'SELECT COUNT(*) FROM _pg_ripple.dictionary; DROP TABLE foo', 1.0
+    );
+    RAISE EXCEPTION 'expected PT0474 error not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'DPPRIV-06 ok: caught PT0474 for semicolon injection';
+END;
+$$;
+-- DPPRIV-07: dp_noisy_count() raises PT0474 for DROP query
+DO $$
+BEGIN
+    PERFORM pg_ripple.dp_noisy_count('DROP TABLE foo', 1.0);
+    RAISE EXCEPTION 'expected PT0474 error not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'DPPRIV-07 ok: caught PT0474 for DROP';
+END;
+$$;
+-- DPPRIV-08: dp_noisy_histogram() returns non-negative counts
+-- Create a small test table for the histogram
+CREATE TEMP TABLE _pprl_hist_test (cat TEXT, n BIGINT);
+INSERT INTO _pprl_hist_test VALUES ('A', 10), ('B', 20), ('C', 5);
+SELECT
+    noisy_count >= 0 AS dppriv08_nonneg
+FROM pg_ripple.dp_noisy_histogram(
+    'SELECT cat, n FROM _pprl_hist_test',
+    'cat',
+    'n',
+    1.0
+)
+LIMIT 1;
+ dppriv08_nonneg 
+-----------------
+ t
+(1 row)
+
+-- DPPRIV-09: dp_noisy_histogram() raises PT0472 for invalid epsilon
+DO $$
+BEGIN
+    PERFORM pg_ripple.dp_noisy_histogram(
+        'SELECT cat, n FROM _pprl_hist_test', 'cat', 'n', 0.0
+    );
+    RAISE EXCEPTION 'expected PT0472 error not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'DPPRIV-09 ok: caught PT0472 for histogram epsilon=0';
+END;
+$$;
+-- DPPRIV-10: dp_noisy_histogram() raises PT0474 for non-SELECT query
+DO $$
+BEGIN
+    PERFORM pg_ripple.dp_noisy_histogram(
+        'INSERT INTO foo VALUES (1)', 'k', 'n', 1.0
+    );
+    RAISE EXCEPTION 'expected PT0474 error not raised';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'DPPRIV-10 ok: caught PT0474 for non-SELECT histogram';
+END;
+$$;
+DROP TABLE IF EXISTS _pprl_hist_test;

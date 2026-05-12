@@ -601,6 +601,12 @@ fn try_parse_string_builtin(text: &str) -> Option<BodyLiteral> {
             StringBuiltin::JaroWinkler(a, b, op, rhs)
         });
     }
+    // ── v0.111.0 PPRL Bloom-filter ────────────────────────────────────────────
+    if text.starts_with("pg:dice_similarity(") {
+        return try_parse_similarity_two_arg(text, "pg:dice_similarity(", |a, b, op, rhs| {
+            StringBuiltin::DiceSimilarity(a, b, op, rhs)
+        });
+    }
     None
 }
 
