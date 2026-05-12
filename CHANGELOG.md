@@ -31,12 +31,11 @@ v1.0.0 GA Entry Criteria to the roadmap.**
 - **(H16-01)** Annotated all `unsafe {}` blocks across the codebase with `// SAFETY:` comments;
   moved 9 SAFETY annotations in `src/shmem.rs` to be immediately before their `unsafe` expressions
   (compliant with `clippy::undocumented_unsafe_blocks`).
-- **(H16-01)** Added `clippy::undocumented_unsafe_blocks = "deny"` to `[workspace.lints.clippy]`
-  in `Cargo.toml` — prevents unannotated `unsafe` blocks from merging.
+- **(H16-01)** Added `clippy::undocumented_unsafe_blocks = "deny"` to `[workspace.lints.clippy]` in `Cargo.toml` (see `roadmap/v0.112.0.md`) — prevents unannotated `unsafe` blocks from merging.
 - **(H16-02)** Added `// PANIC-SAFETY:` annotation to `src/sparql/plan_cache.rs` for the
   `LruCache::new(NonZeroUsize::new(cap).expect(...))` call (`.max(1)` guarantees non-zero);
   added `#[allow(clippy::expect_used)]` to confirm the expectation is intentional.
-- **(H16-02)** Added `#[allow(clippy::unwrap_used, clippy::expect_used)]` to test modules in
+- **(H16-02)** Added `#[allow(clippy::unwrap_used, clippy::expect_used)]` to test modules (`roadmap/v0.112.0.md`):
   `kge.rs`, `datalog/{stratify,builtins,parser,conflict}.rs`, `flight.rs`,
   `entity_resolution.rs`, `bidi/mod.rs`, and `dictionary/inline.rs`.
 - **(H16-03)** `src/entity_resolution.rs`: replaced the SHACL gate stub (`blocked_by_shacl = 0`)
