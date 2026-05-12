@@ -269,3 +269,14 @@ pub static RULE_EXPLANATION_CACHE_TTL: pgrx::GucSetting<Option<std::ffi::CString
 /// GUC: maximum byte length of the `value` argument to `bloom_encode()` (v0.111.0 PPRL-01).
 /// Calls exceeding this limit raise PT0470.  Default: 4096 bytes.
 pub static BLOOM_MAX_INPUT_LENGTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(4096);
+// ─── v0.112.0 Goal Validation GUCs ───────────────────────────────────────────
+
+/// GUC: goal predicate validation mode for `infer_goal()` and `create_datalog_view()`
+/// (issue #89, v0.112.0).
+///
+/// - `'warn'` (default): emit a PostgreSQL WARNING when the goal predicate is not
+///   derived by any rule in the rule set and does not exist as a base predicate.
+/// - `'error'`: raise an ERROR instead of a WARNING (strict mode).
+/// - `'off'`: disable validation entirely (preserve pre-v0.112.0 behaviour).
+pub static STRICT_GOAL_VALIDATION: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);

@@ -348,6 +348,12 @@ mod pg_ripple {
             }
         };
 
+        // issue #89 (v0.112.0): validate the goal predicate against known rule
+        // head predicates and base VP predicates.  Only fires when goal.p is bound.
+        if let Some(pred_id) = goal_pattern.p {
+            crate::datalog::validate_goal_predicate(Some(rule_set), pred_id);
+        }
+
         let (matching, derived, iterations) =
             match crate::datalog::run_infer_goal(rule_set, &goal_pattern) {
                 Ok(r) => r,

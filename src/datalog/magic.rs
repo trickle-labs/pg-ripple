@@ -772,3 +772,115 @@ pub fn count_matching_goal(goal: &GoalPattern) -> i64 {
     .unwrap_or(None)
     .unwrap_or(0)
 }
+
+// ─── Goal predicate validation (issue #89, v0.112.0) ──────────────────────────
+
+/// Validate the encoded goal predicate `pred_id` against the rule set's head
+/// predicates and the base VP predicate catalog.
+///
+/// When the GUC `pg_ripple.strict_goal_validation` is:
+/// - `'warn'` (default): emits a PostgreSQL WARNING if the predicate is unknown.
+/// - `'error'`: raises an ERROR instead.
+/// - `'off'`: no-op; validation is disabled.
+///
+/// Free-variable predicates (caller must pass `goal.p` as `Some(id)`) are not
+/// subject to validation — the caller must skip this function when `goal.p`
+/// is `None`.
+///
+/// The rule set may be empty or `None` when `create_datalog_view` is called
+/// with inline rules rather than a named rule set; in that case only the base
+/// VP predicate catalog is checked.
+pub fn validate_goal_predicate(rule_set: Option<&str>, pred_id: i64) {
+    // Read the GUC.  Default (None / empty) behaves like 'warn'.
+    let mode: String = crate::STRICT_GOAL_VALIDATION
+        .get()
+        .and_then(|s| s.to_str().ok().map(|s| s.to_lowercase()))
+        .unwrap_or_else(|| "warn".to_owned());
+
+    if mode == "off" {
+        return;
+    }
+
+    // Check 1: is pred_id a head predicate in the named rule set?
+    if let Some(rs) = rule_set {
+        let is_rule_head = pgrx::Spi::get_one_with_args::<bool>(
+            "SELECT EXISTS( \
+               SELECT 1 FROM _pg_ripple.rules \
+               WHERE rule_set = $1 AND active = true AND head_pred = $2)",
+            &[
+                DatumWithOid::from(rs),
+                DatumWithOid::from(pred_id),
+            ],
+        )
+        .unwrap_or(None)
+        .unwrap_or(false);
+
+        if is_rule_head {
+            return; // known derived predicate — all good
+        }
+    }
+
+    // Check 2: is pred_id in the base VP predicate catalog?
+    let is_base_pred = pgrx::Spi::get_one_with_args::<bool>(
+        "SELECT EXISTS(SELECT 1 FROM _pg_ripple.predicates WHERE id = $1)",
+        &[DatumWithOid::from(pred_id)],
+    )
+    .unwrap_or(None)
+    .unwrap_or(false);
+
+    if is_base_pred {
+        return; // known base predicate — all good
+    }
+
+    // Unknown predicate — build the warning / error message.
+    let pred_iri = crate::dictionary::decode(pred_id)
+        .unwrap_or_else(|| format!("<id:{pred_id}>"));
+
+    // Collect available derived predicates for the rule set to include in hint.
+    let hint = if let Some(rs) = rule_set {
+        let available: Vec<String> = pgrx::Spi::connect(|client| {
+            let rows = client
+                .select(
+                    "SELECT DISTINCT head_pred \
+                     FROM _pg_ripple.rules \
+                     WHERE rule_set = $1 AND active = true AND head_pred IS NOT NULL \
+                     ORDER BY head_pred \
+                     LIMIT 20",
+                    None,
+                    &[DatumWithOid::from(rs)],
+                );
+            match rows {
+                Ok(tbl) => tbl
+                    .filter_map(|row| {
+                        let id: i64 = row.get::<i64>(1).ok().flatten()?;
+                        Some(crate::dictionary::decode(id).unwrap_or_else(|| format!("<id:{id}>")))
+                    })
+                    .collect::<Vec<_>>(),
+                Err(_) => Vec::new(),
+            }
+        });
+
+        if available.is_empty() {
+            format!("hint: rule set '{rs}' has no active derived predicates")
+        } else {
+            format!(
+                "hint: derived predicates in rule set '{rs}': {}",
+                available.join(", ")
+            )
+        }
+    } else {
+        "hint: no rule set specified; check the goal predicate spelling".to_owned()
+    };
+
+    let msg = format!(
+        "goal predicate {pred_iri} is not derived by any rule in rule set '{}' \
+         and does not exist as a base predicate — the result will always be empty; {hint}",
+        rule_set.unwrap_or("<none>")
+    );
+
+    if mode == "error" {
+        pgrx::error!("{msg}");
+    } else {
+        pgrx::warning!("{msg}");
+    }
+}

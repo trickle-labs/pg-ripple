@@ -152,6 +152,109 @@ fn predicate_table_expr(pred_iri: &str) -> Result<(i64, String), String> {
     Ok((pred_id, table_expr))
 }
 
+// ─── Goal predicate extraction from SPARQL (issue #89, v0.112.0) ─────────────
+
+/// Walk a spargebra `GraphPattern` and collect all bound (non-variable) predicate
+/// IRI strings from triple pattern predicates.
+fn collect_sparql_predicates(
+    pattern: &spargebra::algebra::GraphPattern,
+    out: &mut Vec<String>,
+) {
+    use spargebra::algebra::GraphPattern;
+    use spargebra::term::NamedNodePattern;
+
+    match pattern {
+        GraphPattern::Bgp { patterns } => {
+            for tp in patterns {
+                if let NamedNodePattern::NamedNode(nn) = &tp.predicate {
+                    out.push(nn.as_str().to_owned());
+                }
+            }
+        }
+        GraphPattern::Join { left, right } => {
+            collect_sparql_predicates(left, out);
+            collect_sparql_predicates(right, out);
+        }
+        GraphPattern::LeftJoin { left, right, .. } => {
+            collect_sparql_predicates(left, out);
+            collect_sparql_predicates(right, out);
+        }
+        GraphPattern::Filter { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Union { left, right } => {
+            collect_sparql_predicates(left, out);
+            collect_sparql_predicates(right, out);
+        }
+        GraphPattern::Graph { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Extend { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Minus { left, right } => {
+            collect_sparql_predicates(left, out);
+            collect_sparql_predicates(right, out);
+        }
+        GraphPattern::OrderBy { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Project { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Distinct { inner } | GraphPattern::Reduced { inner } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Slice { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Group { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        GraphPattern::Service { inner, .. } => {
+            collect_sparql_predicates(inner, out);
+        }
+        // Path patterns and table patterns — no BGP predicates to extract.
+        _ => {}
+    }
+}
+
+/// Validate all bound predicates in a SPARQL goal query against known rule head
+/// predicates and base VP predicates for the given rule set.
+///
+/// Called by `create_datalog_view_from_rules` and `create_datalog_view_from_rule_set`
+/// after the rule set is loaded / verified.  Only fires when the GUC
+/// `pg_ripple.strict_goal_validation` is not `'off'`.
+fn validate_datalog_view_goal(rule_set: Option<&str>, goal: &str) {
+    let mode: String = crate::STRICT_GOAL_VALIDATION
+        .get()
+        .and_then(|s| s.to_str().ok().map(|s| s.to_lowercase()))
+        .unwrap_or_else(|| "warn".to_owned());
+    if mode == "off" {
+        return;
+    }
+
+    // Try to parse as SPARQL SELECT and extract predicates.
+    let parsed = match spargebra::SparqlParser::new().parse_query(goal) {
+        Ok(q) => q,
+        Err(_) => return, // non-SPARQL goal (e.g. triple pattern string) — skip
+    };
+    let pattern = match parsed {
+        spargebra::Query::Select { pattern, .. } => pattern,
+        _ => return,
+    };
+
+    let mut pred_iris: Vec<String> = Vec::new();
+    collect_sparql_predicates(&pattern, &mut pred_iris);
+    pred_iris.dedup();
+
+    for iri in pred_iris {
+        // Encode the IRI to get the dictionary ID.
+        let pred_id = crate::datalog::encode_iri(&iri);
+        crate::datalog::validate_goal_predicate(rule_set, pred_id);
+    }
+}
+
 // ─── Public functions — exposed through lib.rs ────────────────────────────────
 
 // These functions are re-exported in the `pg_ripple` schema module in lib.rs.
@@ -355,6 +458,9 @@ pub(crate) fn create_datalog_view_from_rules(
     // Load the rules (this handles parse, stratify, store).
     crate::datalog::load_and_store_rules(rules, rule_set_name);
 
+    // issue #89 (v0.112.0): validate goal predicates against rule heads + base predicates.
+    validate_datalog_view_goal(Some(rule_set_name), goal);
+
     // Compile the goal SPARQL to SQL.
     // The stream table always stores BIGINT dictionary IDs (fix for issue #81).
     let (goal_sql, variables) = compile_sparql_for_view(goal)
@@ -470,6 +576,9 @@ pub(crate) fn create_datalog_view_from_rule_set(
     if !exists {
         pgrx::error!("rule set '{}' not found or is inactive", rule_set);
     }
+
+    // issue #89 (v0.112.0): validate goal predicates against rule heads + base predicates.
+    validate_datalog_view_goal(Some(rule_set), goal);
 
     // Compile the goal SPARQL to SQL.
     // The stream table always stores BIGINT dictionary IDs (fix for issue #81).

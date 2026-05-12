@@ -86,7 +86,26 @@ unsafe extern "C-unwind" fn check_shacl_mode(
     matches!(s, "off" | "sync" | "async")
 }
 
-/// Validate `describe_strategy`: `cbd`, `scbd`, or `simple`.
+/// Validate `strict_goal_validation`: `off`, `warn`, or `error`.
+unsafe extern "C-unwind" fn check_strict_goal_validation(
+    newval: *mut *mut std::ffi::c_char,
+    _extra: *mut *mut std::ffi::c_void,
+    _source: pgrx::pg_sys::GucSource::Type,
+) -> bool {
+    if newval.is_null() {
+        return true;
+    }
+    // SAFETY: newval is a GUC check-hook argument; the pointer is valid for
+    // the duration of this call and the string has at least a NUL terminator.
+    let s = unsafe {
+        if (*newval).is_null() {
+            return true;
+        }
+        std::ffi::CStr::from_ptr(*newval).to_str().unwrap_or("")
+    };
+    matches!(s, "off" | "warn" | "error")
+}
+
 /// Register all GUCs for this domain.
 pub fn register() {
     // ── v0.7.0 GUCs ──────────────────────────────────────────────────────────
@@ -706,4 +725,23 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.112.0 Goal Validation GUC (issue #89) ─────────────────────────────
+
+    // SAFETY: check hook is a valid extern "C-unwind" function pointer.
+    unsafe {
+        pgrx::GucRegistry::define_string_guc_with_hooks(
+            c"pg_ripple.strict_goal_validation",
+            c"Goal predicate validation mode for infer_goal() and create_datalog_view(): \
+          'warn' (default) emits a WARNING when the goal predicate is unknown, \
+          'error' raises an ERROR, 'off' disables validation (v0.112.0)",
+            c"",
+            &crate::gucs::datalog::STRICT_GOAL_VALIDATION,
+            GucContext::Userset,
+            GucFlags::default(),
+            Some(check_strict_goal_validation),
+            None,
+            None,
+        );
+    }
 }

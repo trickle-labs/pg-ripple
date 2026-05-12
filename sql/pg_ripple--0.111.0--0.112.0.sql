@@ -1,0 +1,20 @@
+-- Migration 0.111.0 → 0.112.0: Goal predicate validation (issue #89)
+--
+-- New features in v0.112.0:
+--
+--   GUC: pg_ripple.strict_goal_validation TEXT DEFAULT '' (effective 'warn')
+--     Controls whether pg_ripple.infer_goal() and pg_ripple.create_datalog_view()
+--     emit a WARNING, raise an ERROR, or do nothing when the goal predicate is
+--     not derived by any rule in the rule set and does not exist as a base
+--     VP predicate.
+--
+--     'warn'  (default when unset): emit a PostgreSQL WARNING with a hint
+--             listing valid derived predicates in the rule set.
+--     'error': raise an ERROR instead — useful in strict pipelines where a
+--              silent empty result would be misleading.
+--     'off':   disable validation entirely (pre-v0.112.0 behaviour).
+--
+--   The validation fires only when the goal predicate position is bound (not a
+--   free variable such as '?p').  Free-variable predicates bypass the check.
+--
+-- No schema changes in this release.

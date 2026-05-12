@@ -1,0 +1,118 @@
+-- pg_regress test: Goal predicate validation (issue #89, v0.112.0)
+--
+-- Tests the `pg_ripple.strict_goal_validation` GUC and the validation logic
+-- in `infer_goal()` that warns when the goal predicate does not match any rule
+-- head predicate or base VP predicate for the referenced rule set.
+--
+-- NOTE: setup.sql already does DROP/CREATE EXTENSION before this file.
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+-- Suppress the shared_preload_libraries WARNING from loading the library.
+SET client_min_messages = 'ERROR';
+SELECT pg_ripple.triple_count() >= 0 AS library_loaded;
+ library_loaded 
+----------------
+ t
+(1 row)
+
+RESET client_min_messages;
+SET search_path TO pg_ripple, public;
+-- Pre-test baseline: record max(i) in vp_rare for cleanup.
+CREATE TEMP TABLE _gv_test_baseline AS
+    SELECT COALESCE(MAX(i), 0) AS max_i FROM _pg_ripple.vp_rare;
+-- ── 1. GUC accepts valid values and rejects invalid ones ─────────────────────
+-- 'warn' is valid.
+SET pg_ripple.strict_goal_validation = 'warn';
+SET pg_ripple.strict_goal_validation = 'error';
+SET pg_ripple.strict_goal_validation = 'off';
+RESET pg_ripple.strict_goal_validation;
+-- Invalid value should be rejected.
+DO $$
+BEGIN
+    SET pg_ripple.strict_goal_validation = 'strict';
+    RAISE NOTICE 'ERROR: should have rejected invalid value';
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'OK: invalid GUC value correctly rejected';
+END;
+$$;
+NOTICE:  OK: invalid GUC value correctly rejected
+-- ── 2. Load a rule set with a known derived predicate ─────────────────────────
+SELECT pg_ripple.load_rules($$
+    ?x <http://example.org/reachable> ?z :-
+        ?x <http://example.org/edge> ?z .
+    ?x <http://example.org/reachable> ?z :-
+        ?x <http://example.org/edge> ?y,
+        ?y <http://example.org/reachable> ?z .
+$$, rule_set => '_gv_test_rules') > 0 AS rules_loaded;
+ rules_loaded 
+--------------
+ t
+(1 row)
+
+-- ── 3. 'warn' mode: bad predicate emits warning but execution continues ───────
+-- Suppress the warning text from the output (exact text is tested separately).
+SET client_min_messages = 'ERROR';
+SET pg_ripple.strict_goal_validation = 'warn';
+-- Typo predicate: 'reechable' — not a derived or base predicate.
+SELECT (pg_ripple.infer_goal('_gv_test_rules',
+    '?x <http://example.org/reechable> ?y'))->>'matching' = '0'
+    AS warn_mode_returns_zero_not_crash;
+ warn_mode_returns_zero_not_crash 
+----------------------------------
+ t
+(1 row)
+
+RESET client_min_messages;
+-- ── 4. 'off' mode: bad predicate causes no warning or error ──────────────────
+SET pg_ripple.strict_goal_validation = 'off';
+SELECT (pg_ripple.infer_goal('_gv_test_rules',
+    '?x <http://example.org/reechable> ?y'))->>'matching' = '0'
+    AS off_mode_silently_succeeds;
+ off_mode_silently_succeeds 
+----------------------------
+ t
+(1 row)
+
+-- ── 5. 'error' mode: bad predicate raises an ERROR ───────────────────────────
+SET pg_ripple.strict_goal_validation = 'error';
+DO $$
+BEGIN
+    PERFORM pg_ripple.infer_goal('_gv_test_rules',
+        '?x <http://example.org/reechable> ?y');
+    RAISE NOTICE 'ERROR: should have raised an error for unknown predicate';
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'OK: error mode raised error for unknown goal predicate';
+END;
+$$;
+NOTICE:  OK: error mode raised error for unknown goal predicate
+-- ── 6. Free-variable goal predicate bypasses validation ──────────────────────
+-- '?p' is a free variable — no predicate is encoded, validation is skipped.
+-- Should not raise an error even in 'error' mode.
+SET pg_ripple.strict_goal_validation = 'error';
+SELECT (pg_ripple.infer_goal('_gv_test_rules',
+    '?x ?p ?y'))->>'matching' >= '0'
+    AS free_pred_bypasses_validation;
+ free_pred_bypasses_validation 
+-------------------------------
+ t
+(1 row)
+
+-- ── 7. Known derived predicate does NOT trigger warning or error ──────────────
+-- 'reachable' is a head predicate — no validation error.
+SET pg_ripple.strict_goal_validation = 'error';
+SELECT (pg_ripple.infer_goal('_gv_test_rules',
+    '?x <http://example.org/reachable> ?y'))->>'matching' >= '0'
+    AS known_derived_pred_no_error;
+ known_derived_pred_no_error 
+-----------------------------
+ t
+(1 row)
+
+-- ── 8. Cleanup ────────────────────────────────────────────────────────────────
+RESET pg_ripple.strict_goal_validation;
+SELECT pg_ripple.drop_rules('_gv_test_rules') >= 0 AS rules_dropped;
+ rules_dropped 
+---------------
+ t
+(1 row)
+
+DELETE FROM _pg_ripple.vp_rare WHERE i > (SELECT max_i FROM _gv_test_baseline);

@@ -67,6 +67,7 @@ pub use dred::{check_dred_safety, run_dred_on_delete};
 pub use lattice::{ensure_lattice_catalog, register_lattice, run_infer_lattice};
 pub use magic::parse_goal;
 pub use magic::run_infer_goal;
+pub use magic::validate_goal_predicate;
 pub use parser::parse_rules;
 pub use stratify::check_aggregation_stratification;
 pub use stratify::check_subsumption;
