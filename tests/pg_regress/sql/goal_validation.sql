@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS pg_ripple;
 -- Suppress the shared_preload_libraries WARNING from loading the library.
 SET client_min_messages = 'ERROR';
 SELECT pg_ripple.triple_count() >= 0 AS library_loaded;
-RESET client_min_messages;
+SET client_min_messages = 'NOTICE';
 
 SET search_path TO pg_ripple, public;
 
@@ -54,7 +54,7 @@ SET pg_ripple.strict_goal_validation = 'warn';
 SELECT (pg_ripple.infer_goal('_gv_test_rules',
     '?x <http://example.org/reechable> ?y'))->>'matching' = '0'
     AS warn_mode_returns_zero_not_crash;
-RESET client_min_messages;
+SET client_min_messages = 'NOTICE';
 
 -- ── 4. 'off' mode: bad predicate causes no warning or error ──────────────────
 

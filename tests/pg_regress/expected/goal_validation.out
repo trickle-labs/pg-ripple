@@ -14,7 +14,7 @@ SELECT pg_ripple.triple_count() >= 0 AS library_loaded;
  t
 (1 row)
 
-RESET client_min_messages;
+SET client_min_messages = 'NOTICE';
 SET search_path TO pg_ripple, public;
 -- Pre-test baseline: record max(i) in vp_rare for cleanup.
 CREATE TEMP TABLE _gv_test_baseline AS
@@ -61,7 +61,7 @@ SELECT (pg_ripple.infer_goal('_gv_test_rules',
  t
 (1 row)
 
-RESET client_min_messages;
+SET client_min_messages = 'NOTICE';
 -- ── 4. 'off' mode: bad predicate causes no warning or error ──────────────────
 SET pg_ripple.strict_goal_validation = 'off';
 SELECT (pg_ripple.infer_goal('_gv_test_rules',
