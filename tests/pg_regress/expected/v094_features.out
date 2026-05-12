@@ -90,11 +90,11 @@ SELECT (
 (1 row)
 
 -- ─── H15-05: pg_ripple.bulk_load_use_copy GUC ────────────────────────────────
--- GUC must exist with default value 'off'.
+-- GUC must exist with default value 'on' (changed to on in v0.113.0).
 SHOW pg_ripple.bulk_load_use_copy;
  pg_ripple.bulk_load_use_copy 
 ------------------------------
- off
+ on
 (1 row)
 
 -- Enabling the GUC must work.
@@ -119,7 +119,7 @@ RESET pg_ripple.bulk_load_use_copy;
 SHOW pg_ripple.bulk_load_use_copy;
  pg_ripple.bulk_load_use_copy 
 ------------------------------
- off
+ on
 (1 row)
 
 -- ─── Cleanup ─────────────────────────────────────────────────────────────────
