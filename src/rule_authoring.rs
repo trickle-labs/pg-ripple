@@ -133,6 +133,12 @@ pub fn validate_rule(rule: &str) -> pgrx::JsonB {
                             collect_var_from_term(s, &mut all_body_vars);
                             collect_var_from_term(r, &mut all_body_vars);
                         }
+                        // v0.111.0 PPRL Bloom-filter
+                        StringBuiltin::DiceSimilarity(a, b, _, r) => {
+                            collect_var_from_term(a, &mut all_body_vars);
+                            collect_var_from_term(b, &mut all_body_vars);
+                            collect_var_from_term(r, &mut all_body_vars);
+                        }
                     }
                 }
                 BodyLiteral::Aggregate(agg) => {

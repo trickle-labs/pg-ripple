@@ -10,10 +10,11 @@ use spargebra::algebra::{Expression, Function};
 use super::super::sqlgen::Ctx;
 use super::cast::{xsd_cast_datatype, xsd_cast_sql};
 use super::{
-    PG_CONFIDENCE_IRI, PG_FUZZY_MATCH_IRI, PG_JARO_WINKLER_IRI, PG_LEVENSHTEIN_IRI,
-    PG_LEVENSHTEIN_LESS_EQUAL_IRI, PG_METAPHONE_IRI, PG_SIMILAR_IRI, PG_SOUNDEX_IRI,
-    PG_TEMPORAL_WINDOW_IRI, PG_TOKEN_SET_RATIO_IRI, PG_TRIGRAM_SIMILARITY_IRI, decode_lexical_sql,
-    encode_preserving_lang, postgis_available, translate_arg_text, translate_arg_value,
+    PG_CONFIDENCE_IRI, PG_DICE_SIMILARITY_IRI, PG_FUZZY_MATCH_IRI, PG_JARO_WINKLER_IRI,
+    PG_LEVENSHTEIN_IRI, PG_LEVENSHTEIN_LESS_EQUAL_IRI, PG_METAPHONE_IRI, PG_SIMILAR_IRI,
+    PG_SOUNDEX_IRI, PG_TEMPORAL_WINDOW_IRI, PG_TOKEN_SET_RATIO_IRI, PG_TRIGRAM_SIMILARITY_IRI,
+    decode_lexical_sql, encode_preserving_lang, postgis_available, translate_arg_text,
+    translate_arg_value,
 };
 
 /// Returns `true` when the `fuzzystrmatch` extension is installed.
@@ -1110,6 +1111,17 @@ pub(crate) fn translate_function_value(
                     let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
                     let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
                     Some(format!("jarowinkler({a_text}, {b_text})"))
+                }
+
+                // ── v0.111.0: pg:dice_similarity(a, b) — Bloom-filter Dice coefficient ──
+                // Returns pg_ripple.dice_similarity(a, b)::float8.
+                // The arguments are expected to be hex-encoded bloom filter strings
+                // as produced by pg_ripple.bloom_encode().
+                PG_DICE_SIMILARITY_IRI => {
+                    *is_numeric = true;
+                    let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    Some(format!("pg_ripple.dice_similarity({a_text}, {b_text})"))
                 }
 
                 _ => None,

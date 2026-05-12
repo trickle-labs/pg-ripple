@@ -60,3 +60,7 @@ mod pagerank_oracle;
 mod rule_authoring;
 #[path = "proptest/sparql_roundtrip.rs"]
 mod sparql_roundtrip;
+
+// v0.111.0: PPRL Bloom-filter property tests
+#[path = "proptest/pprl_bloom.rs"]
+mod pprl_bloom;

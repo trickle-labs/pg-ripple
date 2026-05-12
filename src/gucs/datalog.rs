@@ -263,3 +263,9 @@ pub static SAMEAS_ANOMALY_LOG_RETENTION: pgrx::GucSetting<Option<std::ffi::CStri
 /// (v0.110.0 EXPLAIN-01).  Default: `'24 hours'`.
 pub static RULE_EXPLANATION_CACHE_TTL: pgrx::GucSetting<Option<std::ffi::CString>> =
     pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+// ─── v0.111.0 PPRL GUCs ───────────────────────────────────────────────────────
+
+/// GUC: maximum byte length of the `value` argument to `bloom_encode()` (v0.111.0 PPRL-01).
+/// Calls exceeding this limit raise PT0470.  Default: 4096 bytes.
+pub static BLOOM_MAX_INPUT_LENGTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(4096);

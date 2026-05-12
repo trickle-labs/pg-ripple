@@ -1,0 +1,65 @@
+-- Migration 0.110.0 → 0.111.0: Privacy-Preserving Record Linkage (PPRL) Primitives
+--
+-- No schema changes in this release. All new functionality is provided via
+-- compiled Rust functions registered at `CREATE EXTENSION` time.
+--
+-- New SQL-callable functions (provided via compiled Rust):
+--
+--   pg_ripple.bloom_encode(
+--       value      TEXT,
+--       key        TEXT,
+--       hash_count INT  DEFAULT 30,
+--       length     INT  DEFAULT 1024
+--   ) → TEXT
+--     Implements the CLK (Cryptographic Longterm Key) Bloom-filter encoding.
+--     Returns a lowercase hex-encoded bit vector of `length` bits (= length/4 hex chars).
+--     Uses HMAC-SHA-256 keyed with `key || i` for i in 0..hash_count.
+--     Raises PT0470 if value length exceeds pg_ripple.bloom_max_input_length.
+--     Raises PT0471 if hash_count is not in [1, 256] or length is not in [64, 65536]
+--     or length is not a multiple of 8.
+--     Logs a WARNING when parameters are below the recommended security minimums
+--     (hash_count < 30 or length < 1024).
+--
+--   pg_ripple.dice_similarity(a TEXT, b TEXT) → FLOAT8
+--     Computes the Dice coefficient between two Bloom-filter hex strings:
+--       2 * popcount(a & b) / (popcount(a) + popcount(b))
+--     Returns 1.0 for identical inputs (including all-zero vectors).
+--     Returns 0.0 when both inputs have no set bits.
+--
+--   pg_ripple.dp_noisy_count(query TEXT, epsilon FLOAT8) → BIGINT
+--     Executes a read-only SELECT query via SPI, adds Laplace(0, 1/epsilon) noise
+--     to the integer result, and returns the noisy count (clamped to >= 0).
+--     Raises PT0472 if epsilon is not in (0.0, 10.0].
+--     Raises PT0473 if the query does not return a single INTEGER.
+--     Raises PT0474 if the query is not a read-only SELECT.
+--
+--   pg_ripple.dp_noisy_histogram(
+--       query        TEXT,
+--       key_column   TEXT,
+--       count_column TEXT,
+--       epsilon      FLOAT8
+--   ) → TABLE(key TEXT, noisy_count BIGINT)
+--     Executes a read-only SELECT query, adds per-bucket Laplace noise to counts.
+--     Same epsilon and query validation as dp_noisy_count.
+--
+-- New SPARQL FILTER functions (v0.111.0):
+--   pg:dice_similarity(?a, ?b) — Bloom-filter Dice coefficient in SPARQL FILTER/BIND
+--     IRI: <http://pg-ripple.org/functions/dice_similarity>
+--
+-- New Datalog built-in predicate (v0.111.0):
+--   pg:dice_similarity(?a, ?b) OP ?rhs — Dice coefficient comparison in Datalog rule bodies
+--
+-- New GUC parameters:
+--   pg_ripple.bloom_max_input_length  (INT, default 4096)
+--     Maximum byte length of the value argument to bloom_encode().
+--     Calls exceeding this limit raise PT0470.
+--
+-- Error codes added:
+--   PT0470: bloom_encode: input length %d exceeds bloom_max_input_length GUC (%d)
+--   PT0471: bloom_encode: hash_count %d or length %d outside valid range
+--   PT0472: dp_noisy_count: epsilon %g out of valid range (0, 10]
+--   PT0473: dp_noisy_count: query must return a single INTEGER value
+--   PT0474: dp_noisy_count: query rejected by validation — must be a read-only SELECT
+--
+-- Documentation:
+--   docs/src/cookbook/pprl.md — end-to-end PPRL cookbook with security notes

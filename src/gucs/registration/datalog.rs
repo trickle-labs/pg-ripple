@@ -692,4 +692,18 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.111.0 PPRL GUCs ────────────────────────────────────────────────────
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.bloom_max_input_length",
+        c"Maximum byte length of the value argument to bloom_encode(). \
+      Calls exceeding this limit raise PT0470. Default 4096 bytes. (v0.111.0)",
+        c"",
+        &crate::gucs::datalog::BLOOM_MAX_INPUT_LENGTH,
+        1,
+        1_048_576,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

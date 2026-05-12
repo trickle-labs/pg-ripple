@@ -1,0 +1,96 @@
+-- v0.111.0 Feature Regression Tests
+-- Tests for: Dice Similarity SPARQL Function and Datalog Builtin
+--
+-- Covers:
+--   DICE-01: dice_similarity(a, a) = 1.0 for non-empty bloom filter
+--   DICE-02: dice_similarity(a, b) is in [0.0, 1.0]
+--   DICE-03: dice_similarity is symmetric: dice_similarity(a, b) = dice_similarity(b, a)
+--   DICE-04: dice_similarity('Alice', 'Alice') = 1.0 (identical values)
+--   DICE-05: dice_similarity('Alice', 'Bob') < 0.5 (different names)
+--   DICE-06: pg:dice_similarity recognized in SPARQL FILTER (no error)
+--   DICE-07: Datalog pg:dice_similarity builtin parses without error
+
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+
+LOAD '$libdir/pg_ripple';
+
+-- DICE-01: dice_similarity(a, a) = 1.0
+
+SELECT pg_ripple.dice_similarity(
+    pg_ripple.bloom_encode('Alice', 'k', 30, 1024),
+    pg_ripple.bloom_encode('Alice', 'k', 30, 1024)
+) = 1.0 AS dice01_identical;
+
+-- DICE-02: dice_similarity is in [0.0, 1.0]
+
+SELECT
+    pg_ripple.dice_similarity(
+        pg_ripple.bloom_encode('Alice', 'k', 30, 1024),
+        pg_ripple.bloom_encode('Carol', 'k', 30, 1024)
+    ) BETWEEN 0.0 AND 1.0 AS dice02_range_ok;
+
+-- DICE-03: dice_similarity is symmetric
+
+SELECT
+    ABS(
+        pg_ripple.dice_similarity(
+            pg_ripple.bloom_encode('Alice', 'k', 30, 1024),
+            pg_ripple.bloom_encode('Carol', 'k', 30, 1024)
+        )
+        -
+        pg_ripple.dice_similarity(
+            pg_ripple.bloom_encode('Carol', 'k', 30, 1024),
+            pg_ripple.bloom_encode('Alice', 'k', 30, 1024)
+        )
+    ) < 1e-12 AS dice03_symmetric;
+
+-- DICE-04: Same name → similarity = 1.0
+
+SELECT pg_ripple.dice_similarity(
+    pg_ripple.bloom_encode('Alice', 'secret', 30, 1024),
+    pg_ripple.bloom_encode('Alice', 'secret', 30, 1024)
+) = 1.0 AS dice04_same_name;
+
+-- DICE-05: Different names → similarity < 0.5 (heuristic for well-separated names)
+
+SELECT pg_ripple.dice_similarity(
+    pg_ripple.bloom_encode('Alice', 'k', 30, 1024),
+    pg_ripple.bloom_encode('Bob',   'k', 30, 1024)
+) < 0.5 AS dice05_different_names;
+
+-- DICE-06: pg:dice_similarity recognized in SPARQL FILTER
+-- We test by inserting a bloom-encoded triple and running a SPARQL query
+-- that uses pg:dice_similarity in a FILTER. The test passes if the function
+-- runs without error (the specific result may be empty since no matching data
+-- is inserted, but no parse/translation error should occur).
+
+SELECT pg_ripple.insert_triple(
+    '<http://example.org/p1>',
+    '<http://example.org/nameBloom>',
+    pg_ripple.bloom_encode('Alice Smith', 'sharedkey', 30, 1024)
+) > 0 AS dice06_triple_inserted;
+
+-- Run SPARQL FILTER with pg:dice_similarity — should not error
+SELECT COUNT(*) >= 0 AS dice06_sparql_ok
+FROM (
+    SELECT pg_ripple.sparql($$
+        PREFIX pg: <http://pg-ripple.org/functions/>
+        SELECT ?p ?bloom WHERE {
+            ?p <http://example.org/nameBloom> ?bloom .
+            FILTER(pg:dice_similarity(?bloom, ?bloom) > 0.9)
+        }
+    $$) AS result
+) sub;
+
+-- DICE-07: Datalog pg:dice_similarity builtin parses without error
+-- Load a rule using pg:dice_similarity and verify it is accepted.
+
+SELECT pg_ripple.load_rules($$
+    candidate(?x, ?y) :-
+        ?x <http://example.org/nameBloom> ?bx .
+        ?y <http://example.org/nameBloom> ?by .
+        pg:dice_similarity(?bx, ?by) > 0.85 .
+$$) IS NOT NULL AS dice07_datalog_parse_ok;

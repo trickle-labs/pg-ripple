@@ -13,6 +13,34 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.111.0] — 2026-05-12 — Privacy-Preserving Record Linkage (PPRL) Primitives
+
+**Adds Bloom-filter CLK encoding, Dice coefficient similarity, and differential-privacy aggregates for cross-organization entity resolution without sharing raw PII.**
+
+### Added
+
+- **PPRL-01**: `pg_ripple.bloom_encode(value TEXT, key TEXT, hash_count INT DEFAULT 30, length INT DEFAULT 1024) → TEXT` — CLK Bloom-filter encoding using HMAC-SHA-256. Returns a lowercase hex-encoded bit vector of `length` bits. Raises PT0470 on oversized input; PT0471 on invalid parameters; logs WARNING for below-recommended security parameters.
+- **PPRL-02**: `pg_ripple.dice_similarity(a TEXT, b TEXT) → FLOAT8` — Dice coefficient for two Bloom-filter hex strings: `2 * popcount(a & b) / (popcount(a) + popcount(b))`.
+- **PPRL-03**: SPARQL FILTER function `pg:dice_similarity(?a, ?b)` — IRI `<http://pg-ripple.org/functions/dice_similarity>` — computes Dice coefficient in SPARQL FILTER and BIND expressions.
+- **PPRL-04**: Datalog built-in predicate `pg:dice_similarity(?a, ?b) OP ?rhs` — Dice coefficient comparison in Datalog rule bodies.
+- **DPPRIV-01**: `pg_ripple.dp_noisy_count(query TEXT, epsilon FLOAT8) → BIGINT` — differentially-private COUNT with Laplace(0, 1/epsilon) noise, result clamped to ≥ 0. Validates query is a read-only SELECT.
+- **DPPRIV-02**: `pg_ripple.dp_noisy_histogram(query TEXT, key_column TEXT, count_column TEXT, epsilon FLOAT8) → TABLE(key TEXT, noisy_count BIGINT)` — per-bucket Laplace noise histogram.
+- **GUC**: `pg_ripple.bloom_max_input_length` (INT, default 4096) — maximum byte length of the `value` argument to `bloom_encode()`.
+- **PT0470**: error catalog — `bloom_encode: input length %d exceeds bloom_max_input_length GUC (%d)`.
+- **PT0471**: error catalog — `bloom_encode: hash_count %d or length %d outside valid range`.
+- **PT0472**: error catalog — `dp_noisy_count: epsilon %g out of valid range (0, 10]`.
+- **PT0473**: error catalog — `dp_noisy_count: query must return a single INTEGER value`.
+- **PT0474**: error catalog — `dp_noisy_count: query rejected by validation — must be a read-only SELECT`.
+- **DOCS**: `docs/src/cookbook/pprl.md` — end-to-end PPRL cookbook with CLK construction explanation, SPARQL federation example, DP aggregates, and security notes (key management, recommended parameters, patent status).
+- **PROPTEST**: `tests/proptest/pprl_bloom.rs` — six property-based tests: round-trip identity, distinctness, Dice range, symmetry, sign of noisy count, output length.
+- **TEST**: pg_regress tests `v0111_bloom`, `v0111_dice`, `v0111_dp_privacy`.
+
+### Migration
+
+`sql/pg_ripple--0.110.0--0.111.0.sql` — comment-only; no schema changes (all new functionality provided by compiled Rust functions).
+
+---
+
 ## [0.110.0] — 2026-05-11 — NS-RL Evaluation Harness, Continuous Monitoring & Rule Explainability
 
 **Adds the NS-RL evaluation function, three live ER monitoring stream tables, plain-English rule explanation, owl:sameAs anomaly detection, and the Magellan ER benchmark CI gate.**
