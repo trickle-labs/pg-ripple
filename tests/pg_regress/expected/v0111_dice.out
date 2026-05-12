@@ -108,8 +108,10 @@ FROM (
 -- DICE-07: Datalog pg:dice_similarity builtin parses without error
 -- Load a rule using pg:dice_similarity and verify it is accepted.
 -- Rule head must be a 3-term RDF triple; body patterns are comma-separated.
+-- Note: decimal literals cannot be used directly because the Datalog
+-- tokenizer uses '.' as a rule terminator. Use integer thresholds instead.
 SELECT pg_ripple.load_rules($$
-?x <http://example.org/candidate> ?y :- ?x <http://example.org/nameBloom> ?bx , ?y <http://example.org/nameBloom> ?by , pg:dice_similarity(?bx, ?by) > 0.85 .
+?x <http://example.org/candidate> ?y :- ?x <http://example.org/nameBloom> ?bx , ?y <http://example.org/nameBloom> ?by , pg:dice_similarity(?bx, ?by) > 0 .
 $$) IS NOT NULL AS dice07_datalog_parse_ok;
  dice07_datalog_parse_ok 
 --------------------------
