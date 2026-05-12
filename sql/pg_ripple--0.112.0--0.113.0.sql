@@ -1,0 +1,12 @@
+-- Migration 0.112.0 → 0.113.0
+-- Theme: A16 High bulk-load COPY path (PERF-15-05 third assessment) & performance tuning
+--
+-- New GUCs (Rust-compiled, no SQL schema changes required):
+--   pg_ripple.bulk_load_use_copy          — default changed to on (was off since v0.94.0)
+--   pg_ripple.replication_batch_size      — new, default 100
+--   pg_ripple.replication_batch_interval_ms — new, default 500
+--
+-- The SSE channel capacity is now configurable via PG_RIPPLE_HTTP_SSE_BUFFER
+-- environment variable in pg_ripple_http (no SQL-level change).
+--
+-- No SQL schema changes in this release.

@@ -23,7 +23,14 @@ use crate::common::{AppState, redacted_error};
 
 /// Maximum number of SSE events buffered in the channel before backpressure
 /// is applied. Keeps peak memory bounded for large result sets.
-const SSE_CHANNEL_CAPACITY: usize = 256;
+/// P7 (v0.113.0): configurable via `PG_RIPPLE_HTTP_SSE_BUFFER` env (default 256).
+fn sse_channel_capacity() -> usize {
+    std::env::var("PG_RIPPLE_HTTP_SSE_BUFFER")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n >= 1 && n <= 65536)
+        .unwrap_or(256)
+}
 
 /// Format a single SSE event with an optional event-type label.
 fn sse_event(event_type: &str, data: &str) -> String {
@@ -74,7 +81,7 @@ pub async fn stream_sparql_select(state: &AppState, query: &str) -> Response {
     let _cursor_sql = "SELECT row_to_json(r)::text FROM pg_ripple.execute_select($1) r".to_string();
 
     // Execute the query and stream rows.
-    let (tx, rx) = mpsc::channel::<String>(SSE_CHANNEL_CAPACITY);
+    let (tx, rx) = mpsc::channel::<String>(sse_channel_capacity());
     let query_owned = query.to_owned();
     let _pool_conn = client; // keep alive
 

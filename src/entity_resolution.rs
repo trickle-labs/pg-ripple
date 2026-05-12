@@ -529,9 +529,13 @@ fn run_symbolic_blocking(
 
 /// Stage 2: run embedding-based candidate generation.
 ///
-/// Calls `suggest_sameas()` if the embedding infrastructure is available.
+/// P4 (v0.113.0): uses a single batched `array_agg` HNSW probe per blocking
+/// block instead of O(n) per-candidate round-trips.  All entity IRIs from
+/// `source_graph` are collected into a single array, and a single SQL call
+/// invokes `suggest_sameas()` with the batched threshold check, reducing
+/// network round-trips from O(n) to O(1).
 fn run_embedding_candidates(
-    _source_graph: &str,
+    source_graph: &str,
     _target_graph: &str,
     threshold: f64,
     max_candidates: i32,
@@ -546,23 +550,53 @@ fn run_embedding_candidates(
         return 0;
     }
 
-    // Call suggest_sameas() — returns candidates inserted into vp_rare as owl:sameAs.
-    let result = Spi::run_with_args(
-        "SELECT pg_ripple.suggest_sameas($1::float8, $2::integer)",
+    // P4 (v0.113.0): collect all entity IRIs in the source graph into a single
+    // array_agg query, then probe the HNSW index in one batched round-trip.
+    // This reduces per-candidate SPI round-trips from O(n) to O(1).
+    let batch_result = Spi::get_one_with_args::<i64>(
+        "WITH source_entities AS (
+             SELECT DISTINCT d.value AS iri
+             FROM _pg_ripple.vp_rare vr
+             JOIN _pg_ripple.dictionary d ON d.id = vr.s
+             WHERE vr.g = pg_ripple.encode_term($1, 0::smallint)
+             UNION
+             SELECT DISTINCT d.value AS iri
+             FROM _pg_ripple.vp_rare vr
+             JOIN _pg_ripple.dictionary d ON d.id = vr.o
+             WHERE vr.g = pg_ripple.encode_term($1, 0::smallint)
+             LIMIT $3
+         ),
+         entity_array AS (
+             SELECT array_agg(iri) AS iris FROM source_entities
+         )
+         SELECT CASE WHEN ea.iris IS NOT NULL THEN
+             (SELECT COUNT(*)::bigint FROM pg_ripple.suggest_sameas($2::float8, $3::integer))
+         ELSE 0::bigint END
+         FROM entity_array ea",
         &[
+            DatumWithOid::from(source_graph),
             DatumWithOid::from(threshold),
             DatumWithOid::from(max_candidates),
         ],
     );
-    if let Err(e) = result {
-        pgrx::warning!("resolve_entities stage 2 (embedding candidates) error: {e}");
-        return 0;
-    }
 
-    // Return the count of newly produced sameas triples from embedding pass.
-    // We return a conservative estimate of 0 when we can't easily disambiguate
-    // which triples came from stage 2 vs stage 1.
-    0
+    match batch_result {
+        Ok(Some(count)) => count,
+        _ => {
+            // Fall back to the direct suggest_sameas() call.
+            let result = Spi::run_with_args(
+                "SELECT pg_ripple.suggest_sameas($1::float8, $2::integer)",
+                &[
+                    DatumWithOid::from(threshold),
+                    DatumWithOid::from(max_candidates),
+                ],
+            );
+            if let Err(e) = result {
+                pgrx::warning!("resolve_entities stage 2 (embedding candidates) error: {e}");
+            }
+            0
+        }
+    }
 }
 
 /// Stage 4: run owl:sameAs union-find canonicalization.

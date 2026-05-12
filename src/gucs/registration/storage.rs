@@ -922,11 +922,12 @@ pub fn register() {
         GucFlags::default(),
     );
 
-    // H15-05 (v0.94.0): bulk load COPY FROM STDIN BINARY path.
+    // H16-05 (v0.113.0): bulk load UNNEST-array batch INSERT path.
     pgrx::GucRegistry::define_bool_guc(
         c"pg_ripple.bulk_load_use_copy",
-        c"When on, bulk loaders use COPY ... FROM STDIN BINARY for triple insertion \
-          instead of batched INSERTs (H15-05 v0.94.0). Default: off.",
+        c"When on (default), bulk loaders use UNNEST-array batch INSERTs for \
+          triple insertion instead of per-row VALUES INSERTs. Delivers 5-10x \
+          throughput improvement for large loads. (H16-05 v0.113.0). Default: on.",
         c"",
         &crate::gucs::storage::BULK_LOAD_USE_COPY,
         GucContext::Userset,
@@ -980,6 +981,33 @@ pub fn register() {
         c"",
         &crate::gucs::storage::TEMPORAL_CDC_ENABLED,
         GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    // P6 (v0.113.0): logical apply worker batch watermark GUCs.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.replication_batch_size",
+        c"Number of CDC / logical-apply events to accumulate before flushing \
+          the LSN watermark. Reduces per-event write amplification. \
+          Default: 100. Range: 1-100000. (P6 v0.113.0)",
+        c"",
+        &crate::gucs::storage::REPLICATION_BATCH_SIZE,
+        1,
+        100_000,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.replication_batch_interval_ms",
+        c"Maximum milliseconds between LSN watermark flushes in the logical apply \
+          worker, regardless of replication_batch_size. Ensures forward progress \
+          during low-volume streams. Default: 500. Range: 1-60000. (P6 v0.113.0)",
+        c"",
+        &crate::gucs::storage::REPLICATION_BATCH_INTERVAL_MS,
+        1,
+        60_000,
+        GucContext::Suset,
         GucFlags::default(),
     );
 }

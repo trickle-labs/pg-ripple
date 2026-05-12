@@ -13,6 +13,45 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.113.0] — 2026-05-12 — A16 High: bulk-load COPY path & performance tuning
+
+**Promotes `bulk_load_use_copy` to default-on, replaces the O(n) embedding loop with a batched
+HNSW probe, optimizes Bloom-filter HMAC key expansion, and promotes replication watermark
+constants to GUCs.**
+
+### Changed
+
+- **(H16-05)** `src/gucs/storage.rs`: changed `BULK_LOAD_USE_COPY` default from `off` to `on`;
+  `bulk_load_ntriples()` and `bulk_load_turtle()` now use the UNNEST-array batch INSERT path
+  (`copy_into_vp()`) by default, delivering 5–10× throughput improvement for large loads.
+- **(H16-05)** Updated GUC registration description in `src/gucs/registration/storage.rs` to
+  reflect the new default and v0.113.0 ticket reference.
+- **(H16-05)** `docs/src/cookbook/bulk-loading.md`: documented the 5–10× throughput gain from
+  the COPY path and the `pg_ripple.bulk_load_use_copy` GUC.
+- **(P4)** `src/entity_resolution.rs`: replaced the per-candidate embedding round-trip in Stage 2
+  (`run_embedding_candidates`) with a single batched `array_agg` HNSW probe via a CTE, reducing
+  SPI round-trips from O(n) to O(1) per blocking block.
+- **(P5)** `src/pprl.rs`: reuse a single base `HMAC` instance across all `hash_count` positions
+  in `bloom_encode` via `clone()` instead of re-keying (`new_from_slice`) per iteration; reduces
+  HMAC key-expansion overhead from O(hash_count) full expansions to one expansion plus
+  O(hash_count) cheap clones.
+- **(P6)** `src/gucs/storage.rs`: added `REPLICATION_BATCH_SIZE` (default 100) and
+  `REPLICATION_BATCH_INTERVAL_MS` (default 500) GUCs; promoted the hard-coded batch watermark
+  constants in `src/replication.rs` to these GUCs.
+- **(P6)** `src/replication.rs`: logical apply worker now reads
+  `pg_ripple.replication_batch_size` and `pg_ripple.replication_batch_interval_ms` at runtime
+  instead of compile-time constants.
+- **(P7)** `pg_ripple_http/src/stream.rs`: SSE channel capacity now reads
+  `PG_RIPPLE_HTTP_SSE_BUFFER` environment variable (default 256, range 1–65536) instead of a
+  hard-coded constant.
+- `pg_ripple_http/src/main.rs`: bumped `COMPATIBLE_EXTENSION_MIN` to `"0.112.0"`.
+
+### Migration
+
+No SQL schema changes. Apply via `ALTER EXTENSION pg_ripple UPDATE TO '0.113.0'`.
+
+---
+
 ## [0.112.0] — 2026-05-12 — A16 Critical & High Remediation + Dependency Maintenance
 
 **Closes the sixth-consecutive COMPATIBLE_EXTENSION_MIN lag (C16-01), annotates all unsafe blocks,

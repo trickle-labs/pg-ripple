@@ -148,13 +148,11 @@ pub extern "C-unwind" fn pg_ripple_logical_apply_worker_main(_arg: pg_sys::Datum
     );
 
     // CC13-03 (v0.86.0): batch LSN watermark updates.
-    // Only write to `_pg_ripple.cdc_lsn_watermark` every 100 events or every
-    // 500 ms (whichever comes first) to avoid excessive WAL traffic on busy
-    // CDC streams. The last-committed LSN is buffered in this local variable.
+    // P6 (v0.113.0): the batch size and interval are now configurable via
+    // `pg_ripple.replication_batch_size` and `pg_ripple.replication_batch_interval_ms`
+    // GUCs instead of the previous hard-coded constants (100 events / 500 ms).
     let mut events_since_watermark: u32 = 0;
     let mut last_watermark_ts: std::time::Instant = std::time::Instant::now();
-    const WATERMARK_BATCH_EVENTS: u32 = 100;
-    const WATERMARK_BATCH_MS: u64 = 500;
 
     while BackgroundWorker::wait_latch(Some(Duration::from_secs(5))) {
         if BackgroundWorker::sighup_received() {
@@ -179,7 +177,11 @@ pub extern "C-unwind" fn pg_ripple_logical_apply_worker_main(_arg: pg_sys::Datum
         // mutable borrows satisfy BackgroundWorker::transaction's UnwindSafe bound.
         events_since_watermark += 1;
         let elapsed_ms = last_watermark_ts.elapsed().as_millis() as u64;
-        if events_since_watermark >= WATERMARK_BATCH_EVENTS || elapsed_ms >= WATERMARK_BATCH_MS {
+        // P6 (v0.113.0): read batch size and interval from GUCs instead of
+        // hard-coded constants (100 / 500 ms).
+        let batch_events = crate::REPLICATION_BATCH_SIZE.get() as u32;
+        let batch_ms = crate::REPLICATION_BATCH_INTERVAL_MS.get() as u64;
+        if events_since_watermark >= batch_events || elapsed_ms >= batch_ms {
             BackgroundWorker::transaction(|| {
                 // CDC-LSN-01 (v0.81.0): update the LSN watermark.
                 let lsn: Option<String> =

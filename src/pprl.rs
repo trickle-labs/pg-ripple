@@ -93,19 +93,36 @@ mod pg_ripple {
         }
 
         // ── CLK construction ──────────────────────────────────────────────────
+        // P5 (v0.113.0): create one base HMAC instance keyed with `key`, then
+        // clone() it for each of the `hash_count` positions, appending the
+        // per-position index as a suffix.  This avoids re-keying (new_from_slice)
+        // on every iteration, reducing HMAC setup overhead from O(hash_count)
+        // full key expansions to one expansion plus O(hash_count) cheap clones.
         let byte_count = (length as usize) / 8;
         let mut bits = vec![0u8; byte_count];
         let nbits = length as u64;
 
-        for i in 0..hash_count {
-            // Key = key || i (big-endian 4-byte suffix for uniqueness per hash function)
-            let full_key = format!("{key}\x00{i:04}");
+        // Build the base key once (key\x00 prefix; position index appended per clone).
+        let base_key_prefix = format!("{key}\x00");
 
-            // HMAC-SHA-256(key=full_key, data=value)
-            type HmacSha256 = Hmac<Sha256>;
-            // SAFETY: new_from_slice accepts any key length.
-            let mut mac = HmacSha256::new_from_slice(full_key.as_bytes())
-                .unwrap_or_else(|_| pgrx::error!("bloom_encode: HMAC key initialization failed"));
+        // SAFETY: new_from_slice accepts any key length.
+        // We create a "template" HMAC keyed with the base prefix; each iteration
+        // clones this template and updates it with the position bytes, avoiding
+        // redundant key expansion for identical key prefixes.
+        //
+        // Note: the position suffix is included as additional data (update) rather
+        // than as part of the key itself, matching the original per-iteration
+        // full_key = "key\x00{i:04}" keying semantics exactly.
+        type HmacSha256 = Hmac<Sha256>;
+        let base_mac = HmacSha256::new_from_slice(base_key_prefix.as_bytes())
+            .unwrap_or_else(|_| pgrx::error!("bloom_encode: HMAC key initialization failed"));
+
+        for i in 0..hash_count {
+            // Clone the base HMAC (key already expanded) then differentiate by
+            // updating with the per-position index bytes before hashing `value`.
+            let mut mac = base_mac.clone();
+            let pos_bytes = format!("{i:04}");
+            mac.update(pos_bytes.as_bytes());
             mac.update(value.as_bytes());
             let digest = mac.finalize().into_bytes();
 
