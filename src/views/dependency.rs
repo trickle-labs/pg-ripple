@@ -3,10 +3,7 @@
 
 use pgrx::prelude::*;
 
-
-use super::{
-    PGTRICKLE_HINT, predicate_table_expr, validate_name,
-};
+use super::{PGTRICKLE_HINT, predicate_table_expr, validate_name};
 
 /// Create an ExtVP semi-join stream table for two frequently co-joined predicates.
 ///
@@ -278,4 +275,3 @@ pub(crate) fn list_framing_views() -> pgrx::JsonB {
 }
 
 // ─── CONSTRUCT Views (v0.18.0) ────────────────────────────────────────────────
-

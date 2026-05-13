@@ -3,8 +3,8 @@
 //! Contains `CyclicBgpPattern`, `LftiBinding`, `execute_leapfrog_triejoin`,
 //! `try_leapfrog_select`, and related helpers.
 
-use super::trie::{EdgeData, SortedIterator, leapfrog_intersect};
 use super::detect_cyclic_bgp;
+use super::trie::{EdgeData, SortedIterator, leapfrog_intersect};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

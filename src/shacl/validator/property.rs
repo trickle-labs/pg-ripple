@@ -1,11 +1,11 @@
 #![allow(unused_imports, dead_code)]
+use super::node::node_conforms_to_shape;
+use super::severity::Violation;
+use crate::shacl::constraints;
+use crate::shacl::{PropertyShape, Shape, ShapeConstraint, ShapeTarget};
 use pgrx::datum::DatumWithOid;
 use pgrx::prelude::*;
 use serde::Serialize;
-use crate::shacl::constraints;
-use crate::shacl::{PropertyShape, Shape, ShapeConstraint, ShapeTarget};
-use super::severity::Violation;
-use super::node::node_conforms_to_shape;
 
 /// Execute validation for a single `PropertyShape` against all focus nodes.
 pub(crate) fn validate_property_shape(
@@ -539,4 +539,3 @@ pub(crate) fn get_all_predicate_iris_for_node(focus: i64, graph_id: i64) -> Vec<
 pub fn decode_id_safe(id: i64) -> String {
     crate::dictionary::decode(id).unwrap_or_else(|| format!("<decoded-id:{id}>"))
 }
-

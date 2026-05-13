@@ -147,7 +147,10 @@ pub(super) fn predicate_table_expr(pred_iri: &str) -> Result<(i64, String), Stri
 
 /// Walk a spargebra `GraphPattern` and collect all bound (non-variable) predicate
 /// IRI strings from triple pattern predicates.
-pub(super) fn collect_sparql_predicates(pattern: &spargebra::algebra::GraphPattern, out: &mut Vec<String>) {
+pub(super) fn collect_sparql_predicates(
+    pattern: &spargebra::algebra::GraphPattern,
+    out: &mut Vec<String>,
+) {
     use spargebra::algebra::GraphPattern;
     use spargebra::term::NamedNodePattern;
 
@@ -265,15 +268,15 @@ pub mod refresh;
 pub mod sparql;
 
 // ─── Re-exports for views_api.rs ─────────────────────────────────────────────
-pub(crate) use sparql::{create_sparql_view, drop_sparql_view, list_sparql_views};
-pub(crate) use materialise::{
-    create_datalog_view_from_rules, create_datalog_view_from_rule_set,
-    drop_datalog_view, list_datalog_views,
-};
-pub(crate) use dependency::{
-    create_extvp, drop_extvp, list_extvp,
-    create_framing_view, drop_framing_view, list_framing_views,
-};
 pub(crate) use construct::{create_construct_view, drop_construct_view, list_construct_views};
+pub(crate) use dependency::{
+    create_extvp, create_framing_view, drop_extvp, drop_framing_view, list_extvp,
+    list_framing_views,
+};
 pub(crate) use describe::{create_describe_view, drop_describe_view, list_describe_views};
+pub(crate) use materialise::{
+    create_datalog_view_from_rule_set, create_datalog_view_from_rules, drop_datalog_view,
+    list_datalog_views,
+};
 pub(crate) use refresh::{create_ask_view, drop_ask_view, list_ask_views};
+pub(crate) use sparql::{create_sparql_view, drop_sparql_view, list_sparql_views};

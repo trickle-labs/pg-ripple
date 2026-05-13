@@ -6,9 +6,7 @@ use spargebra::SparqlParser;
 
 use crate::sparql::sqlgen;
 
-use super::{
-    PGTRICKLE_HINT, validate_name,
-};
+use super::{PGTRICKLE_HINT, validate_name};
 
 /// Compile a SPARQL ASK query to a SQL SELECT for a stream table.
 ///

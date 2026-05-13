@@ -70,4 +70,3 @@ pub fn distribute_vp_delta(pred_id: i64, colocate_with: &str) {
     )
     .unwrap_or_else(|e| pgrx::warning!("create_distributed_table {tombs}: {e}"));
 }
-

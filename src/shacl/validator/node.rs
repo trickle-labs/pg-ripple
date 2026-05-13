@@ -1,14 +1,14 @@
 #![allow(unused_imports, dead_code)]
+use super::property::{
+    collect_focus_nodes, get_all_predicate_iris_for_node, get_value_ids, validate_property_shape,
+};
+use super::severity::Violation;
+use super::sparql::validate_sync_with_shapes;
+use crate::shacl::constraints;
+use crate::shacl::{PropertyShape, Shape, ShapeConstraint, ShapeTarget};
 use pgrx::datum::DatumWithOid;
 use pgrx::prelude::*;
 use serde::Serialize;
-use crate::shacl::constraints;
-use crate::shacl::{PropertyShape, Shape, ShapeConstraint, ShapeTarget};
-use super::severity::Violation;
-use super::property::{
-    validate_property_shape, get_all_predicate_iris_for_node, collect_focus_nodes, get_value_ids,
-};
-use super::sparql::validate_sync_with_shapes;
 
 /// Check whether `node_id` conforms to the shape `shape_iri`.
 /// Depth-limited to 32 levels to prevent infinite recursion.
@@ -95,8 +95,6 @@ fn validate_property_shape_depth(
 }
 
 // ─── Property shape validation ────────────────────────────────────────────────
-
-
 
 /// Run offline validation of all data against all active SHACL shapes.
 pub fn run_validate(graph: Option<&str>) -> pgrx::JsonB {
@@ -355,4 +353,3 @@ pub fn process_validation_batch(batch_size: i64) -> i64 {
 
     processed_count
 }
-

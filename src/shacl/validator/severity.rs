@@ -3,7 +3,6 @@
 
 use serde::Serialize;
 
-
 // ─── Violation record ─────────────────────────────────────────────────────────
 
 /// A violation entry in a SHACL validation report.
@@ -24,4 +23,3 @@ pub struct Violation {
 }
 
 // ─── Recursive shape conformance ─────────────────────────────────────────────
-

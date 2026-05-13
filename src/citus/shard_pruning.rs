@@ -701,4 +701,3 @@ pub fn approx_distinct_available_impl() -> bool {
 }
 
 // ── v0.63.0: CITUS-37 Per-worker BRIN summarise after merge ─────────────────
-

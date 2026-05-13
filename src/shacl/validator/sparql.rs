@@ -1,17 +1,16 @@
 #![allow(unused_imports, dead_code)]
+use super::node::{count_qualifying_values, node_conforms_to_shape, validate_sync};
+use super::property::{
+    collect_focus_nodes, compare_dictionary_values, count_values_in_graph, encode_shacl_in_value,
+    get_all_predicate_iris_for_node, get_language_tag, get_value_ids, get_vp_table_name,
+    validate_property_shape, value_has_datatype, value_has_node_kind, value_has_rdf_type,
+};
+use super::severity::Violation;
+use crate::shacl::constraints;
+use crate::shacl::{PropertyShape, Shape, ShapeConstraint, ShapeTarget};
 use pgrx::datum::DatumWithOid;
 use pgrx::prelude::*;
 use serde::Serialize;
-use crate::shacl::constraints;
-use crate::shacl::{PropertyShape, Shape, ShapeConstraint, ShapeTarget};
-use super::severity::Violation;
-use super::node::{validate_sync, node_conforms_to_shape, count_qualifying_values};
-use super::property::{
-    validate_property_shape, get_all_predicate_iris_for_node, collect_focus_nodes, get_value_ids,
-    get_vp_table_name, encode_shacl_in_value, value_has_datatype,
-    value_has_rdf_type, value_has_node_kind, get_language_tag,
-    compare_dictionary_values, count_values_in_graph,
-};
 
 /// Like `validate_sync` but accepts a pre-loaded shapes slice.
 pub(crate) fn validate_sync_with_shapes(

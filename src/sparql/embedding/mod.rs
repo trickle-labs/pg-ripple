@@ -15,7 +15,7 @@ pub mod rag;
 // Public re-exports (keep crate-visibility for pub(crate) items)
 pub use hybrid::hybrid_search;
 pub(crate) use index::{
-    call_embedding_api_pub, embed_entities, has_pgvector, refresh_embeddings,
-    similar_entities, sql_for_pg_similar, store_embedding,
+    call_embedding_api_pub, embed_entities, has_pgvector, refresh_embeddings, similar_entities,
+    sql_for_pg_similar, store_embedding,
 };
 pub use rag::{add_embedding_triples, contextualize_entity, list_embedding_models, rag_retrieve};

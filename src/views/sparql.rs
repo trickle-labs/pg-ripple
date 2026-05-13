@@ -3,11 +3,7 @@
 
 use pgrx::prelude::*;
 
-
-use super::{
-    PGTRICKLE_HINT,
-    compile_sparql_for_view, validate_name,
-};
+use super::{PGTRICKLE_HINT, compile_sparql_for_view, validate_name};
 
 /// Create a named, incrementally-maintained SPARQL result table.
 ///
@@ -169,4 +165,3 @@ pub(crate) fn list_sparql_views() -> pgrx::JsonB {
 }
 
 // ─── Datalog Views ───────────────────────────────────────────────────────────
-

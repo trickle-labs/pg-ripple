@@ -4,11 +4,7 @@
 use pgrx::datum::DatumWithOid;
 use pgrx::prelude::*;
 
-
-use super::{
-    PGTRICKLE_HINT,
-    compile_sparql_for_view, validate_datalog_view_goal, validate_name,
-};
+use super::{PGTRICKLE_HINT, compile_sparql_for_view, validate_datalog_view_goal, validate_name};
 
 /// Create a Datalog view from inline rules and a SPARQL SELECT goal.
 ///
@@ -291,4 +287,3 @@ pub(crate) fn list_datalog_views() -> pgrx::JsonB {
 }
 
 // ─── ExtVP Semi-join Tables ───────────────────────────────────────────────────
-

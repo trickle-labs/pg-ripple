@@ -7,10 +7,7 @@ use spargebra::SparqlParser;
 use crate::dictionary;
 use crate::sparql::sqlgen;
 
-use super::{
-    PGTRICKLE_HINT,
-    remap_view_columns, validate_name,
-};
+use super::{PGTRICKLE_HINT, remap_view_columns, validate_name};
 
 /// Compile a SPARQL CONSTRUCT query to a SQL SELECT for a stream table.
 ///
@@ -312,4 +309,3 @@ pub(crate) fn list_construct_views() -> pgrx::JsonB {
 }
 
 // ─── DESCRIBE Views (v0.18.0) ─────────────────────────────────────────────────
-

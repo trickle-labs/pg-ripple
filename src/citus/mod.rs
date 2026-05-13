@@ -87,6 +87,6 @@ pub mod shard_pruning;
 
 // Re-export key public API
 pub use ddl_hooks::distribute_vp_delta;
-pub use shard_pruning::compute_shard_id;
 pub use query_rewriting::citus_service_shard_annotation;
+pub use shard_pruning::compute_shard_id;
 pub use shard_pruning::explain_citus_section;

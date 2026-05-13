@@ -351,5 +351,4 @@ mod pg_ripple {
             "predicate_iri":  result.predicate_iri
         }))
     }
-
 }

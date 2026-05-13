@@ -796,7 +796,6 @@ mod pg_ripple {
         TableIterator::new(rows)
     }
 
-
     /// Write `pgc:CoverageMap` triples for all topics into `target_graph`.
     ///
     /// Returns the number of triples written.
@@ -911,6 +910,4 @@ mod pg_ripple {
     }
 
     // ── v0.99.0: Schema.org SQL Helper ───────────────────────────────────────
-
-
 }

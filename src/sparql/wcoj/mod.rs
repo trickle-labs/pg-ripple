@@ -19,13 +19,8 @@ pub mod leapfrog;
 pub mod trie;
 
 // Re-export so callers use `crate::sparql::wcoj::*` unchanged.
-pub use executor::{
-    analyse_bgp, apply_wcoj_hints,
-    run_triangle_query, wcoj_session_preamble,
-};
-pub use leapfrog::{
-    LftiBinding, try_leapfrog_select,
-};
+pub use executor::{analyse_bgp, apply_wcoj_hints, run_triangle_query, wcoj_session_preamble};
+pub use leapfrog::{LftiBinding, try_leapfrog_select};
 
 // ─── BGP variable extraction ──────────────────────────────────────────────────
 
@@ -104,8 +99,7 @@ pub fn detect_cyclic_bgp(pattern_vars: &[Vec<String>]) -> bool {
     let mut visited: HashSet<String> = HashSet::new();
     let mut rec_stack: HashSet<String> = HashSet::new();
     for node in &nodes {
-        if !visited.contains(node)
-            && has_cycle_dfs(node, None, &adj, &mut visited, &mut rec_stack)
+        if !visited.contains(node) && has_cycle_dfs(node, None, &adj, &mut visited, &mut rec_stack)
         {
             return true;
         }

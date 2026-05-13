@@ -193,5 +193,4 @@ mod pg_ripple {
     }
 
     // ── v0.102.0: hypothetical_inference ──────────────────────────────────────
-
 }

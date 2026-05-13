@@ -5,7 +5,6 @@
 mod pg_ripple {
     use pgrx::prelude::*;
 
-
     // ── Datalog Reasoning Engine (v0.10.0) ────────────────────────────────────
 
     /// Load Datalog rules from a text string.
@@ -236,5 +235,4 @@ mod pg_ripple {
             &[pgrx::datum::DatumWithOid::from(name)],
         );
     }
-
 }

@@ -238,6 +238,4 @@ mod pg_ripple {
     }
 
     // ── SKOS-IC: integrity constraint rules ───────────────────────────────────
-
-
 }

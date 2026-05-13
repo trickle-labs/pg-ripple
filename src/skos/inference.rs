@@ -126,6 +126,4 @@ mod pg_ripple {
     }
 
     // ── SKOS-05: SQL Helper Functions ─────────────────────────────────────────
-
-
 }

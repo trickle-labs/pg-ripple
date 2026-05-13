@@ -646,4 +646,3 @@ pub(crate) fn sql_for_pg_similar(entity_col: &str, query_text: &str, _k: i64) ->
 }
 
 // ─── v0.28.0: Advanced Hybrid Search & RAG Pipeline ──────────────────────────
-

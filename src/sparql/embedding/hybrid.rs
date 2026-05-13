@@ -95,4 +95,3 @@ pub fn hybrid_search(
     results.truncate(k as usize);
     results
 }
-

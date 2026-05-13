@@ -279,4 +279,3 @@ pub fn citus_cluster_status() -> TableIterator<
 pub fn citus_available() -> bool {
     is_citus_loaded()
 }
-
