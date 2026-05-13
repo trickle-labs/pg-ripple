@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.4",
   "version": 1,
-  "serialNumber": "urn:uuid:33f54c7f-26e7-4306-8063-35c93802dc04",
+  "serialNumber": "urn:uuid:7eb79adb-8b8f-4917-9a11-79b4dde2af58",
   "metadata": {
-    "timestamp": "2026-05-12T18:54:52.601538000Z",
+    "timestamp": "2026-05-13T09:26:42.288375000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "application",
-      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.113.0",
+      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.115.0",
       "name": "pg_ripple_http",
-      "version": "0.113.0",
+      "version": "0.115.0",
       "description": "SPARQL 1.1 Protocol HTTP endpoint for pg_ripple — connects PostgreSQL 18 RDF triple store to the web",
       "scope": "required",
       "licenses": [
@@ -24,7 +24,7 @@
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/pg_ripple_http@0.113.0?download_url=file://.",
+      "purl": "pkg:cargo/pg_ripple_http@0.115.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -34,10 +34,10 @@
       "components": [
         {
           "type": "application",
-          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.113.0 bin-target-0",
+          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.115.0 bin-target-0",
           "name": "pg_ripple_http",
-          "version": "0.113.0",
-          "purl": "pkg:cargo/pg_ripple_http@0.113.0?download_url=file://.#src/main.rs"
+          "version": "0.115.0",
+          "purl": "pkg:cargo/pg_ripple_http@0.115.0?download_url=file://.#src/main.rs"
         }
       ]
     },
@@ -7570,7 +7570,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.113.0",
+      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.115.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#arrow@58.3.0",
         "registry+https://github.com/rust-lang/crates.io-index#axum@0.8.9",
