@@ -532,8 +532,7 @@ impl Metrics {
     /// Record entity-resolution stage latency.
     pub fn record_er_stage_duration(&self, stage: &str, duration: std::time::Duration) {
         let idx = Self::er_stage_index(stage);
-        self.er_stage_duration_us[idx]
-            .fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
+        self.er_stage_duration_us[idx].fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
     }
 
     /// ER stage cumulative duration in seconds for the given stage label.
@@ -558,7 +557,9 @@ impl Metrics {
     }
 
     pub fn bayesian_propagation_duration_secs(&self) -> f64 {
-        self.bayesian_propagation_duration_us.load(Ordering::Relaxed) as f64 / 1_000_000.0
+        self.bayesian_propagation_duration_us
+            .load(Ordering::Relaxed) as f64
+            / 1_000_000.0
     }
 
     /// Update the temporal facts count snapshot.
@@ -581,7 +582,8 @@ impl Metrics {
 
     /// Increment the PPRL Bloom encode counter.
     pub fn record_pprl_bloom_encode(&self) {
-        self.pprl_bloom_encodes_total.fetch_add(1, Ordering::Relaxed);
+        self.pprl_bloom_encodes_total
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn pprl_bloom_encodes_total(&self) -> u64 {
@@ -618,7 +620,8 @@ impl Metrics {
 
     /// Increment the conflict detection counter.
     pub fn record_conflict_detection(&self) {
-        self.conflict_detections_total.fetch_add(1, Ordering::Relaxed);
+        self.conflict_detections_total
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn conflict_detections_total(&self) -> u64 {

@@ -199,11 +199,7 @@ pub(crate) async fn pagerank_run(
           damping => {}, max_iterations => {}, convergence_delta => {}, \
           direction => $1, decay_rate => {}, bias => {} \
         )",
-        req.damping,
-        req.max_iterations,
-        req.convergence_delta,
-        req.decay_rate,
-        req.bias,
+        req.damping, req.max_iterations, req.convergence_delta, req.decay_rate, req.bias,
     );
 
     let row_count: i64 = match client.query_one(&sql, &[&direction_str]).await {
@@ -772,7 +768,13 @@ pub(crate) async fn find_duplicates(
     };
     // M16-04 (v0.115.0): parameterised $1/$2/$3 for metric, thresholds.
     let sql = "SELECT * FROM pg_ripple.pagerank_find_duplicates($1, $2, $3)";
-    let rows = match client.query(sql, &[&req.metric, &req.centrality_threshold, &req.fuzzy_threshold]).await {
+    let rows = match client
+        .query(
+            sql,
+            &[&req.metric, &req.centrality_threshold, &req.fuzzy_threshold],
+        )
+        .await
+    {
         Ok(r) => r,
         Err(e) => {
             return redacted_error(

@@ -37,7 +37,9 @@ pub struct CreateTenantBody {
 fn is_valid_tenant_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 63
-        && name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        && name
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
 }
 
 // ── GET /tenants ──────────────────────────────────────────────────────────────
@@ -54,7 +56,11 @@ pub(crate) async fn list_tenants(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let rows = match client
@@ -95,7 +101,10 @@ pub(crate) async fn create_tenant(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: CreateTenantBody = match serde_json::from_slice(&bytes) {
@@ -120,7 +129,11 @@ pub(crate) async fn create_tenant(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     match client
@@ -141,7 +154,11 @@ pub(crate) async fn create_tenant(
         ),
         Err(e) => {
             state.metrics.record_error();
-            redacted_error("create_tenant_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+            redacted_error(
+                "create_tenant_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
         }
     }
 }
@@ -167,7 +184,11 @@ pub(crate) async fn get_tenant(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let row = match client
@@ -187,7 +208,11 @@ pub(crate) async fn get_tenant(
         }
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("tenant_stats_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR);
+            return redacted_error(
+                "tenant_stats_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
     json_response(
@@ -222,17 +247,28 @@ pub(crate) async fn delete_tenant(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
-    match client.execute("SELECT pg_ripple.drop_tenant($1)", &[&name]).await {
+    match client
+        .execute("SELECT pg_ripple.drop_tenant($1)", &[&name])
+        .await
+    {
         Ok(_) => json_response(
             StatusCode::OK,
             serde_json::json!({ "status": "dropped", "name": name }),
         ),
         Err(e) => {
             state.metrics.record_error();
-            redacted_error("drop_tenant_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+            redacted_error(
+                "drop_tenant_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
         }
     }
 }

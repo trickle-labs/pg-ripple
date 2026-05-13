@@ -52,7 +52,10 @@ pub(crate) async fn entity_resolution_resolve(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: ResolveEntitiesBody = match serde_json::from_slice(&bytes) {
@@ -68,11 +71,18 @@ pub(crate) async fn entity_resolution_resolve(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let start = Instant::now();
-    let options_json = req.options.map(|v| v.to_string()).unwrap_or_else(|| "null".to_owned());
+    let options_json = req
+        .options
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_owned());
     let row = match client
         .query_one(
             "SELECT pg_ripple.resolve_entities($1, $2, $3::json)",
@@ -92,7 +102,9 @@ pub(crate) async fn entity_resolution_resolve(
     };
     let elapsed = start.elapsed();
     // M16-03: record owl:sameAs assertion metrics.
-    state.metrics.record_er_stage_duration("canonicalization", elapsed);
+    state
+        .metrics
+        .record_er_stage_duration("canonicalization", elapsed);
     let result: serde_json::Value = row.get::<_, serde_json::Value>(0);
     json_response(StatusCode::OK, result)
 }
@@ -111,7 +123,10 @@ pub(crate) async fn entity_resolution_evaluate(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: EvaluateResolutionBody = match serde_json::from_slice(&bytes) {
@@ -127,7 +142,11 @@ pub(crate) async fn entity_resolution_evaluate(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let opts_json = req
@@ -169,14 +188,28 @@ pub(crate) async fn entity_resolution_monitoring_enable(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
-    match client.execute("SELECT pg_ripple.enable_er_monitoring()", &[]).await {
-        Ok(_) => json_response(StatusCode::OK, serde_json::json!({"status": "monitoring_enabled"})),
+    match client
+        .execute("SELECT pg_ripple.enable_er_monitoring()", &[])
+        .await
+    {
+        Ok(_) => json_response(
+            StatusCode::OK,
+            serde_json::json!({"status": "monitoring_enabled"}),
+        ),
         Err(e) => {
             state.metrics.record_error();
-            redacted_error("er_monitoring_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+            redacted_error(
+                "er_monitoring_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
         }
     }
 }
@@ -195,14 +228,28 @@ pub(crate) async fn entity_resolution_monitoring_disable(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
-    match client.execute("SELECT pg_ripple.disable_er_monitoring()", &[]).await {
-        Ok(_) => json_response(StatusCode::OK, serde_json::json!({"status": "monitoring_disabled"})),
+    match client
+        .execute("SELECT pg_ripple.disable_er_monitoring()", &[])
+        .await
+    {
+        Ok(_) => json_response(
+            StatusCode::OK,
+            serde_json::json!({"status": "monitoring_disabled"}),
+        ),
         Err(e) => {
             state.metrics.record_error();
-            redacted_error("er_monitoring_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+            redacted_error(
+                "er_monitoring_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
         }
     }
 }

@@ -36,15 +36,23 @@ pub(crate) async fn proof_tree_get(
     }
 
     // Percent-decode path segments so clients can pass IRIs via URL encoding.
-    let subject = percent_decode_str(&subject).decode_utf8_lossy().into_owned();
-    let predicate = percent_decode_str(&predicate).decode_utf8_lossy().into_owned();
+    let subject = percent_decode_str(&subject)
+        .decode_utf8_lossy()
+        .into_owned();
+    let predicate = percent_decode_str(&predicate)
+        .decode_utf8_lossy()
+        .into_owned();
     let object = percent_decode_str(&object).decode_utf8_lossy().into_owned();
 
     let client = match state.pool.get().await {
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
 

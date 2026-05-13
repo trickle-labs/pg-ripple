@@ -122,11 +122,11 @@ pub(crate) mod rule_explain_handler;
 pub(crate) mod rule_library_handler;
 pub(crate) mod sparql_handlers;
 // v0.115.0 M16-02: new subsystem handlers.
-pub(crate) mod temporal_handlers;
-pub(crate) mod pprl_handlers;
 pub(crate) mod dp_handlers;
 pub(crate) mod entity_resolution_handlers;
+pub(crate) mod pprl_handlers;
 pub(crate) mod proof_tree_handler;
+pub(crate) mod temporal_handlers;
 pub(crate) mod tenant_handlers;
 
 // Re-export public helpers that arrow_encode.rs and spi_bridge.rs import via
@@ -346,10 +346,7 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         )
         // v0.115.0 M16-02: Differential-privacy REST API.
         .route("/dp/noisy_count", post(dp_handlers::dp_noisy_count))
-        .route(
-            "/dp/noisy_histogram",
-            post(dp_handlers::dp_noisy_histogram),
-        )
+        .route("/dp/noisy_histogram", post(dp_handlers::dp_noisy_histogram))
         // v0.115.0 M16-02: Entity-resolution REST API.
         .route(
             "/entity-resolution/resolve",

@@ -291,7 +291,9 @@ async fn main() {
     // M16-22 (v0.115.0): optional metrics bearer token.
     let metrics_token = std::env::var("PG_RIPPLE_HTTP_METRICS_TOKEN").ok();
     if metrics_token.is_some() {
-        tracing::info!("PG_RIPPLE_HTTP_METRICS_TOKEN set: GET /metrics requires Authorization: Bearer <token>");
+        tracing::info!(
+            "PG_RIPPLE_HTTP_METRICS_TOKEN set: GET /metrics requires Authorization: Bearer <token>"
+        );
     }
     let state = Arc::new(AppState {
         pool,

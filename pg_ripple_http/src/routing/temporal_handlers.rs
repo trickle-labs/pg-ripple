@@ -60,7 +60,11 @@ pub(crate) async fn list_temporal_predicates(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let rows = match client
@@ -75,7 +79,11 @@ pub(crate) async fn list_temporal_predicates(
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("query_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR);
+            return redacted_error(
+                "query_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
     let predicates: Vec<serde_json::Value> = rows
@@ -87,7 +95,10 @@ pub(crate) async fn list_temporal_predicates(
             })
         })
         .collect();
-    json_response(StatusCode::OK, serde_json::json!({ "predicates": predicates }))
+    json_response(
+        StatusCode::OK,
+        serde_json::json!({ "predicates": predicates }),
+    )
 }
 
 // ── POST /temporal/mark ───────────────────────────────────────────────────────
@@ -104,7 +115,10 @@ pub(crate) async fn mark_temporal_predicate(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: MarkTemporalBody = match serde_json::from_slice(&bytes) {
@@ -120,7 +134,11 @@ pub(crate) async fn mark_temporal_predicate(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     match client
@@ -140,7 +158,11 @@ pub(crate) async fn mark_temporal_predicate(
         ),
         Err(e) => {
             state.metrics.record_error();
-            redacted_error("mark_temporal_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+            redacted_error(
+                "mark_temporal_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
         }
     }
 }
@@ -161,7 +183,10 @@ pub(crate) async fn set_point_in_time(
     let bytes = match axum::body::to_bytes(body, 64 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: PointInTimeBody = if bytes.is_empty() {
@@ -181,15 +206,16 @@ pub(crate) async fn set_point_in_time(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let result = if let Some(ts) = &req.timestamp {
         client
-            .execute(
-                "SELECT pg_ripple.point_in_time($1::TIMESTAMPTZ)",
-                &[ts],
-            )
+            .execute("SELECT pg_ripple.point_in_time($1::TIMESTAMPTZ)", &[ts])
             .await
     } else {
         client
@@ -203,7 +229,11 @@ pub(crate) async fn set_point_in_time(
         ),
         Err(e) => {
             state.metrics.record_error();
-            redacted_error("point_in_time_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+            redacted_error(
+                "point_in_time_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
         }
     }
 }
@@ -235,7 +265,11 @@ pub(crate) async fn temporal_facts(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
 
@@ -257,7 +291,11 @@ pub(crate) async fn temporal_facts(
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("temporal_facts_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR);
+            return redacted_error(
+                "temporal_facts_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
 
@@ -274,5 +312,8 @@ pub(crate) async fn temporal_facts(
         })
         .collect();
 
-    json_response(StatusCode::OK, serde_json::json!({ "facts": facts, "count": facts.len() }))
+    json_response(
+        StatusCode::OK,
+        serde_json::json!({ "facts": facts, "count": facts.len() }),
+    )
 }

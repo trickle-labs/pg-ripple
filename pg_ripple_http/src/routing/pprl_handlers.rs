@@ -59,7 +59,10 @@ pub(crate) async fn pprl_bloom_encode(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: BloomEncodeBody = match serde_json::from_slice(&bytes) {
@@ -75,7 +78,11 @@ pub(crate) async fn pprl_bloom_encode(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let row = match client
@@ -88,7 +95,11 @@ pub(crate) async fn pprl_bloom_encode(
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("bloom_encode_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR);
+            return redacted_error(
+                "bloom_encode_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
     // M16-03: increment Bloom encode counter.
@@ -118,7 +129,10 @@ pub(crate) async fn pprl_dice_similarity(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: DiceSimilarityBody = match serde_json::from_slice(&bytes) {
@@ -134,19 +148,33 @@ pub(crate) async fn pprl_dice_similarity(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let row = match client
-        .query_one("SELECT pg_ripple.dice_similarity($1, $2)", &[&req.a, &req.b])
+        .query_one(
+            "SELECT pg_ripple.dice_similarity($1, $2)",
+            &[&req.a, &req.b],
+        )
         .await
     {
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("dice_similarity_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR);
+            return redacted_error(
+                "dice_similarity_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
     let similarity: f64 = row.get(0);
-    json_response(StatusCode::OK, serde_json::json!({ "similarity": similarity }))
+    json_response(
+        StatusCode::OK,
+        serde_json::json!({ "similarity": similarity }),
+    )
 }

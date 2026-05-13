@@ -57,7 +57,10 @@ pub(crate) async fn dp_noisy_count(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: NoisyCountBody = match serde_json::from_slice(&bytes) {
@@ -79,17 +82,28 @@ pub(crate) async fn dp_noisy_count(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let row = match client
-        .query_one("SELECT pg_ripple.dp_noisy_count($1, $2)", &[&req.query, &req.epsilon])
+        .query_one(
+            "SELECT pg_ripple.dp_noisy_count($1, $2)",
+            &[&req.query, &req.epsilon],
+        )
         .await
     {
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("dp_noisy_count_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR);
+            return redacted_error(
+                "dp_noisy_count_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
     let noisy_count: i64 = row.get(0);
@@ -113,7 +127,10 @@ pub(crate) async fn dp_noisy_histogram(
     let bytes = match axum::body::to_bytes(body, 1024 * 1024).await {
         Ok(b) => b,
         Err(_) => {
-            return json_response(StatusCode::BAD_REQUEST, serde_json::json!({"error": "read_error"}));
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
         }
     };
     let req: NoisyHistogramBody = match serde_json::from_slice(&bytes) {
@@ -135,7 +152,11 @@ pub(crate) async fn dp_noisy_histogram(
         Ok(c) => c,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("db_pool_error", &e.to_string(), StatusCode::SERVICE_UNAVAILABLE);
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
         }
     };
     let rows = match client
@@ -148,7 +169,11 @@ pub(crate) async fn dp_noisy_histogram(
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
-            return redacted_error("dp_noisy_histogram_error", &e.to_string(), StatusCode::INTERNAL_SERVER_ERROR);
+            return redacted_error(
+                "dp_noisy_histogram_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
     let histogram: Vec<serde_json::Value> = rows
