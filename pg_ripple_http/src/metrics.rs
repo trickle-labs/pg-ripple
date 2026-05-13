@@ -114,6 +114,29 @@ pub struct Metrics {
     shacl_validation_queue_depth: AtomicU64,
     /// Snapshot: CDC replication slot lag in bytes (from pg_replication_slots).
     cdc_replication_slot_lag_bytes: AtomicU64,
+
+    // M16-03 (v0.115.0): new subsystem Prometheus metrics.
+    /// Cumulative ER stage latency in microseconds, stored per stage label index:
+    /// 0=blocking, 1=embedding, 2=shacl, 3=canonicalization, 4=provenance.
+    er_stage_duration_us: [AtomicU64; 5],
+    /// Total owl:sameAs assertions made by the entity-resolution pipeline.
+    sameas_assertions_total: AtomicU64,
+    /// Cumulative Bayesian propagation latency in microseconds.
+    bayesian_propagation_duration_us: AtomicU64,
+    /// Snapshot: total temporal facts in the temporal_facts table.
+    temporal_facts_total: AtomicU64,
+    /// Total temporal fact queries.
+    temporal_queries_total: AtomicU64,
+    /// Total PPRL Bloom-filter encodes.
+    pprl_bloom_encodes_total: AtomicU64,
+    /// Total LLM explanation cache hits.
+    llm_cache_hits_total: AtomicU64,
+    /// Total LLM explanation cache misses.
+    llm_cache_misses_total: AtomicU64,
+    /// Cumulative proof-tree generation latency in microseconds.
+    proof_tree_duration_us: AtomicU64,
+    /// Total conflict detections raised by the rule conflict detector.
+    conflict_detections_total: AtomicU64,
 }
 
 impl Default for Metrics {
@@ -161,6 +184,23 @@ impl Metrics {
             datalog_stratum_duration_us: AtomicU64::new(0),
             shacl_validation_queue_depth: AtomicU64::new(0),
             cdc_replication_slot_lag_bytes: AtomicU64::new(0),
+            // M16-03 (v0.115.0)
+            er_stage_duration_us: [
+                AtomicU64::new(0),
+                AtomicU64::new(0),
+                AtomicU64::new(0),
+                AtomicU64::new(0),
+                AtomicU64::new(0),
+            ],
+            sameas_assertions_total: AtomicU64::new(0),
+            bayesian_propagation_duration_us: AtomicU64::new(0),
+            temporal_facts_total: AtomicU64::new(0),
+            temporal_queries_total: AtomicU64::new(0),
+            pprl_bloom_encodes_total: AtomicU64::new(0),
+            llm_cache_hits_total: AtomicU64::new(0),
+            llm_cache_misses_total: AtomicU64::new(0),
+            proof_tree_duration_us: AtomicU64::new(0),
+            conflict_detections_total: AtomicU64::new(0),
         }
     }
 
@@ -473,5 +513,115 @@ impl Metrics {
     /// CDC replication slot lag in bytes.
     pub fn cdc_replication_slot_lag_bytes(&self) -> u64 {
         self.cdc_replication_slot_lag_bytes.load(Ordering::Relaxed)
+    }
+
+    // ── M16-03 (v0.115.0): new subsystem metrics ─────────────────────────────
+
+    /// ER stage labels for histogram indexing.
+    fn er_stage_index(stage: &str) -> usize {
+        match stage {
+            "blocking" => 0,
+            "embedding" => 1,
+            "shacl" => 2,
+            "canonicalization" => 3,
+            "provenance" => 4,
+            _ => 4,
+        }
+    }
+
+    /// Record entity-resolution stage latency.
+    pub fn record_er_stage_duration(&self, stage: &str, duration: std::time::Duration) {
+        let idx = Self::er_stage_index(stage);
+        self.er_stage_duration_us[idx]
+            .fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
+    }
+
+    /// ER stage cumulative duration in seconds for the given stage label.
+    pub fn er_stage_duration_secs(&self, stage: &str) -> f64 {
+        let idx = Self::er_stage_index(stage);
+        self.er_stage_duration_us[idx].load(Ordering::Relaxed) as f64 / 1_000_000.0
+    }
+
+    /// Increment the owl:sameAs assertions counter.
+    pub fn record_sameas_assertion(&self) {
+        self.sameas_assertions_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn sameas_assertions_total(&self) -> u64 {
+        self.sameas_assertions_total.load(Ordering::Relaxed)
+    }
+
+    /// Record Bayesian propagation latency.
+    pub fn record_bayesian_propagation_duration(&self, duration: std::time::Duration) {
+        self.bayesian_propagation_duration_us
+            .fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
+    }
+
+    pub fn bayesian_propagation_duration_secs(&self) -> f64 {
+        self.bayesian_propagation_duration_us.load(Ordering::Relaxed) as f64 / 1_000_000.0
+    }
+
+    /// Update the temporal facts count snapshot.
+    pub fn update_temporal_facts_total(&self, count: u64) {
+        self.temporal_facts_total.store(count, Ordering::Relaxed);
+    }
+
+    pub fn temporal_facts_total(&self) -> u64 {
+        self.temporal_facts_total.load(Ordering::Relaxed)
+    }
+
+    /// Increment the temporal query counter.
+    pub fn record_temporal_query(&self) {
+        self.temporal_queries_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn temporal_queries_total(&self) -> u64 {
+        self.temporal_queries_total.load(Ordering::Relaxed)
+    }
+
+    /// Increment the PPRL Bloom encode counter.
+    pub fn record_pprl_bloom_encode(&self) {
+        self.pprl_bloom_encodes_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn pprl_bloom_encodes_total(&self) -> u64 {
+        self.pprl_bloom_encodes_total.load(Ordering::Relaxed)
+    }
+
+    /// Record an LLM cache hit.
+    pub fn record_llm_cache_hit(&self) {
+        self.llm_cache_hits_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record an LLM cache miss.
+    pub fn record_llm_cache_miss(&self) {
+        self.llm_cache_misses_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn llm_cache_hits_total(&self) -> u64 {
+        self.llm_cache_hits_total.load(Ordering::Relaxed)
+    }
+
+    pub fn llm_cache_misses_total(&self) -> u64 {
+        self.llm_cache_misses_total.load(Ordering::Relaxed)
+    }
+
+    /// Record proof-tree generation latency.
+    pub fn record_proof_tree_duration(&self, duration: std::time::Duration) {
+        self.proof_tree_duration_us
+            .fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
+    }
+
+    pub fn proof_tree_duration_secs(&self) -> f64 {
+        self.proof_tree_duration_us.load(Ordering::Relaxed) as f64 / 1_000_000.0
+    }
+
+    /// Increment the conflict detection counter.
+    pub fn record_conflict_detection(&self) {
+        self.conflict_detections_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn conflict_detections_total(&self) -> u64 {
+        self.conflict_detections_total.load(Ordering::Relaxed)
     }
 }

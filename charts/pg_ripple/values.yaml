@@ -84,17 +84,23 @@ ripple:
     apiKeySecretKey: "api-key"
 
 # ── Liveness and readiness probes ────────────────────────────────────────────
+# M16-09 (v0.115.0): Use HTTP probes against the pg_ripple_http companion.
+# /health — liveness: HTTP 200 when the process is alive and the DB is reachable.
+# /ready  — readiness: HTTP 200 when the server has completed its startup
+#           and obtained a connection from the pool (safe to receive traffic).
 livenessProbe:
-  exec:
-    command: ["pg_isready", "-U", "postgres"]
+  httpGet:
+    path: /health
+    port: 7878
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 6
 
 readinessProbe:
-  exec:
-    command: ["pg_isready", "-U", "postgres"]
+  httpGet:
+    path: /ready
+    port: 7878
   initialDelaySeconds: 5
   periodSeconds: 5
   timeoutSeconds: 3

@@ -13,6 +13,51 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.115.0] — 2026-05-26 — A16 Medium: HTTP API Parity and Observability
+
+**Six HTTP API and observability improvements: new REST endpoints for temporal
+facts, PPRL, differential privacy, entity resolution, proof trees, and
+multi-tenant management; parameterised query hardening in the PageRank handler;
+expanded Prometheus metrics; and bearer-token protection for `/metrics`.**
+
+### Added
+
+- **M16-02** HTTP REST endpoints for temporal facts (`/temporal/*`), PPRL
+  (`/pprl/*`), differential-privacy noise (`/dp/*`), entity resolution
+  (`/entity-resolution/*`), Datalog proof trees (`/proof-tree/{s}/{p}/{o}`),
+  and multi-tenant management (`/tenants`, `/tenants/{name}`).
+- **M16-03** Expanded Prometheus metrics: entity-resolution stage latencies
+  (five stages), `sameas_assertions_total`, Bayesian propagation duration,
+  temporal facts gauge, PPRL Bloom-encode counter, LLM cache hit/miss counters,
+  proof-tree duration, and conflict-detection counter.
+- **M16-22** `PG_RIPPLE_HTTP_METRICS_TOKEN` env var — when set, `GET /metrics`
+  requires `Authorization: Bearer <token>` (constant-time comparison).  Returns
+  `401 Unauthorized` with `WWW-Authenticate: Bearer realm="pg_ripple"` on
+  mismatch.  Documented in `pg_ripple_http/README.md`.
+
+### Changed
+
+- **M16-04** `pagerank_handlers.rs` — replaced `replace('\'', "''")` string
+  escaping with `$1`/`$2` parameterised queries throughout; the `direction`
+  field is now a typed `Direction` enum (`forward` | `reverse` | `both`)
+  deserialized by serde, preventing injection via unknown values.
+- **M16-04** `pagerank_run()` SQL function — extended direction validation to
+  also accept `'both'` (undirected: each edge emitted in both orientations via
+  UNION).
+- **M16-09** `charts/pg_ripple/values.yaml` — liveness probe changed from
+  `exec: pg_isready` to `httpGet: /health`; readiness probe changed to
+  `httpGet: /ready`.
+- **M16-09** `pg_ripple_http/README.md` — added `/health` (liveness) vs `/ready`
+  (readiness) semantics section; documented `PG_RIPPLE_HTTP_METRICS_TOKEN`.
+
+### Tests
+
+- `tests/pg_regress/sql/pagerank.sql` — three new tests (38-40) covering
+  `direction = 'forward'`, `'reverse'`, and `'both'` at the SQL layer
+  (mirrors the M16-04 Direction enum).
+
+---
+
 ## [0.114.0] — 2026-05-19 — A16 Medium: Module Splits and Architecture Debt
 
 **Pure Rust refactoring: seven large source files (each 1,000–1,600 LOC) decomposed

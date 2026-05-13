@@ -81,6 +81,10 @@ pub struct AppState {
     /// S13-03 (v0.86.0): whether the CORS wildcard-origin policy (*) is active.
     /// When `true`, every request increments `cors_permissive_requests_total`.
     pub cors_is_permissive: bool,
+    /// M16-22 (v0.115.0): optional bearer token that protects `GET /metrics`.
+    /// When `Some`, the metrics endpoint requires `Authorization: Bearer <token>`.
+    /// Uses constant-time comparison to prevent timing side-channels.
+    pub metrics_token: Option<String>,
 }
 
 // ─── Configuration ────────────────────────────────────────────────────────────

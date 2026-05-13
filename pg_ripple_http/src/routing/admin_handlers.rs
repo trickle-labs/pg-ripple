@@ -6,6 +6,7 @@ use axum::body::Body;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
+use constant_time_eq::constant_time_eq;
 
 use super::sparql_handlers::json_response_http;
 use crate::common::{AppState, check_auth, redacted_error};
@@ -256,7 +257,29 @@ pub(crate) async fn health_ready(State(state): State<Arc<AppState>>) -> Response
 
 // ─── Metrics endpoint ────────────────────────────────────────────────────────
 
-pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Response {
+pub(crate) async fn metrics_endpoint(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Response {
+    // M16-22 (v0.115.0): optional bearer-token auth for the metrics endpoint.
+    if let Some(expected) = &state.metrics_token {
+        let provided = headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let token = provided.strip_prefix("Bearer ").unwrap_or(provided);
+        if !constant_time_eq(token.as_bytes(), expected.as_bytes()) {
+            // SAFETY: status code and header values are compile-time constants.
+            return axum::response::Response::builder()
+                .status(StatusCode::UNAUTHORIZED)
+                .header("www-authenticate", "Bearer realm=\"pg_ripple\"")
+                .header("content-type", "application/json")
+                .body(axum::body::Body::from(
+                    r#"{"error":"PT401","message":"metrics token required"}"#,
+                ))
+                .expect("infallible: hardcoded valid HTTP headers");
+        }
+    }
     let m = &state.metrics;
     let body = format!(
         "# HELP pg_ripple_http_sparql_queries_total Total SPARQL queries executed\n\
@@ -338,7 +361,41 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
          pg_ripple_shacl_validation_queue_depth {}\n\
          # HELP pg_ripple_cdc_replication_slot_lag_bytes CDC replication slot lag in bytes (M15-19)\n\
          # TYPE pg_ripple_cdc_replication_slot_lag_bytes gauge\n\
-         pg_ripple_cdc_replication_slot_lag_bytes {}\n",
+         pg_ripple_cdc_replication_slot_lag_bytes {}\n\
+         # HELP pg_ripple_er_stage_duration_seconds Cumulative NS-RL entity-resolution stage latency in seconds (M16-03)\n\
+         # TYPE pg_ripple_er_stage_duration_seconds counter\n\
+         pg_ripple_er_stage_duration_seconds{{stage=\"blocking\"}} {:.6}\n\
+         pg_ripple_er_stage_duration_seconds{{stage=\"embedding\"}} {:.6}\n\
+         pg_ripple_er_stage_duration_seconds{{stage=\"shacl\"}} {:.6}\n\
+         pg_ripple_er_stage_duration_seconds{{stage=\"canonicalization\"}} {:.6}\n\
+         pg_ripple_er_stage_duration_seconds{{stage=\"provenance\"}} {:.6}\n\
+         # HELP pg_ripple_sameas_assertions_total Total owl:sameAs assertions from entity-resolution (M16-03)\n\
+         # TYPE pg_ripple_sameas_assertions_total counter\n\
+         pg_ripple_sameas_assertions_total {}\n\
+         # HELP pg_ripple_bayesian_propagation_duration_seconds Cumulative Bayesian confidence propagation latency (M16-03)\n\
+         # TYPE pg_ripple_bayesian_propagation_duration_seconds counter\n\
+         pg_ripple_bayesian_propagation_duration_seconds {:.6}\n\
+         # HELP pg_ripple_temporal_facts_total Current number of temporal facts (M16-03)\n\
+         # TYPE pg_ripple_temporal_facts_total gauge\n\
+         pg_ripple_temporal_facts_total {}\n\
+         # HELP pg_ripple_temporal_queries_total Total temporal fact queries (M16-03)\n\
+         # TYPE pg_ripple_temporal_queries_total counter\n\
+         pg_ripple_temporal_queries_total {}\n\
+         # HELP pg_ripple_pprl_bloom_encodes_total Total PPRL Bloom-filter encodes (M16-03)\n\
+         # TYPE pg_ripple_pprl_bloom_encodes_total counter\n\
+         pg_ripple_pprl_bloom_encodes_total {}\n\
+         # HELP pg_ripple_llm_cache_hits_total Total LLM explanation cache hits (M16-03)\n\
+         # TYPE pg_ripple_llm_cache_hits_total counter\n\
+         pg_ripple_llm_cache_hits_total {}\n\
+         # HELP pg_ripple_llm_cache_misses_total Total LLM explanation cache misses (M16-03)\n\
+         # TYPE pg_ripple_llm_cache_misses_total counter\n\
+         pg_ripple_llm_cache_misses_total {}\n\
+         # HELP pg_ripple_proof_tree_duration_seconds Cumulative proof-tree generation latency in seconds (M16-03)\n\
+         # TYPE pg_ripple_proof_tree_duration_seconds counter\n\
+         pg_ripple_proof_tree_duration_seconds {:.6}\n\
+         # HELP pg_ripple_conflict_detections_total Total rule conflict detections (M16-03)\n\
+         # TYPE pg_ripple_conflict_detections_total counter\n\
+         pg_ripple_conflict_detections_total {}\n",
         m.sparql_query_count(),
         m.datalog_query_count(),
         m.error_count(),
@@ -373,6 +430,21 @@ pub(crate) async fn metrics_endpoint(State(state): State<Arc<AppState>>) -> Resp
         m.datalog_stratum_duration_secs(),
         m.shacl_validation_queue_depth(),
         m.cdc_replication_slot_lag_bytes(),
+        // M16-03 (v0.115.0): new subsystem metrics.
+        m.er_stage_duration_secs("blocking"),
+        m.er_stage_duration_secs("embedding"),
+        m.er_stage_duration_secs("shacl"),
+        m.er_stage_duration_secs("canonicalization"),
+        m.er_stage_duration_secs("provenance"),
+        m.sameas_assertions_total(),
+        m.bayesian_propagation_duration_secs(),
+        m.temporal_facts_total(),
+        m.temporal_queries_total(),
+        m.pprl_bloom_encodes_total(),
+        m.llm_cache_hits_total(),
+        m.llm_cache_misses_total(),
+        m.proof_tree_duration_secs(),
+        m.conflict_detections_total(),
     );
 
     Response::builder()

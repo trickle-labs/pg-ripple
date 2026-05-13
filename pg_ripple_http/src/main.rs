@@ -36,7 +36,7 @@ use common::{AppState, env_or};
 /// Connections to older extension versions log a prominent warning. The extension
 /// is still served (degraded mode) so that rolling upgrades do not hard-fail.
 /// Set `PG_RIPPLE_HTTP_STRICT_COMPAT=1` to convert the warning to a fatal startup error.
-const COMPATIBLE_EXTENSION_MIN: &str = "0.113.0";
+const COMPATIBLE_EXTENSION_MIN: &str = "0.114.0";
 
 /// Check that the installed pg_ripple extension version is within the known-compatible
 /// range for this pg_ripple_http build.  Logs a warning if it is not.
@@ -288,6 +288,11 @@ async fn main() {
     // rate_limit is consumed by the governor layer below; not stored in AppState.
     // S13-03 (v0.86.0): compute cors_is_permissive before building AppState.
     let cors_is_permissive = cors_origins == "*";
+    // M16-22 (v0.115.0): optional metrics bearer token.
+    let metrics_token = std::env::var("PG_RIPPLE_HTTP_METRICS_TOKEN").ok();
+    if metrics_token.is_some() {
+        tracing::info!("PG_RIPPLE_HTTP_METRICS_TOKEN set: GET /metrics requires Authorization: Bearer <token>");
+    }
     let state = Arc::new(AppState {
         pool,
         auth_token,
@@ -308,6 +313,8 @@ async fn main() {
             .unwrap_or(10_000),
         // S13-03 (v0.86.0): CORS permissive mode tracking.
         cors_is_permissive,
+        // M16-22 (v0.115.0): metrics endpoint bearer token.
+        metrics_token,
     });
 
     // CORS layer — wildcard "*" requires explicit opt-in; empty means deny all cross-origin.

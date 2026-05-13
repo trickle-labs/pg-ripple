@@ -35,6 +35,7 @@ All configuration is via environment variables:
 | `PG_RIPPLE_HTTP_PORT` | `7878` | HTTP listening port |
 | `PG_RIPPLE_HTTP_POOL_SIZE` | `16` | Database connection pool size |
 | `PG_RIPPLE_HTTP_AUTH_TOKEN` | (unset) | If set, requests must include `Authorization: Bearer <token>` |
+| `PG_RIPPLE_HTTP_METRICS_TOKEN` | (unset) | If set, `GET /metrics` requires `Authorization: Bearer <token>` (M16-22) |
 | `PG_RIPPLE_HTTP_RATE_LIMIT` | `0` | Max requests/sec per client IP (0 = disabled) |
 | `PG_RIPPLE_HTTP_CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*` for all |
 
@@ -49,13 +50,30 @@ export PG_RIPPLE_HTTP_AUTH_TOKEN="my-secret-token"
 
 ## Endpoints
 
-### `GET /health`
+### `GET /health` (liveness)
 
-Returns `200 OK` when the service is up and the database is reachable. Use for load balancer health checks.
+Returns `200 OK` when the process is alive **and** the database is reachable.
+Use this for Kubernetes **liveness** probes — a non-200 response means the
+container should be restarted.
 
 ```bash
 curl http://localhost:7878/health
 ```
+
+### `GET /ready` (readiness)
+
+Returns `200 OK` once the server has completed start-up and successfully
+obtained a connection from the pool, meaning it is ready to serve traffic.
+Use this for Kubernetes **readiness** probes — a non-200 response removes
+the pod from the service endpoints until recovery.
+
+```bash
+curl http://localhost:7878/ready
+```
+
+> **M16-09 (v0.115.0):** Kubernetes `livenessProbe` should point at `/health`
+> and `readinessProbe` at `/ready`.  Using `exec: pg_isready` for both probes
+> is deprecated from v0.115.0 onward.
 
 ### `GET /metrics`
 
@@ -63,13 +81,15 @@ Prometheus-compatible metrics.
 
 ```bash
 curl http://localhost:7878/metrics
+# With optional bearer-token protection (M16-22, v0.115.0):
+curl -H "Authorization: Bearer $PG_RIPPLE_HTTP_METRICS_TOKEN" http://localhost:7878/metrics
 ```
 
-> **⚠ Network isolation required** (S13-09, v0.86.0): the `/metrics` endpoint exposes
-> operational data (query counts, error rates, cache statistics, federation endpoint info)
-> **without authentication**. Do not expose the metrics port to untrusted networks.
-> In production, restrict `/metrics` to your Prometheus scraper IP via a reverse proxy ACL
-> and keep the metrics endpoint on a private network.
+> **Security (M16-22, v0.115.0):** Set `PG_RIPPLE_HTTP_METRICS_TOKEN` to
+> require a bearer token on the `/metrics` endpoint.  Requests without a
+> valid token receive `401 Unauthorized` with a `WWW-Authenticate: Bearer`
+> challenge.  Even without this token you should still restrict the metrics
+> port to your Prometheus scraper IP via a reverse-proxy ACL.
 >
 > See [Security → Metrics Port Isolation](../docs/src/operations/security.md) for details.
 

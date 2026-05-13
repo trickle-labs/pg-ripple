@@ -18,11 +18,11 @@ pub fn validate_params(params: &PageRankParams) -> Option<(&'static str, String)
             ),
         ));
     }
-    if !matches!(params.direction.as_str(), "forward" | "reverse") {
+    if !matches!(params.direction.as_str(), "forward" | "reverse" | "both") {
         return Some((
             PT0412,
             format!(
-                "invalid direction '{}': expected 'forward' or 'reverse'",
+                "invalid direction '{}': expected 'forward', 'reverse', or 'both'",
                 params.direction
             ),
         ));
@@ -96,6 +96,8 @@ fn build_edge_sql(params: &PageRankParams) -> String {
         .as_ref()
         .map(|g| crate::dictionary::encode(g, crate::dictionary::KIND_IRI));
 
+    // 'both' treats the graph as undirected: UNION of (s,o) and (o,s).
+    // 'reverse' swaps source and target; 'forward' (default) uses (s,o).
     let (src_col, tgt_col) = if params.direction == "reverse" {
         ("vp.o", "vp.s")
     } else {
@@ -129,6 +131,27 @@ fn build_edge_sql(params: &PageRankParams) -> String {
     };
 
     let vp_sql = crate::sparql::sqlgen::build_all_predicates_union(graph_id_opt, "");
+
+    if params.direction == "both" {
+        // Undirected: emit each edge in both orientations.
+        return format!(
+            "SELECT DISTINCT source_id, target_id, weight FROM (\
+               SELECT {src_col} AS source_id, {tgt_col} AS target_id, 1.0::FLOAT8 AS weight \
+               FROM ({vp_sql}) vp \
+               JOIN _pg_ripple.dictionary ds  ON ds.id  = vp.s \
+               JOIN _pg_ripple.dictionary do_ ON do_.id = vp.o \
+               WHERE do_.kind = 0 {blank_filter} {pred_filter} \
+               UNION \
+               SELECT {tgt_col} AS source_id, {src_col} AS target_id, 1.0::FLOAT8 AS weight \
+               FROM ({vp_sql}) vp \
+               JOIN _pg_ripple.dictionary ds  ON ds.id  = vp.s \
+               JOIN _pg_ripple.dictionary do_ ON do_.id = vp.o \
+               WHERE do_.kind = 0 {blank_filter} {pred_filter}\
+             ) undirected",
+            src_col = "vp.s",
+            tgt_col = "vp.o",
+        );
+    }
 
     format!(
         "SELECT DISTINCT {src_col} AS source_id, {tgt_col} AS target_id, 1.0::FLOAT8 AS weight \

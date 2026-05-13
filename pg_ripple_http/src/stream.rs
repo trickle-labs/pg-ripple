@@ -28,7 +28,7 @@ fn sse_channel_capacity() -> usize {
     std::env::var("PG_RIPPLE_HTTP_SSE_BUFFER")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
-        .filter(|&n| n >= 1 && n <= 65536)
+        .filter(|&n| (1..=65536).contains(&n))
         .unwrap_or(256)
 }
 

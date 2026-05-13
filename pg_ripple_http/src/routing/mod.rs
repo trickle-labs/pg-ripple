@@ -121,6 +121,13 @@ pub(crate) mod rule_authoring_handler;
 pub(crate) mod rule_explain_handler;
 pub(crate) mod rule_library_handler;
 pub(crate) mod sparql_handlers;
+// v0.115.0 M16-02: new subsystem handlers.
+pub(crate) mod temporal_handlers;
+pub(crate) mod pprl_handlers;
+pub(crate) mod dp_handlers;
+pub(crate) mod entity_resolution_handlers;
+pub(crate) mod proof_tree_handler;
+pub(crate) mod tenant_handlers;
 
 // Re-export public helpers that arrow_encode.rs and spi_bridge.rs import via
 // `crate::routing::...`.  These functions live in sparql_handlers but are
@@ -319,6 +326,60 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/rules/{id}/explain",
             get(rule_explain_handler::explain_rule_get),
+        )
+        // v0.115.0 M16-02: Temporal facts REST API.
+        .route(
+            "/temporal/mark",
+            get(temporal_handlers::list_temporal_predicates)
+                .post(temporal_handlers::mark_temporal_predicate),
+        )
+        .route(
+            "/temporal/point_in_time",
+            post(temporal_handlers::set_point_in_time),
+        )
+        .route("/temporal/facts", get(temporal_handlers::temporal_facts))
+        // v0.115.0 M16-02: PPRL REST API.
+        .route("/pprl/bloom_encode", post(pprl_handlers::pprl_bloom_encode))
+        .route(
+            "/pprl/dice_similarity",
+            post(pprl_handlers::pprl_dice_similarity),
+        )
+        // v0.115.0 M16-02: Differential-privacy REST API.
+        .route("/dp/noisy_count", post(dp_handlers::dp_noisy_count))
+        .route(
+            "/dp/noisy_histogram",
+            post(dp_handlers::dp_noisy_histogram),
+        )
+        // v0.115.0 M16-02: Entity-resolution REST API.
+        .route(
+            "/entity-resolution/resolve",
+            post(entity_resolution_handlers::entity_resolution_resolve),
+        )
+        .route(
+            "/entity-resolution/evaluate",
+            post(entity_resolution_handlers::entity_resolution_evaluate),
+        )
+        .route(
+            "/entity-resolution/monitoring/enable",
+            post(entity_resolution_handlers::entity_resolution_monitoring_enable),
+        )
+        .route(
+            "/entity-resolution/monitoring/disable",
+            post(entity_resolution_handlers::entity_resolution_monitoring_disable),
+        )
+        // v0.115.0 M16-02: Proof-tree REST API.
+        .route(
+            "/proof-tree/{subject}/{predicate}/{object}",
+            get(proof_tree_handler::proof_tree_get),
+        )
+        // v0.115.0 M16-02: Multi-tenant REST API.
+        .route(
+            "/tenants",
+            get(tenant_handlers::list_tenants).post(tenant_handlers::create_tenant),
+        )
+        .route(
+            "/tenants/{name}",
+            get(tenant_handlers::get_tenant).delete(tenant_handlers::delete_tenant),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)
