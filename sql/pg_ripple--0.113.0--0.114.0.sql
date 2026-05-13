@@ -1,0 +1,23 @@
+-- Migration 0.113.0 → 0.114.0: Module splits and architecture debt (A16)
+--
+-- This release is a pure Rust refactoring: seven large source files were
+-- decomposed into focused sub-modules following the patterns in src/datalog/
+-- and src/sparql/. No SQL-visible schema changes were made.
+--
+-- New/changed in this release (Rust only):
+--   src/views/         → {mod.rs, construct.rs, materialise.rs, refresh.rs,
+--                         dependency.rs, sparql.rs, describe.rs}  (H16-06a)
+--   src/skos/          → {mod.rs, bundle.rs, inference.rs,
+--                         broader_narrower.rs, export.rs}          (H16-06b)
+--   src/datalog_api/   → {mod.rs, parse.rs, validate.rs,
+--                         explain.rs, conflict.rs}                 (M16-14)
+--   src/sparql/wcoj/   → {mod.rs, executor.rs, trie.rs, leapfrog.rs} (M16-15)
+--   src/sparql/embedding/ → {mod.rs, index.rs, hybrid.rs, rag.rs}    (M16-16)
+--   src/shacl/validator/  → {mod.rs, property.rs, node.rs,
+--                            sparql.rs, severity.rs}               (M16-17)
+--   src/citus/         → {mod.rs, shard_pruning.rs, ddl_hooks.rs,
+--                         query_rewriting.rs, rebalance.rs}        (M16-18)
+--   scripts/check_module_sizes.sh: CI gate (warn@1,200, fail@1,500 LOC)
+--   docs/src/architecture.md: subsystem dependency graph added
+--
+-- No schema changes required.

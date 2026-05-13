@@ -13,6 +13,31 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.114.0] — 2026-05-19 — A16 Medium: Module Splits and Architecture Debt
+
+**Pure Rust refactoring: seven large source files (each 1,000–1,600 LOC) decomposed
+into focused sub-modules following the patterns in `src/datalog/` and `src/sparql/`.
+No SQL-visible schema changes. CI module-size gate added.**
+
+### Changed
+
+- **H16-06a** `src/views/mod.rs` (1,599 LOC) → `src/views/{mod.rs, construct.rs, materialise.rs, refresh.rs, dependency.rs, sparql.rs, describe.rs}` (each < 400 LOC)
+- **H16-06b** `src/skos.rs` (1,495 LOC) → `src/skos/{mod.rs, bundle.rs, inference.rs, broader_narrower.rs, export.rs}`
+- **M16-14** `src/datalog_api.rs` (1,134 LOC) → `src/datalog_api/{mod.rs, parse.rs, validate.rs, explain.rs, conflict.rs}` (each < 400 LOC)
+- **M16-15** `src/sparql/wcoj.rs` (1,067 LOC) → `src/sparql/wcoj/{mod.rs, executor.rs, trie.rs, leapfrog.rs}`
+- **M16-16** `src/sparql/embedding.rs` (1,144 LOC) → `src/sparql/embedding/{mod.rs, index.rs, hybrid.rs, rag.rs}`
+- **M16-17** `src/shacl/validator.rs` (1,181 LOC) → `src/shacl/validator/{mod.rs, property.rs, node.rs, sparql.rs, severity.rs}`
+- **M16-18** `src/citus/mod.rs` (1,366 LOC) → `src/citus/{mod.rs, shard_pruning.rs, ddl_hooks.rs, query_rewriting.rs, rebalance.rs}`
+
+### Added
+
+- `scripts/check_module_sizes.sh` — CI gate; warns at 1,200 LOC, fails at 1,500 LOC per `.rs` file
+- `docs/src/architecture.md` — subsystem dependency graph (SKOS→Datalog, OWL-RL→Datalog, NS-RL→embedding+Datalog, conflict-detection→SHACL+Datalog, hypothetical→storage)
+- Module size policy documented in `CONTRIBUTING.md`
+- Migration script `sql/pg_ripple--0.113.0--0.114.0.sql` (comment-only; no schema changes)
+
+---
+
 ## [0.113.0] — 2026-05-12 — A16 High: bulk-load COPY path & performance tuning
 
 **Promotes `bulk_load_use_copy` to default-on, replaces the O(n) embedding loop with a batched

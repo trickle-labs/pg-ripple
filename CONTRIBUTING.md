@@ -215,6 +215,25 @@ the current release is not tagged.
 
 ---
 
+## Module size policy
+
+To prevent monolithic growth, each `.rs` file in `src/` is limited to **1,500 LOC** (hard CI failure) with a **1,200 LOC** advisory warning.  The limit is enforced by `scripts/check_module_sizes.sh`, which runs on every PR.
+
+When a file approaches the limit:
+1. Create a sub-module directory `src/<module>/` next to the flat file.
+2. Move the original file to `src/<module>/mod.rs` and extract focused sub-modules.
+3. Re-export the public API from `mod.rs` so callers need no changes.
+4. Follow the pattern in `src/datalog/`, `src/sparql/`, and `src/views/`.
+
+Run the check locally:
+
+```bash
+bash scripts/check_module_sizes.sh          # defaults to src/
+bash scripts/check_module_sizes.sh src/     # explicit path
+```
+
+---
+
 ## Running tests
 
 ```bash
