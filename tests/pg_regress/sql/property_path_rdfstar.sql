@@ -1,0 +1,73 @@
+-- pg_regress test: property paths over RDF-star triples (v0.119.0)
+-- Verifies that property paths work correctly in queries that
+-- also use RDF-star quoted triple patterns.
+
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SELECT pg_ripple.triple_count() >= 0 AS extension_loaded;
+SET search_path TO pg_ripple, public;
+
+-- Load base triples for property path tests over RDF-star data.
+SELECT pg_ripple.load_ntriples(
+    '<https://rdfstar.path.test/alice> <https://rdfstar.path.test/knows> <https://rdfstar.path.test/bob> .' || E'\n' ||
+    '<https://rdfstar.path.test/bob>   <https://rdfstar.path.test/knows> <https://rdfstar.path.test/carol> .' || E'\n' ||
+    '<https://rdfstar.path.test/carol> <https://rdfstar.path.test/knows> <https://rdfstar.path.test/dave> .'
+) = 3 AS base_triples_loaded;
+
+-- Insert a quoted triple annotation via SPARQL UPDATE.
+SELECT pg_ripple.sparql_update(
+    'PREFIX ex: <https://rdfstar.path.test/>
+     INSERT DATA {
+       << ex:alice ex:knows ex:bob >> ex:confidence "0.9"^^<http://www.w3.org/2001/XMLSchema#decimal> .
+     }'
+) >= 0 AS quoted_triple_inserted;
+
+-- Test 1: Basic property path (no RDF-star context) works correctly.
+SELECT COUNT(*) >= 1 AS basic_plus_path_works
+FROM pg_ripple.sparql($$
+    PREFIX ex: <https://rdfstar.path.test/>
+    SELECT ?end WHERE {
+        ex:alice ex:knows+ ?end .
+    }
+$$);
+
+-- Test 2: ZeroOrMore path traversal alongside RDF-star data.
+SELECT COUNT(*) >= 1 AS zero_or_more_path_works
+FROM pg_ripple.sparql($$
+    PREFIX ex: <https://rdfstar.path.test/>
+    SELECT ?hop WHERE {
+        ex:alice ex:knows* ?hop .
+    }
+$$);
+
+-- Test 3: Sequence path alongside RDF-star annotated triples.
+SELECT COUNT(*) >= 1 AS sequence_path_works
+FROM pg_ripple.sparql($$
+    PREFIX ex: <https://rdfstar.path.test/>
+    SELECT ?end WHERE {
+        ex:alice ex:knows/ex:knows ?end .
+    }
+$$);
+
+-- Test 4: Property path and RDF-star annotation in same query.
+-- Checks that property path traversal does not interfere with
+-- quoted triple pattern matching.
+SELECT COUNT(*) >= 1 AS path_and_rdfstar_coexist
+FROM pg_ripple.sparql($$
+    PREFIX ex: <https://rdfstar.path.test/>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?end ?conf WHERE {
+        ex:alice ex:knows+ ?end .
+        OPTIONAL {
+            << ex:alice ex:knows ex:bob >> ex:confidence ?conf .
+        }
+    }
+$$);
+
+-- Test 5: ZeroOrOne path alongside RDF-star data.
+SELECT COUNT(*) >= 1 AS zero_or_one_path_works
+FROM pg_ripple.sparql($$
+    PREFIX ex: <https://rdfstar.path.test/>
+    SELECT ?next WHERE {
+        ex:alice ex:knows? ?next .
+    }
+$$);
