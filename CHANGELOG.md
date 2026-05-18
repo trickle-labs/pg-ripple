@@ -39,9 +39,8 @@ write-race concurrency tests; and four new fuzz targets.**
   sections on restart behaviour, crash-loop backoff, and the 30 s
   `BGWORKER_RESTART_TIME` constant.
 
-- **L16-05** Arrow Flight v1→v2 HMAC ticket migration guide added to
-  `docs/src/reference/arrow-flight.md` with "What constitutes a valid v1 ticket",
-  migration path, and summary table.
+- **L16-05** Arrow Flight v1→v2 HMAC ticket migration guide added to `docs/src/reference/arrow-flight.md`
+  with "What constitutes a valid v1 ticket", migration path, and summary table.
 
 - **L16-06** `PG_RIPPLE_HTTP_AUTH_REALM` environment variable: configures the
   `Bearer realm=` value returned in `WWW-Authenticate` headers; defaults to
