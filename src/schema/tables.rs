@@ -734,3 +734,26 @@ COMMENT ON TABLE _pg_ripple.bench_history IS
     name = "v0118_privacy_bench_tables",
     requires = ["v0110_nsrl_eval_tables"]
 );
+
+// v0.119.0: Federation circuit breaker persistent state table.
+pgrx::extension_sql!(
+    r#"
+-- Federation circuit breaker state table (v0.119.0 Feature 6)
+-- Tracks per-endpoint circuit state for observability and Prometheus gauge.
+-- State values: 'closed' (normal), 'open' (blocked), 'half_open' (probing).
+-- Updated by circuit_sync_to_db() on state transitions.
+CREATE TABLE IF NOT EXISTS _pg_ripple.federation_circuit_state (
+    endpoint_iri    TEXT        PRIMARY KEY,
+    state           TEXT        NOT NULL DEFAULT 'closed'
+                                CHECK (state IN ('closed', 'open', 'half_open')),
+    last_failure_at TIMESTAMPTZ,
+    failure_count   INT         NOT NULL DEFAULT 0
+);
+COMMENT ON TABLE _pg_ripple.federation_circuit_state IS
+    'Per-endpoint federation circuit breaker state (v0.119.0 Feature 6). '
+    'Populated on state transitions by the SPARQL federation layer. '
+    'Prometheus gauge: pg_ripple_federation_circuit_state{endpoint}.';
+"#,
+    name = "v0119_federation_circuit_state",
+    requires = ["v0118_privacy_bench_tables"]
+);

@@ -89,7 +89,15 @@ pub(super) fn circuit_record_success(url: &str) {
     CIRCUIT_BREAKERS.with(|cb| {
         let mut map = cb.borrow_mut();
         if let Some(breaker) = map.get_mut(url) {
+            let was_open = matches!(
+                breaker.state,
+                CircuitState::Open { .. } | CircuitState::HalfOpen
+            );
             breaker.record_success();
+            if was_open {
+                // State changed to closed — persist for observability.
+                circuit_sync_to_db(url, "closed", 0, None);
+            }
         }
     });
 }
@@ -101,7 +109,76 @@ pub(super) fn circuit_record_failure(url: &str) {
             .entry(url.to_owned())
             .or_insert_with(CircuitBreaker::new);
         breaker.record_failure();
+        let failures = breaker.consecutive_failures;
+        let state_str = match &breaker.state {
+            CircuitState::Closed => "closed",
+            CircuitState::Open { .. } => "open",
+            CircuitState::HalfOpen => "half_open",
+        };
+        // Persist on any failure so failure_count and state are always current.
+        circuit_sync_to_db(url, state_str, failures, Some(std::time::SystemTime::now()));
     });
+}
+
+/// Persist the current circuit state to `_pg_ripple.federation_circuit_state`.
+///
+/// Called on state transitions (open, close, half_open) so that the DB table
+/// always reflects the most recent state for each endpoint.  Used by the
+/// Prometheus gauge `pg_ripple_federation_circuit_state{endpoint}`.
+/// Errors are logged as warnings — a DB write failure must never break the
+/// query path.
+fn circuit_sync_to_db(
+    url: &str,
+    state: &str,
+    failure_count: u32,
+    last_failure: Option<std::time::SystemTime>,
+) {
+    let ts = last_failure
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs() as i64);
+
+    let sql = if ts.is_some() {
+        "INSERT INTO _pg_ripple.federation_circuit_state \
+             (endpoint_iri, state, last_failure_at, failure_count) \
+         VALUES ($1, $2, to_timestamp($3), $4) \
+         ON CONFLICT (endpoint_iri) DO UPDATE \
+             SET state = EXCLUDED.state, \
+                 last_failure_at = EXCLUDED.last_failure_at, \
+                 failure_count = EXCLUDED.failure_count"
+    } else {
+        "INSERT INTO _pg_ripple.federation_circuit_state \
+             (endpoint_iri, state, last_failure_at, failure_count) \
+         VALUES ($1, $2, NULL, $3) \
+         ON CONFLICT (endpoint_iri) DO UPDATE \
+             SET state = EXCLUDED.state, \
+                 last_failure_at = EXCLUDED.last_failure_at, \
+                 failure_count = EXCLUDED.failure_count"
+    };
+
+    let result = if let Some(ts_val) = ts {
+        pgrx::Spi::run_with_args(
+            sql,
+            &[
+                pgrx::datum::DatumWithOid::from(url),
+                pgrx::datum::DatumWithOid::from(state),
+                pgrx::datum::DatumWithOid::from(ts_val),
+                pgrx::datum::DatumWithOid::from(failure_count as i32),
+            ],
+        )
+    } else {
+        pgrx::Spi::run_with_args(
+            sql,
+            &[
+                pgrx::datum::DatumWithOid::from(url),
+                pgrx::datum::DatumWithOid::from(state),
+                pgrx::datum::DatumWithOid::from(failure_count as i32),
+            ],
+        )
+    };
+
+    if let Err(e) = result {
+        pgrx::warning!("circuit_sync_to_db: SPI error persisting state for {url}: {e}");
+    }
 }
 
 // ─── Thread-local connection pool (v0.19.0) ──────────────────────────────────

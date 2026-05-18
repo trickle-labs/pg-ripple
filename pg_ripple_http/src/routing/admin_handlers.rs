@@ -447,10 +447,52 @@ pub(crate) async fn metrics_endpoint(
         m.conflict_detections_total(),
     );
 
+    // Feature 6 (v0.119.0): Append per-endpoint federation circuit breaker
+    // Prometheus gauge from _pg_ripple.federation_circuit_state table.
+    // state: 0=closed, 1=open, 2=half_open.
+    let circuit_gauge = if let Ok(client) = state.pool.get().await {
+        match client
+            .query(
+                "SELECT endpoint_iri, state, failure_count \
+                 FROM _pg_ripple.federation_circuit_state",
+                &[],
+            )
+            .await
+        {
+            Ok(rows) if !rows.is_empty() => {
+                let mut g = String::from(
+                    "# HELP pg_ripple_federation_circuit_state Federation endpoint circuit breaker state (0=closed,1=open,2=half_open) (Feature 6, v0.119.0)\n\
+                     # TYPE pg_ripple_federation_circuit_state gauge\n",
+                );
+                for row in &rows {
+                    let endpoint: &str = row.get(0);
+                    let state_str: &str = row.get(1);
+                    let state_val: i32 = match state_str {
+                        "closed" => 0,
+                        "open" => 1,
+                        "half_open" => 2,
+                        _ => 0,
+                    };
+                    g.push_str(&format!(
+                        "pg_ripple_federation_circuit_state{{endpoint=\"{}\"}} {}\n",
+                        endpoint.replace('"', "\\\""),
+                        state_val
+                    ));
+                }
+                g
+            }
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+
+    let full_body = body + &circuit_gauge;
+
     Response::builder()
         .status(StatusCode::OK)
         .header("content-type", "text/plain; version=0.0.4")
-        .body(Body::from(body))
+        .body(Body::from(full_body))
         .unwrap_or_else(|e| {
             tracing::error!("response build error: {e}");
             redacted_error(
