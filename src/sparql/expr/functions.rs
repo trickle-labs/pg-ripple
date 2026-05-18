@@ -10,11 +10,12 @@ use spargebra::algebra::{Expression, Function};
 use super::super::sqlgen::Ctx;
 use super::cast::{xsd_cast_datatype, xsd_cast_sql};
 use super::{
-    PG_CONFIDENCE_IRI, PG_DICE_SIMILARITY_IRI, PG_FUZZY_MATCH_IRI, PG_JARO_WINKLER_IRI,
-    PG_LEVENSHTEIN_IRI, PG_LEVENSHTEIN_LESS_EQUAL_IRI, PG_METAPHONE_IRI, PG_SIMILAR_IRI,
-    PG_SOUNDEX_IRI, PG_TEMPORAL_WINDOW_IRI, PG_TOKEN_SET_RATIO_IRI, PG_TRIGRAM_SIMILARITY_IRI,
-    decode_lexical_sql, encode_preserving_lang, postgis_available, translate_arg_text,
-    translate_arg_value,
+    PG_ALLEN_BEFORE_IRI, PG_ALLEN_DURING_IRI, PG_ALLEN_EQUALS_IRI, PG_ALLEN_FINISHES_IRI,
+    PG_ALLEN_MEETS_IRI, PG_ALLEN_OVERLAPS_IRI, PG_ALLEN_STARTS_IRI, PG_CONFIDENCE_IRI,
+    PG_DICE_SIMILARITY_IRI, PG_FUZZY_MATCH_IRI, PG_JARO_WINKLER_IRI, PG_LEVENSHTEIN_IRI,
+    PG_LEVENSHTEIN_LESS_EQUAL_IRI, PG_METAPHONE_IRI, PG_SIMILAR_IRI, PG_SOUNDEX_IRI,
+    PG_TEMPORAL_WINDOW_IRI, PG_TOKEN_SET_RATIO_IRI, PG_TRIGRAM_SIMILARITY_IRI, decode_lexical_sql,
+    encode_preserving_lang, postgis_available, translate_arg_text, translate_arg_value,
 };
 
 /// Returns `true` when the `fuzzystrmatch` extension is installed.
@@ -1122,6 +1123,106 @@ pub(crate) fn translate_function_value(
                     let a_text = translate_arg_text(args.first()?, bindings, ctx)?;
                     let b_text = translate_arg_text(args.get(1)?, bindings, ctx)?;
                     Some(format!("pg_ripple.dice_similarity({a_text}, {b_text})"))
+                }
+
+                // ── v0.118.0: Allen's interval relation SPARQL FILTER functions ──────────
+                // All seven Allen's interval relations take four timestamp arguments:
+                //   pg:before(a_start, a_end, b_start, b_end) etc.
+                // Arguments are decoded to text and cast to TIMESTAMPTZ for comparison.
+                PG_ALLEN_BEFORE_IRI => {
+                    // A is before B: A ends before B starts
+                    // a_end < b_start (strictly before)
+                    *is_numeric = false;
+                    let a_start = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let a_end = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    let b_start = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let _b_end = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!(
+                        "({a_start}::timestamptz < {b_start}::timestamptz \
+                         AND {a_end}::timestamptz <= {b_start}::timestamptz)"
+                    ))
+                }
+
+                PG_ALLEN_MEETS_IRI => {
+                    // A meets B: A ends exactly where B starts
+                    // a_end = b_start
+                    *is_numeric = false;
+                    let _a_start = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let a_end = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    let b_start = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let _b_end = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!("{a_end}::timestamptz = {b_start}::timestamptz"))
+                }
+
+                PG_ALLEN_OVERLAPS_IRI => {
+                    // A overlaps B: A starts before B starts, A ends within B
+                    // a_start < b_start AND a_end > b_start AND a_end < b_end
+                    *is_numeric = false;
+                    let a_start = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let a_end = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    let b_start = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let b_end = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!(
+                        "({a_start}::timestamptz < {b_start}::timestamptz \
+                         AND {a_end}::timestamptz > {b_start}::timestamptz \
+                         AND {a_end}::timestamptz < {b_end}::timestamptz)"
+                    ))
+                }
+
+                PG_ALLEN_DURING_IRI => {
+                    // A is during B: A is strictly contained within B
+                    // a_start > b_start AND a_end < b_end
+                    *is_numeric = false;
+                    let a_start = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let a_end = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    let b_start = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let b_end = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!(
+                        "({a_start}::timestamptz > {b_start}::timestamptz \
+                         AND {a_end}::timestamptz < {b_end}::timestamptz)"
+                    ))
+                }
+
+                PG_ALLEN_FINISHES_IRI => {
+                    // A finishes B: A ends at same point as B, but starts later
+                    // a_start > b_start AND a_end = b_end
+                    *is_numeric = false;
+                    let a_start = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let a_end = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    let b_start = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let b_end = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!(
+                        "({a_start}::timestamptz > {b_start}::timestamptz \
+                         AND {a_end}::timestamptz = {b_end}::timestamptz)"
+                    ))
+                }
+
+                PG_ALLEN_STARTS_IRI => {
+                    // A starts B: A starts at same point as B, but ends earlier
+                    // a_start = b_start AND a_end < b_end
+                    *is_numeric = false;
+                    let a_start = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let a_end = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    let b_start = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let b_end = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!(
+                        "({a_start}::timestamptz = {b_start}::timestamptz \
+                         AND {a_end}::timestamptz < {b_end}::timestamptz)"
+                    ))
+                }
+
+                PG_ALLEN_EQUALS_IRI => {
+                    // A equals B: identical intervals
+                    // a_start = b_start AND a_end = b_end
+                    *is_numeric = false;
+                    let a_start = translate_arg_text(args.first()?, bindings, ctx)?;
+                    let a_end = translate_arg_text(args.get(1)?, bindings, ctx)?;
+                    let b_start = translate_arg_text(args.get(2)?, bindings, ctx)?;
+                    let b_end = translate_arg_text(args.get(3)?, bindings, ctx)?;
+                    Some(format!(
+                        "({a_start}::timestamptz = {b_start}::timestamptz \
+                         AND {a_end}::timestamptz = {b_end}::timestamptz)"
+                    ))
                 }
 
                 _ => None,

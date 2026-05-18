@@ -234,6 +234,8 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route("/datalog/views/{name}", delete(datalog::drop_view))
         // v0.62.0: Visual graph explorer — browser-based SPARQL CONSTRUCT visualiser.
         .route("/explorer", get(admin_handlers::explorer_page))
+        // v0.118.0 Feature 1: Benchmark history endpoint.
+        .route("/admin/bench-history", get(admin_handlers::bench_history))
         // v0.62.0: Arrow Flight bulk-export endpoint.
         .route("/flight/do_get", post(flight_do_get))
         // v0.73.0 SUB-01: Live SPARQL subscription SSE endpoint.
@@ -347,6 +349,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         // v0.115.0 M16-02: Differential-privacy REST API.
         .route("/dp/noisy_count", post(dp_handlers::dp_noisy_count))
         .route("/dp/noisy_histogram", post(dp_handlers::dp_noisy_histogram))
+        // v0.118.0 Feature 2: Privacy budget status endpoint.
+        .route(
+            "/dp/budget/:dataset/:principal",
+            get(dp_handlers::dp_budget_get),
+        )
         // v0.115.0 M16-02: Entity-resolution REST API.
         .route(
             "/entity-resolution/resolve",

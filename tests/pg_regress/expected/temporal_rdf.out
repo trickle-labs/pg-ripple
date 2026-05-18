@@ -4,9 +4,9 @@ SELECT pg_get_function_identity_arguments(oid) AS sig
 FROM pg_proc
 WHERE proname = 'point_in_time'
   AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'pg_ripple');
-             sig             
------------------------------
- ts timestamp with time zone
+                     sig                     
+---------------------------------------------
+ ts timestamp with time zone, time_zone text
 (1 row)
 
 SELECT pg_get_function_identity_arguments(oid) AS sig

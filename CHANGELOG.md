@@ -13,6 +13,54 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.118.0] — 2026-06-10 — Temporal Allen's Relations, compat_check() and Privacy Budget Registry
+
+**Three new Platform Maturity features: seven Allen's interval relations as SPARQL
+FILTER functions and Datalog built-ins (Feature 4); `pg_ripple.compat_check()` SQL
+function for belt-and-suspenders version verification (Feature 3); per-dataset
+differential privacy budget registry with automatic reset (Feature 2). Also
+includes AT TIME ZONE support for temporal queries and an integrated benchmark
+runner (Feature 1).**
+
+### Added
+
+- **Feature 3** `pg_ripple.compat_check() → TEXT` returns structured JSON
+  `{"extension_version": "...", "http_min_version": "...", "compatible": true}`;
+  HTTP companion calls this at startup (C16-01 belt-and-suspenders check on top
+  of the v0.112.0 CI gate).
+- **Feature 4** Seven Allen's interval relation SQL functions and SPARQL FILTER
+  extensions: `allen_before`, `allen_meets`, `allen_overlaps`, `allen_during`,
+  `allen_finishes`, `allen_starts`, `allen_equals` — each takes four
+  `TIMESTAMPTZ` arguments and returns `BOOLEAN`. Also available as Datalog
+  built-ins (`ALLEN_BEFORE(...)`, etc.) and SPARQL custom functions
+  (`http://pg-ripple.org/functions/before`, etc.).
+- **Feature 2** `_pg_ripple.privacy_budget (dataset_id, principal, budget_total,
+  budget_spent, last_reset_at)` table; `dp_noisy_count()` and
+  `dp_noisy_histogram()` gain optional `dataset_id`/`principal` parameters that
+  deduct `epsilon` and raise `PT0490` when the budget is exhausted; GUC
+  `pg_ripple.privacy_budget_reset_interval` (default `'1 day'`) for automatic
+  budget reset; HTTP endpoint `GET /dp/budget/{dataset}/{principal}`.
+- **AT TIME ZONE gap fix** `mark_temporal()` and `point_in_time()` gain an
+  optional `time_zone TEXT` parameter; when provided, timestamps are coerced via
+  `AT TIME ZONE` before temporal fact comparison; `default_tz` column added to
+  `_pg_ripple.temporal_predicates`.
+- **Feature 1** `pg_ripple.bench_workload(profile TEXT DEFAULT 'bsbm') → BIGINT`
+  runs a lightweight proxy benchmark and records the result in
+  `_pg_ripple.bench_history`; `bench_history_recent()` table-returning function
+  for recent run summary; HTTP endpoint `GET /admin/bench-history`.
+
+### Changed
+
+- `COMPATIBLE_EXTENSION_MIN` in `pg_ripple_http` bumped to `"0.117.0"`.
+
+### Migration
+
+- Migration script `sql/pg_ripple--0.117.0--0.118.0.sql` adds
+  `_pg_ripple.privacy_budget`, `_pg_ripple.bench_history`, and the
+  `default_tz TEXT` column on `_pg_ripple.temporal_predicates`.
+
+---
+
 ## [0.117.0] — 2026-06-03 — A16 Low-Severity Polish, Tests and Supply-Chain
 
 **Seventeen low-severity polish items: allow-suppression count reduced to ≤186;

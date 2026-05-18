@@ -36,7 +36,7 @@ use common::{AppState, env_or};
 /// Connections to older extension versions log a prominent warning. The extension
 /// is still served (degraded mode) so that rolling upgrades do not hard-fail.
 /// Set `PG_RIPPLE_HTTP_STRICT_COMPAT=1` to convert the warning to a fatal startup error.
-const COMPATIBLE_EXTENSION_MIN: &str = "0.116.0";
+const COMPATIBLE_EXTENSION_MIN: &str = "0.117.0";
 
 /// Check that the installed pg_ripple extension version is within the known-compatible
 /// range for this pg_ripple_http build.  Logs a warning if it is not.
@@ -104,6 +104,54 @@ async fn check_extension_compatibility(client: &deadpool_postgres::Object) {
              or set PG_RIPPLE_HTTP_SKIP_COMPAT_CHECK=1 to suppress this warning. \
              Set PG_RIPPLE_HTTP_STRICT_COMPAT=1 to make this a fatal startup error."
         );
+    }
+
+    // v0.118.0 Feature 3: Belt-and-suspenders compat_check() call.
+    // Query the extension's own compatibility descriptor to surface any
+    // http_min_version requirement declared by the extension itself.
+    if let Ok(Some(row)) = client
+        .query_opt("SELECT pg_ripple.compat_check()", &[])
+        .await
+    {
+        let compat_json: String = row.get(0);
+        match serde_json::from_str::<serde_json::Value>(&compat_json) {
+            Ok(v) => {
+                let compatible = v
+                    .get("compatible")
+                    .and_then(|c| c.as_bool())
+                    .unwrap_or(true);
+                let http_min = v
+                    .get("http_min_version")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("unknown");
+                let companion_version = env!("CARGO_PKG_VERSION");
+                if !compatible || semver_lt(companion_version, http_min) {
+                    if strict {
+                        tracing::error!(
+                            companion_version = %companion_version,
+                            http_min_version = %http_min,
+                            "PG_RIPPLE_HTTP_STRICT_COMPAT=1: compat_check() reports incompatible — aborting"
+                        );
+                        std::process::exit(1);
+                    }
+                    tracing::warn!(
+                        companion_version = %companion_version,
+                        http_min_version = %http_min,
+                        "pg_ripple.compat_check() reports this HTTP companion version is below \
+                         the extension's http_min_version requirement. Upgrade pg_ripple_http."
+                    );
+                } else {
+                    tracing::debug!(
+                        companion_version = %companion_version,
+                        http_min_version = %http_min,
+                        "compat_check() passed"
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::debug!("compat_check() returned non-JSON response (older extension): {e}");
+            }
+        }
     }
 }
 

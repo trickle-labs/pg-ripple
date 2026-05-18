@@ -1,0 +1,178 @@
+-- v0.118.0 Feature Regression Tests
+-- Tests for: Allen's Interval Relations (Feature 4)
+--
+-- Covers all 7 Allen's temporal interval relations:
+--   ALLEN-01: pg:before — interval A entirely before interval B
+--   ALLEN-02: pg:meets  — A ends exactly when B begins
+--   ALLEN-03: pg:overlaps — A starts before B, they overlap, A ends first
+--   ALLEN-04: pg:during — A is entirely contained within B
+--   ALLEN-05: pg:finishes — A ends at the same time as B, A starts after
+--   ALLEN-06: pg:starts — A starts at the same time as B, A ends first
+--   ALLEN-07: pg:equals — A and B are identical intervals
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+LOAD '$libdir/pg_ripple';
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+-- ALLEN-01: pg:before — a_end <= b_start
+SELECT pg_ripple.allen_before(
+    '2024-01-01'::timestamptz,
+    '2024-01-05'::timestamptz,
+    '2024-01-06'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen01_before_true;
+ allen01_before_true 
+---------------------
+ t
+(1 row)
+
+SELECT pg_ripple.allen_before(
+    '2024-01-01'::timestamptz,
+    '2024-01-07'::timestamptz,
+    '2024-01-06'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen01_before_false;
+ allen01_before_false 
+----------------------
+ f
+(1 row)
+
+-- ALLEN-02: pg:meets — a_end = b_start
+SELECT pg_ripple.allen_meets(
+    '2024-01-01'::timestamptz,
+    '2024-01-06'::timestamptz,
+    '2024-01-06'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen02_meets_true;
+ allen02_meets_true 
+--------------------
+ t
+(1 row)
+
+SELECT pg_ripple.allen_meets(
+    '2024-01-01'::timestamptz,
+    '2024-01-05'::timestamptz,
+    '2024-01-06'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen02_meets_false;
+ allen02_meets_false 
+---------------------
+ f
+(1 row)
+
+-- ALLEN-03: pg:overlaps — a_start < b_start AND a_end > b_start AND a_end < b_end
+SELECT pg_ripple.allen_overlaps(
+    '2024-01-01'::timestamptz,
+    '2024-01-07'::timestamptz,
+    '2024-01-05'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen03_overlaps_true;
+ allen03_overlaps_true 
+-----------------------
+ t
+(1 row)
+
+SELECT pg_ripple.allen_overlaps(
+    '2024-01-01'::timestamptz,
+    '2024-01-04'::timestamptz,
+    '2024-01-05'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen03_overlaps_false;
+ allen03_overlaps_false 
+------------------------
+ f
+(1 row)
+
+-- ALLEN-04: pg:during — a_start > b_start AND a_end < b_end
+SELECT pg_ripple.allen_during(
+    '2024-01-03'::timestamptz,
+    '2024-01-08'::timestamptz,
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen04_during_true;
+ allen04_during_true 
+---------------------
+ t
+(1 row)
+
+SELECT pg_ripple.allen_during(
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz,
+    '2024-01-03'::timestamptz,
+    '2024-01-08'::timestamptz
+) AS allen04_during_false;
+ allen04_during_false 
+----------------------
+ f
+(1 row)
+
+-- ALLEN-05: pg:finishes — a_end = b_end AND a_start > b_start
+SELECT pg_ripple.allen_finishes(
+    '2024-01-05'::timestamptz,
+    '2024-01-10'::timestamptz,
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen05_finishes_true;
+ allen05_finishes_true 
+-----------------------
+ t
+(1 row)
+
+SELECT pg_ripple.allen_finishes(
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz,
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen05_finishes_false;
+ allen05_finishes_false 
+------------------------
+ f
+(1 row)
+
+-- ALLEN-06: pg:starts — a_start = b_start AND a_end < b_end
+SELECT pg_ripple.allen_starts(
+    '2024-01-01'::timestamptz,
+    '2024-01-05'::timestamptz,
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen06_starts_true;
+ allen06_starts_true 
+---------------------
+ t
+(1 row)
+
+SELECT pg_ripple.allen_starts(
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz,
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen06_starts_false;
+ allen06_starts_false 
+----------------------
+ f
+(1 row)
+
+-- ALLEN-07: pg:equals — a_start = b_start AND a_end = b_end
+SELECT pg_ripple.allen_equals(
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz,
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen07_equals_true;
+ allen07_equals_true 
+---------------------
+ t
+(1 row)
+
+SELECT pg_ripple.allen_equals(
+    '2024-01-01'::timestamptz,
+    '2024-01-09'::timestamptz,
+    '2024-01-01'::timestamptz,
+    '2024-01-10'::timestamptz
+) AS allen07_equals_false;
+ allen07_equals_false 
+----------------------
+ f
+(1 row)
+

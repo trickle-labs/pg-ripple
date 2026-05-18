@@ -208,10 +208,15 @@ mod pg_ripple {
     /// result, adds Laplace(0, 1/epsilon) noise, and returns the noisy count
     /// (clamped to ≥ 0).
     ///
+    /// When `dataset_id` and `principal` are provided, deducts `epsilon` from
+    /// `_pg_ripple.privacy_budget` for that (dataset, principal) pair.
+    /// Raises PT0490 if the deduction would exceed `budget_total`.
+    ///
     /// # Error codes
     /// - PT0472: `epsilon` out of range (must be in (0.0, 10.0])
     /// - PT0473: query did not return a single INTEGER
     /// - PT0474: query rejected by validation (not a read-only SELECT)
+    /// - PT0490: privacy budget exhausted for (dataset_id, principal)
     ///
     /// ```sql
     /// SELECT pg_ripple.dp_noisy_count(
@@ -220,13 +225,23 @@ mod pg_ripple {
     /// ) >= 0;
     /// ```
     #[pg_extern]
-    pub fn dp_noisy_count(query: &str, epsilon: f64) -> i64 {
+    pub fn dp_noisy_count(
+        query: &str,
+        epsilon: f64,
+        dataset_id: default!(Option<i64>, "NULL"),
+        principal: default!(Option<String>, "NULL"),
+    ) -> i64 {
         // ── epsilon validation (PT0472) ────────────────────────────────────────
         if epsilon <= 0.0 || epsilon > 10.0 {
             pgrx::error!(
                 "dp_noisy_count: epsilon {} out of valid range (0, 10] [PT0472]",
                 epsilon
             );
+        }
+
+        // ── Privacy budget check and deduction (PT0490) ────────────────────────
+        if let (Some(ds_id), Some(princ)) = (dataset_id, &principal) {
+            super::check_and_deduct_budget(ds_id, princ, epsilon);
         }
 
         // ── Query validation (PT0474) ──────────────────────────────────────────
@@ -252,9 +267,14 @@ mod pg_ripple {
     /// Laplace(0, 1/epsilon) noise to each bucket count, and returns the
     /// noisy histogram (each bucket count clamped to ≥ 0).
     ///
+    /// When `dataset_id` and `principal` are provided, deducts `epsilon` from
+    /// `_pg_ripple.privacy_budget` for that (dataset, principal) pair.
+    /// Raises PT0490 if the deduction would exceed `budget_total`.
+    ///
     /// # Error codes
     /// - PT0472: `epsilon` out of range
     /// - PT0474: query rejected by validation
+    /// - PT0490: privacy budget exhausted for (dataset_id, principal)
     ///
     /// ```sql
     /// SELECT * FROM pg_ripple.dp_noisy_histogram(
@@ -268,6 +288,8 @@ mod pg_ripple {
         key_column: &str,
         count_column: &str,
         epsilon: f64,
+        dataset_id: default!(Option<i64>, "NULL"),
+        principal: default!(Option<String>, "NULL"),
     ) -> TableIterator<'static, (name!(key, String), name!(noisy_count, i64))> {
         // ── epsilon validation (PT0472) ────────────────────────────────────────
         if epsilon <= 0.0 || epsilon > 10.0 {
@@ -275,6 +297,11 @@ mod pg_ripple {
                 "dp_noisy_histogram: epsilon {} out of valid range (0, 10] [PT0472]",
                 epsilon
             );
+        }
+
+        // ── Privacy budget check and deduction (PT0490) ────────────────────────
+        if let (Some(ds_id), Some(princ)) = (dataset_id, &principal) {
+            super::check_and_deduct_budget(ds_id, princ, epsilon);
         }
 
         // ── Query validation (PT0474) ──────────────────────────────────────────
@@ -336,6 +363,74 @@ fn validate_dp_query(query: &str) {
             );
         }
     }
+}
+
+/// Check the privacy budget for `(dataset_id, principal)` and deduct `epsilon`.
+///
+/// Raises PT0490 when `budget_spent + epsilon > budget_total`.
+/// If no budget row exists for the pair, the call is allowed (no budget configured).
+///
+/// Also resets the budget when `now() - last_reset_at > privacy_budget_reset_interval`.
+fn check_and_deduct_budget(dataset_id: i64, principal: &str, epsilon: f64) {
+    use pgrx::prelude::*;
+
+    // Retrieve the reset interval GUC value (default: '1 day').
+    let reset_interval = crate::gucs::storage::PRIVACY_BUDGET_RESET_INTERVAL
+        .get()
+        .and_then(|cs| cs.to_str().ok().map(str::to_owned))
+        .unwrap_or_else(|| "1 day".to_owned());
+
+    // Reset budget_spent if the reset interval has elapsed.
+    Spi::run_with_args(
+        "UPDATE _pg_ripple.privacy_budget \
+         SET budget_spent = 0, last_reset_at = now() \
+         WHERE dataset_id = $1 AND principal = $2 \
+           AND now() - last_reset_at > $3::interval",
+        &[
+            pgrx::datum::DatumWithOid::from(dataset_id),
+            pgrx::datum::DatumWithOid::from(principal),
+            pgrx::datum::DatumWithOid::from(reset_interval.as_str()),
+        ],
+    )
+    .unwrap_or_else(|e| pgrx::warning!("privacy budget reset check failed: {e}"));
+
+    // Read current budget state.
+    let row = Spi::get_two_with_args::<f64, f64>(
+        "SELECT budget_total, budget_spent FROM _pg_ripple.privacy_budget \
+         WHERE dataset_id = $1 AND principal = $2",
+        &[
+            pgrx::datum::DatumWithOid::from(dataset_id),
+            pgrx::datum::DatumWithOid::from(principal),
+        ],
+    );
+
+    if let Ok((Some(budget_total), Some(budget_spent))) = row {
+        if budget_spent + epsilon > budget_total {
+            pgrx::error!(
+                "PT0490: privacy budget exhausted for dataset_id={} principal='{}' \
+                 (spent={:.4}, total={:.4}, requested={:.4})",
+                dataset_id,
+                principal,
+                budget_spent,
+                budget_total,
+                epsilon
+            );
+        }
+
+        // Deduct epsilon from budget_spent.
+        Spi::run_with_args(
+            "UPDATE _pg_ripple.privacy_budget \
+             SET budget_spent = budget_spent + $3 \
+             WHERE dataset_id = $1 AND principal = $2",
+            &[
+                pgrx::datum::DatumWithOid::from(dataset_id),
+                pgrx::datum::DatumWithOid::from(principal),
+                pgrx::datum::DatumWithOid::from(epsilon),
+            ],
+        )
+        .unwrap_or_else(|e| pgrx::error!("privacy budget deduction failed: {e}"));
+    }
+    // If no row exists, no budget configured — allow the call.
 }
 
 /// Generate a sample from the Laplace distribution with scale `b`

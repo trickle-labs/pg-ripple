@@ -599,6 +599,49 @@ fn compile_nonrecursive_rule(
                     TemporalFilter::Within(..)
                     | TemporalFilter::Sequence(..)
                     | TemporalFilter::Consecutive(..) => continue,
+                    // v0.118.0 Allen's interval relations — compile to timestamptz comparisons.
+                    // These do not filter the temporal_facts table directly; they compare
+                    // timestamp arguments provided as rule body constants or variables.
+                    TemporalFilter::AllenBefore(a_start, a_end, b_start, _b_end) => {
+                        format!(
+                            "({a_start}::timestamptz < {b_start}::timestamptz \
+                             AND {a_end}::timestamptz <= {b_start}::timestamptz)"
+                        )
+                    }
+                    TemporalFilter::AllenMeets(_a_start, a_end, b_start, _b_end) => {
+                        format!("{a_end}::timestamptz = {b_start}::timestamptz")
+                    }
+                    TemporalFilter::AllenOverlaps(a_start, a_end, b_start, b_end) => {
+                        format!(
+                            "({a_start}::timestamptz < {b_start}::timestamptz \
+                             AND {a_end}::timestamptz > {b_start}::timestamptz \
+                             AND {a_end}::timestamptz < {b_end}::timestamptz)"
+                        )
+                    }
+                    TemporalFilter::AllenDuring(a_start, a_end, b_start, b_end) => {
+                        format!(
+                            "({a_start}::timestamptz > {b_start}::timestamptz \
+                             AND {a_end}::timestamptz < {b_end}::timestamptz)"
+                        )
+                    }
+                    TemporalFilter::AllenFinishes(a_start, a_end, b_start, b_end) => {
+                        format!(
+                            "({a_start}::timestamptz > {b_start}::timestamptz \
+                             AND {a_end}::timestamptz = {b_end}::timestamptz)"
+                        )
+                    }
+                    TemporalFilter::AllenStarts(a_start, a_end, b_start, b_end) => {
+                        format!(
+                            "({a_start}::timestamptz = {b_start}::timestamptz \
+                             AND {a_end}::timestamptz < {b_end}::timestamptz)"
+                        )
+                    }
+                    TemporalFilter::AllenEquals(a_start, a_end, b_start, b_end) => {
+                        format!(
+                            "({a_start}::timestamptz = {b_start}::timestamptz \
+                             AND {a_end}::timestamptz = {b_end}::timestamptz)"
+                        )
+                    }
                 };
                 parts.push(s);
             }

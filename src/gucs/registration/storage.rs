@@ -1040,4 +1040,19 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.118.0 GUCs ────────────────────────────────────────────────────────
+
+    // Feature 2: Privacy budget reset interval GUC.
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.privacy_budget_reset_interval",
+        c"Automatic reset interval for differential-privacy budget rows in \
+          _pg_ripple.privacy_budget. When now() - last_reset_at exceeds this \
+          interval, budget_spent is reset to 0 on the next DP function call. \
+          Default: '1 day'. (Feature 2 v0.118.0)",
+        c"",
+        &crate::gucs::storage::PRIVACY_BUDGET_RESET_INTERVAL,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
 }

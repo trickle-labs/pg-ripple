@@ -1,12 +1,13 @@
-//! Differential-privacy HTTP handlers (v0.115.0 M16-02).
+//! Differential-privacy HTTP handlers (v0.115.0 M16-02, v0.118.0 Feature 2).
 //!
 //! POST /dp/noisy_count      — differentially-private count query
 //! POST /dp/noisy_histogram  — differentially-private histogram query
+//! GET  /dp/budget/{dataset}/{principal} — privacy budget status (v0.118.0)
 
 use std::sync::Arc;
 
 use axum::body::Body;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use serde::Deserialize;
@@ -188,5 +189,82 @@ pub(crate) async fn dp_noisy_histogram(
     json_response(
         StatusCode::OK,
         serde_json::json!({ "histogram": histogram, "epsilon": req.epsilon }),
+    )
+}
+
+// ── GET /dp/budget/{dataset}/{principal} ─────────────────────────────────────
+
+/// Returns the current privacy budget status for a (dataset_id, principal) pair.
+///
+/// Response JSON:
+/// ```json
+/// {"dataset_id": 42, "principal": "alice",
+///  "budget_total": 10.0, "budget_spent": 3.5,
+///  "budget_remaining": 6.5, "last_reset_at": "..."}
+/// ```
+/// Returns 404 when no budget row exists for the given pair.
+pub(crate) async fn dp_budget_get(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path((dataset, principal)): Path<(i64, String)>,
+) -> Response {
+    if let Err(r) = check_auth_write(&state, &headers) {
+        return r;
+    }
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+    let row = match client
+        .query_opt(
+            "SELECT dataset_id, principal, budget_total, budget_spent, \
+             to_char(last_reset_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS last_reset_at \
+             FROM _pg_ripple.privacy_budget \
+             WHERE dataset_id = $1 AND principal = $2",
+            &[&dataset, &principal],
+        )
+        .await
+    {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return json_response(
+                StatusCode::NOT_FOUND,
+                serde_json::json!({
+                    "error": "not_found",
+                    "detail": format!("no budget row for dataset_id={dataset} principal='{principal}'")
+                }),
+            );
+        }
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "dp_budget_get_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+    let dataset_id: i64 = row.get(0);
+    let princ: String = row.get(1);
+    let budget_total: f64 = row.get(2);
+    let budget_spent: f64 = row.get(3);
+    let last_reset_at: String = row.get(4);
+    json_response(
+        StatusCode::OK,
+        serde_json::json!({
+            "dataset_id": dataset_id,
+            "principal": princ,
+            "budget_total": budget_total,
+            "budget_spent": budget_spent,
+            "budget_remaining": (budget_total - budget_spent).max(0.0),
+            "last_reset_at": last_reset_at,
+        }),
     )
 }

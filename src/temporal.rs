@@ -36,18 +36,38 @@ use pgrx::prelude::*;
 /// All subsequent SPARQL queries will only see triples whose statement ID was
 /// assigned before or at `ts`.  Pass `NULL` to clear the threshold.
 ///
+/// When `time_zone` is provided (e.g. `'America/New_York'`), the lookup query
+/// uses `$1 AT TIME ZONE $2` to reinterpret the timestamp before comparison,
+/// allowing callers to supply a wall-clock time in a named time zone.
+///
 /// # Errors
 /// Raises an error if `_pg_ripple.statement_id_timeline` is not accessible
 /// (extension not installed or schema search path issue).
 #[pg_extern(schema = "pg_ripple")]
-pub fn point_in_time(ts: pgrx::datum::TimestampWithTimeZone) {
-    // Find the maximum SID inserted before `ts`.
-    let threshold: i64 = Spi::get_one_with_args::<i64>(
-        "SELECT COALESCE(MAX(sid), 0) FROM _pg_ripple.statement_id_timeline WHERE inserted_at <= $1",
-        &[pgrx::datum::DatumWithOid::from(ts)],
-    )
-    .unwrap_or_else(|e| pgrx::error!("point_in_time: timeline query error: {e}"))
-    .unwrap_or(0);
+pub fn point_in_time(
+    ts: pgrx::datum::TimestampWithTimeZone,
+    time_zone: default!(Option<String>, "NULL"),
+) {
+    // Build the comparison expression: apply AT TIME ZONE if requested.
+    let threshold: i64 = if let Some(ref tz) = time_zone {
+        let tz_safe = tz.replace('\'', "''");
+        Spi::get_one_with_args::<i64>(
+            &format!(
+                "SELECT COALESCE(MAX(sid), 0) FROM _pg_ripple.statement_id_timeline \
+                 WHERE inserted_at <= ($1 AT TIME ZONE '{tz_safe}')"
+            ),
+            &[pgrx::datum::DatumWithOid::from(ts)],
+        )
+        .unwrap_or_else(|e| pgrx::error!("point_in_time: timeline query error: {e}"))
+        .unwrap_or(0)
+    } else {
+        Spi::get_one_with_args::<i64>(
+            "SELECT COALESCE(MAX(sid), 0) FROM _pg_ripple.statement_id_timeline WHERE inserted_at <= $1",
+            &[pgrx::datum::DatumWithOid::from(ts)],
+        )
+        .unwrap_or_else(|e| pgrx::error!("point_in_time: timeline query error: {e}"))
+        .unwrap_or(0)
+    };
 
     // Store as a session-local GUC that the SQL generator reads.
     Spi::run_with_args(
@@ -260,11 +280,22 @@ pub fn initialize_temporal_store_schema() {
 
 /// Register a predicate as temporal.
 ///
+/// # Parameters
+/// - `predicate_iri`: the predicate IRI to register.
+/// - `data_model`: `'snapshot'` (default) or `'versioned'`.
+/// - `time_zone`: optional default time zone (e.g. `'UTC'`, `'America/New_York'`)
+///   stored in `_pg_ripple.temporal_predicates.default_tz`.  Used by temporal
+///   query helpers to interpret validity timestamps.
+///
 /// # Errors
 /// - PT0430: predicate is already registered with a **different** data model.
 ///   Re-registering with the same model is a no-op.
 #[pg_extern(schema = "pg_ripple")]
-pub fn mark_temporal(predicate_iri: &str, data_model: default!(String, "'snapshot'")) {
+pub fn mark_temporal(
+    predicate_iri: &str,
+    data_model: default!(String, "'snapshot'"),
+    time_zone: default!(Option<String>, "NULL"),
+) {
     let data_model = data_model.as_str();
     if !matches!(data_model, "snapshot" | "versioned") {
         pgrx::error!(
@@ -292,16 +323,28 @@ pub fn mark_temporal(predicate_iri: &str, data_model: default!(String, "'snapsho
                 existing_model
             );
         }
-        // Same model — idempotent, nothing to do.
+        // Same model — update time_zone if provided, then return.
+        if let Some(ref tz) = time_zone {
+            Spi::run_with_args(
+                "UPDATE _pg_ripple.temporal_predicates SET default_tz = $2 \
+                 WHERE predicate_id = $1",
+                &[
+                    pgrx::datum::DatumWithOid::from(pred_id),
+                    pgrx::datum::DatumWithOid::from(tz.as_str()),
+                ],
+            )
+            .unwrap_or_else(|e| pgrx::warning!("mark_temporal: update default_tz: {e}"));
+        }
         return;
     }
 
     Spi::run_with_args(
-        "INSERT INTO _pg_ripple.temporal_predicates (predicate_id, data_model) \
-         VALUES ($1, $2) ON CONFLICT (predicate_id) DO NOTHING",
+        "INSERT INTO _pg_ripple.temporal_predicates (predicate_id, data_model, default_tz) \
+         VALUES ($1, $2, $3) ON CONFLICT (predicate_id) DO NOTHING",
         &[
             pgrx::datum::DatumWithOid::from(pred_id),
             pgrx::datum::DatumWithOid::from(data_model),
+            pgrx::datum::DatumWithOid::from(time_zone.as_deref()),
         ],
     )
     .unwrap_or_else(|e| pgrx::error!("mark_temporal: insert error: {e}"));
@@ -700,4 +743,103 @@ pub fn retract_triple_temporal(
     .unwrap_or(0);
 
     rows_affected
+}
+
+// ── Allen's Interval Relation SQL Functions (v0.118.0 Feature 4) ─────────────
+//
+// These SQL wrappers expose the 7 Allen temporal interval relations as callable
+// pg_ripple schema functions, in addition to their SPARQL FILTER function form
+// (http://pg-ripple.org/functions/*) and Datalog built-in form (ALLEN_*).
+//
+// Naming follows Allen (1983): before, meets, overlaps, during, finishes,
+// starts, equals. Each relation takes four TIMESTAMPTZ arguments:
+//   (a_start, a_end, b_start, b_end)
+// and returns a BOOLEAN.
+
+/// `pg_ripple.allen_before(a_start, a_end, b_start, b_end)` — interval A ends
+/// before interval B begins: `a_end <= b_start`.
+#[pg_extern(schema = "pg_ripple")]
+pub fn allen_before(
+    a_start: pgrx::datum::TimestampWithTimeZone,
+    a_end: pgrx::datum::TimestampWithTimeZone,
+    b_start: pgrx::datum::TimestampWithTimeZone,
+    _b_end: pgrx::datum::TimestampWithTimeZone,
+) -> bool {
+    let _ = a_start; // a_start not needed for this relation
+    a_end <= b_start
+}
+
+/// `pg_ripple.allen_meets(a_start, a_end, b_start, b_end)` — interval A ends
+/// exactly when B begins: `a_end = b_start`.
+#[pg_extern(schema = "pg_ripple")]
+pub fn allen_meets(
+    _a_start: pgrx::datum::TimestampWithTimeZone,
+    a_end: pgrx::datum::TimestampWithTimeZone,
+    b_start: pgrx::datum::TimestampWithTimeZone,
+    _b_end: pgrx::datum::TimestampWithTimeZone,
+) -> bool {
+    a_end == b_start
+}
+
+/// `pg_ripple.allen_overlaps(a_start, a_end, b_start, b_end)` — interval A
+/// starts before B, they overlap, and A ends before B:
+/// `a_start < b_start AND a_end > b_start AND a_end < b_end`.
+#[pg_extern(schema = "pg_ripple")]
+pub fn allen_overlaps(
+    a_start: pgrx::datum::TimestampWithTimeZone,
+    a_end: pgrx::datum::TimestampWithTimeZone,
+    b_start: pgrx::datum::TimestampWithTimeZone,
+    b_end: pgrx::datum::TimestampWithTimeZone,
+) -> bool {
+    a_start < b_start && a_end > b_start && a_end < b_end
+}
+
+/// `pg_ripple.allen_during(a_start, a_end, b_start, b_end)` — interval A is
+/// entirely contained within B: `a_start > b_start AND a_end < b_end`.
+#[pg_extern(schema = "pg_ripple")]
+pub fn allen_during(
+    a_start: pgrx::datum::TimestampWithTimeZone,
+    a_end: pgrx::datum::TimestampWithTimeZone,
+    b_start: pgrx::datum::TimestampWithTimeZone,
+    b_end: pgrx::datum::TimestampWithTimeZone,
+) -> bool {
+    a_start > b_start && a_end < b_end
+}
+
+/// `pg_ripple.allen_finishes(a_start, a_end, b_start, b_end)` — interval A
+/// ends at the same time as B and starts after B:
+/// `a_end = b_end AND a_start > b_start`.
+#[pg_extern(schema = "pg_ripple")]
+pub fn allen_finishes(
+    a_start: pgrx::datum::TimestampWithTimeZone,
+    a_end: pgrx::datum::TimestampWithTimeZone,
+    b_start: pgrx::datum::TimestampWithTimeZone,
+    b_end: pgrx::datum::TimestampWithTimeZone,
+) -> bool {
+    a_end == b_end && a_start > b_start
+}
+
+/// `pg_ripple.allen_starts(a_start, a_end, b_start, b_end)` — interval A
+/// starts at the same time as B and ends before B:
+/// `a_start = b_start AND a_end < b_end`.
+#[pg_extern(schema = "pg_ripple")]
+pub fn allen_starts(
+    a_start: pgrx::datum::TimestampWithTimeZone,
+    a_end: pgrx::datum::TimestampWithTimeZone,
+    b_start: pgrx::datum::TimestampWithTimeZone,
+    b_end: pgrx::datum::TimestampWithTimeZone,
+) -> bool {
+    a_start == b_start && a_end < b_end
+}
+
+/// `pg_ripple.allen_equals(a_start, a_end, b_start, b_end)` — intervals A and
+/// B are identical: `a_start = b_start AND a_end = b_end`.
+#[pg_extern(schema = "pg_ripple")]
+pub fn allen_equals(
+    a_start: pgrx::datum::TimestampWithTimeZone,
+    a_end: pgrx::datum::TimestampWithTimeZone,
+    b_start: pgrx::datum::TimestampWithTimeZone,
+    b_end: pgrx::datum::TimestampWithTimeZone,
+) -> bool {
+    a_start == b_start && a_end == b_end
 }

@@ -381,6 +381,44 @@ fn try_parse_temporal_filter(text: &str) -> Option<TemporalFilter> {
         }
     }
 
+    // v0.118.0: Allen's interval relation operators
+    // Each takes four timestamp arguments: (a_start, a_end, b_start, b_end)
+    for (prefix, len) in &[
+        ("ALLEN_BEFORE(", 13),
+        ("ALLEN_MEETS(", 12),
+        ("ALLEN_OVERLAPS(", 15),
+        ("ALLEN_DURING(", 13),
+        ("ALLEN_FINISHES(", 15),
+        ("ALLEN_STARTS(", 13),
+        ("ALLEN_EQUALS(", 13),
+    ] {
+        if upper.starts_with(prefix) && text.ends_with(')') {
+            let inner = &text[*len..text.len() - 1];
+            let parts = split_csv(inner);
+            if parts.len() == 4 {
+                let a_start = trim_cast(&parts[0]);
+                let a_end = trim_cast(&parts[1]);
+                let b_start = trim_cast(&parts[2]);
+                let b_end = trim_cast(&parts[3]);
+                let variant = match upper.split('(').next().unwrap_or("") {
+                    "ALLEN_BEFORE" => TemporalFilter::AllenBefore(a_start, a_end, b_start, b_end),
+                    "ALLEN_MEETS" => TemporalFilter::AllenMeets(a_start, a_end, b_start, b_end),
+                    "ALLEN_OVERLAPS" => {
+                        TemporalFilter::AllenOverlaps(a_start, a_end, b_start, b_end)
+                    }
+                    "ALLEN_DURING" => TemporalFilter::AllenDuring(a_start, a_end, b_start, b_end),
+                    "ALLEN_FINISHES" => {
+                        TemporalFilter::AllenFinishes(a_start, a_end, b_start, b_end)
+                    }
+                    "ALLEN_STARTS" => TemporalFilter::AllenStarts(a_start, a_end, b_start, b_end),
+                    "ALLEN_EQUALS" => TemporalFilter::AllenEquals(a_start, a_end, b_start, b_end),
+                    _ => continue,
+                };
+                return Some(variant);
+            }
+        }
+    }
+
     None
 }
 

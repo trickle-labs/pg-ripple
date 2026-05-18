@@ -416,6 +416,36 @@ pub(super) const PG_JARO_WINKLER_IRI: &str = "http://pg-ripple.org/functions/jar
 /// `pg:dice_similarity(a, b)` IRI — Dice coefficient on Bloom-filter hex strings (v0.111.0).
 pub(super) const PG_DICE_SIMILARITY_IRI: &str = "http://pg-ripple.org/functions/dice_similarity";
 
+// ─── v0.118.0 Allen's interval relation SPARQL FILTER functions ───────────────
+
+/// `pg:before(a_start, a_end, b_start, b_end)` IRI — Allen's interval BEFORE (v0.118.0).
+/// Returns true when interval A ends before interval B starts.
+pub(super) const PG_ALLEN_BEFORE_IRI: &str = "http://pg-ripple.org/functions/before";
+
+/// `pg:meets(a_start, a_end, b_start, b_end)` IRI — Allen's interval MEETS (v0.118.0).
+/// Returns true when interval A ends exactly where interval B starts.
+pub(super) const PG_ALLEN_MEETS_IRI: &str = "http://pg-ripple.org/functions/meets";
+
+/// `pg:overlaps(a_start, a_end, b_start, b_end)` IRI — Allen's interval OVERLAPS (v0.118.0).
+/// Returns true when interval A starts before B and ends within B.
+pub(super) const PG_ALLEN_OVERLAPS_IRI: &str = "http://pg-ripple.org/functions/overlaps";
+
+/// `pg:during(a_start, a_end, b_start, b_end)` IRI — Allen's interval DURING (v0.118.0).
+/// Returns true when interval A is strictly contained within interval B.
+pub(super) const PG_ALLEN_DURING_IRI: &str = "http://pg-ripple.org/functions/during";
+
+/// `pg:finishes(a_start, a_end, b_start, b_end)` IRI — Allen's interval FINISHES (v0.118.0).
+/// Returns true when interval A ends at the same point as B but starts later.
+pub(super) const PG_ALLEN_FINISHES_IRI: &str = "http://pg-ripple.org/functions/finishes";
+
+/// `pg:starts(a_start, a_end, b_start, b_end)` IRI — Allen's interval STARTS (v0.118.0).
+/// Returns true when interval A starts at the same point as B but ends earlier.
+pub(super) const PG_ALLEN_STARTS_IRI: &str = "http://pg-ripple.org/functions/starts";
+
+/// `pg:equals(a_start, a_end, b_start, b_end)` IRI — Allen's interval EQUALS (v0.118.0).
+/// Returns true when interval A and interval B are identical.
+pub(super) const PG_ALLEN_EQUALS_IRI: &str = "http://pg-ripple.org/functions/equals";
+
 /// Translate an argument expression to a SQL text expression.
 ///
 /// For variable arguments: decode the dictionary ID to lexical text.

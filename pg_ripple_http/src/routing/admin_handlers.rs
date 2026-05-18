@@ -639,6 +639,71 @@ pub(crate) fn strip_angle(s: &str) -> &str {
     s.trim_start_matches('<').trim_end_matches('>')
 }
 
+// ─── v0.118.0: Benchmark history endpoint ────────────────────────────────────
+
+/// Return recent benchmark run history from `_pg_ripple.bench_history`.
+///
+/// Requires authentication (check_auth_write).
+/// Optional query param `limit` (default 20, max 1000).
+///
+/// Response: `{"runs": [{"run_id":..., "profile":"...", ...}]}`
+pub(crate) async fn bench_history(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Response {
+    use crate::common::check_auth_write;
+    if let Err(r) = check_auth_write(&state, &headers) {
+        return r;
+    }
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+    let rows = match client
+        .query(
+            "SELECT run_id, profile, \
+                    to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS started_at, \
+                    duration_ms, triples_processed, queries_per_second \
+             FROM _pg_ripple.bench_history \
+             ORDER BY started_at DESC \
+             LIMIT 100",
+            &[],
+        )
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "bench_history_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+    let runs: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "run_id": row.get::<_, i64>(0),
+                "profile": row.get::<_, String>(1),
+                "started_at": row.get::<_, String>(2),
+                "duration_ms": row.get::<_, Option<i64>>(3),
+                "triples_processed": row.get::<_, Option<i64>>(4),
+                "queries_per_second": row.get::<_, Option<f64>>(5),
+            })
+        })
+        .collect();
+    json_response_http(StatusCode::OK, serde_json::json!({ "runs": runs }))
+}
+
 // ─── v0.62.0: Visual graph explorer ─────────────────────────────────────────
 
 /// Serve the browser-based visual graph explorer at `/explorer`.

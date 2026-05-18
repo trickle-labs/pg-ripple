@@ -359,3 +359,13 @@ pub static BIDI_RELAY_DROP_POLICY: pgrx::GucSetting<Option<std::ffi::CString>> =
 /// Ensures forward progress during low-volume replication streams.
 /// Default: 500. Range: 1–60000. (P6 v0.113.0)
 pub static REPLICATION_BATCH_INTERVAL_MS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(500);
+
+// ─── v0.118.0 GUCs ───────────────────────────────────────────────────────────
+
+/// GUC: automatic reset interval for differential-privacy budget rows in
+/// `_pg_ripple.privacy_budget`.
+/// When `now() - last_reset_at > privacy_budget_reset_interval`, the
+/// `budget_spent` counter is reset to 0 on the next DP function call.
+/// Default: `'1 day'`. (Feature 2 v0.118.0)
+pub static PRIVACY_BUDGET_RESET_INTERVAL: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);

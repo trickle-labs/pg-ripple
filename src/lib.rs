@@ -102,6 +102,10 @@ mod rule_explain;
 // v0.111.0 modules — Privacy-Preserving Record Linkage (PPRL) primitives
 mod pprl;
 
+// v0.118.0 modules — compat_check(), bench_workload(), Allen's interval relations
+mod bench;
+mod compat;
+
 // Re-export all GUC statics at the crate root so that `crate::SOME_GUC` paths
 // in existing code continue to work after the split.
 pub(crate) use gucs::*;

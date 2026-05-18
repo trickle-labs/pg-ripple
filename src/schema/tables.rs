@@ -542,15 +542,17 @@ COMMENT ON TABLE _pg_ripple.explanation_cache IS
 // v0.106.0: Temporal fact store — predicates registry and facts table.
 pgrx::extension_sql!(
     r#"
--- Temporal predicates registry (v0.106.0)
+-- Temporal predicates registry (v0.106.0, extended v0.118.0)
 -- Marks which predicates are time-aware and what data model they use.
 -- data_model: 'snapshot' — closes previous open interval on re-assertion;
 --             'versioned' — always inserts a new row, never modifies existing rows.
+-- default_tz (v0.118.0): optional default time zone for temporal queries.
 CREATE TABLE IF NOT EXISTS _pg_ripple.temporal_predicates (
     predicate_id BIGINT NOT NULL PRIMARY KEY,
     data_model   TEXT   NOT NULL
                  CHECK (data_model IN ('snapshot', 'versioned')),
-    registered_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    registered_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    default_tz    TEXT
 );
 
 -- Temporal facts table (v0.106.0)
@@ -687,4 +689,48 @@ COMMENT ON TABLE _pg_ripple.sameas_anomaly_log IS
 "#,
     name = "v0110_nsrl_eval_tables",
     requires = ["v0108_bayesian_confidence"]
+);
+
+// v0.118.0: Privacy budget registry and benchmark history table.
+pgrx::extension_sql!(
+    r#"
+-- Privacy budget registry (v0.118.0 Feature 2)
+-- Tracks per-dataset per-principal differential-privacy epsilon budgets.
+-- dp_noisy_count() and dp_noisy_histogram() deduct epsilon from budget_spent on
+-- each call, raising PT0490 when the budget is exhausted.
+-- Automatic daily reset is controlled by pg_ripple.privacy_budget_reset_interval.
+CREATE TABLE IF NOT EXISTS _pg_ripple.privacy_budget (
+    dataset_id    BIGINT      NOT NULL,
+    principal     TEXT        NOT NULL,
+    budget_total  FLOAT8      NOT NULL,
+    budget_spent  FLOAT8      NOT NULL DEFAULT 0,
+    last_reset_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT privacy_budget_pk PRIMARY KEY (dataset_id, principal),
+    CONSTRAINT privacy_budget_total_pos CHECK (budget_total > 0),
+    CONSTRAINT privacy_budget_spent_nonneg CHECK (budget_spent >= 0)
+);
+COMMENT ON TABLE _pg_ripple.privacy_budget IS
+    'Per-dataset per-principal differential-privacy epsilon budget registry (v0.118.0). '
+    'dp_noisy_count() and dp_noisy_histogram() deduct epsilon from budget_spent; '
+    'PT0490 is raised when budget would be exceeded. '
+    'Automatic daily reset controlled by pg_ripple.privacy_budget_reset_interval.';
+
+-- Benchmark history table (v0.118.0 Feature 1)
+-- Records results from pg_ripple.bench_workload() runs.
+CREATE TABLE IF NOT EXISTS _pg_ripple.bench_history (
+    run_id              BIGSERIAL   PRIMARY KEY,
+    profile             TEXT        NOT NULL,
+    started_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    duration_ms         BIGINT,
+    triples_processed   BIGINT,
+    queries_per_second  FLOAT8
+);
+CREATE INDEX IF NOT EXISTS idx_bench_history_started_at
+    ON _pg_ripple.bench_history (started_at DESC);
+COMMENT ON TABLE _pg_ripple.bench_history IS
+    'Benchmark run history for pg_ripple.bench_workload() (v0.118.0 Feature 1). '
+    'Exposed via GET /admin/bench-history.';
+"#,
+    name = "v0118_privacy_bench_tables",
+    requires = ["v0110_nsrl_eval_tables"]
 );

@@ -253,6 +253,21 @@ pub enum TemporalFilter {
     /// True if there are n consecutive rows for the same subject and predicate
     /// within the window duration.
     Consecutive(i64, String, String),
+    // ── v0.118.0 Allen's interval relations ──────────────────────────────────
+    /// `ALLEN_BEFORE(a_start, a_end, b_start, b_end)` — A ends before B starts.
+    AllenBefore(String, String, String, String),
+    /// `ALLEN_MEETS(a_start, a_end, b_start, b_end)` — A ends exactly where B starts.
+    AllenMeets(String, String, String, String),
+    /// `ALLEN_OVERLAPS(a_start, a_end, b_start, b_end)` — A starts before B and ends within B.
+    AllenOverlaps(String, String, String, String),
+    /// `ALLEN_DURING(a_start, a_end, b_start, b_end)` — A is strictly contained in B.
+    AllenDuring(String, String, String, String),
+    /// `ALLEN_FINISHES(a_start, a_end, b_start, b_end)` — A ends at same point as B.
+    AllenFinishes(String, String, String, String),
+    /// `ALLEN_STARTS(a_start, a_end, b_start, b_end)` — A starts at same point as B.
+    AllenStarts(String, String, String, String),
+    /// `ALLEN_EQUALS(a_start, a_end, b_start, b_end)` — A and B are identical intervals.
+    AllenEquals(String, String, String, String),
 }
 
 // ─── Catalog helpers ──────────────────────────────────────────────────────────
