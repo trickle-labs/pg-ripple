@@ -145,7 +145,11 @@ COPY --from=gosu-builder /go/bin/gosu /usr/local/bin/gosu
 # Runtime deps for PostGIS, pgvector, and pg_trgm (CONF-SBOM-01c: required for fuzzy SPARQL v0.87.0)
 # Use runtime library packages, not -dev packages — headers and static libs are
 # only needed at compile time and account for ~900 MB of unnecessary bloat.
+# apt-get upgrade -y patches all OS packages to their latest versions, which
+# eliminates CVEs with available fixes (e.g. glibc CVE-2026-0861, libcap2
+# CVE-2026-4878, systemd CVE-2026-29111) that Trivy flags on the base image.
 RUN apt-get update -qq \
+    && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends \
        libgeos-c1v5 \
        libproj25 \
