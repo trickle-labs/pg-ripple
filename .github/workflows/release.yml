@@ -394,12 +394,10 @@ jobs:
       # The signed SBOM satisfies GA entry criterion (e) from H16-07.
       # Verification: cosign verify-blob --certificate-identity-regexp 'github.com/trickle-labs/pg-ripple'
       #               --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
-      #               --bundle pg_ripple.cdx.json.cosign.bundle pg_ripple.cdx.json
+      #               --bundle sbom.json.cosign.bundle sbom.json
       - name: Sign SBOM with cosign (keyless)
-        uses: sigstore/cosign-installer@d7d6bc7722e4fe1f4cae7cbf2f6f81483e5c3a82  # v3.9.2
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
       - name: cosign sign-blob SBOM
-        env:
-          COSIGN_EXPERIMENTAL: "1"
         run: |
           cosign sign-blob \
             --yes \
