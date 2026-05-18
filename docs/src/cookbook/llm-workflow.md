@@ -233,3 +233,38 @@ if __name__ == "__main__":
 - [Cookbook: Grounded Chatbot](grounded-chatbot.md) — simpler single-pass variant.
 - [Cookbook: SPARQL Repair Workflow](sparql-repair.md) — what to do when NL→SPARQL fails.
 - [AI Agent Integration](../features/ai-agent-integration.md) — LangChain / LlamaIndex wiring.
+
+---
+
+## Schema-Aware NL→SPARQL with Vocabulary Bundles (v0.119.0)
+
+When your dataset uses custom ontologies or domain-specific vocabularies,
+`sparql_from_nl()` can automatically include vocabulary metadata in the LLM
+system prompt, improving translation accuracy for ontology-rich knowledge graphs.
+
+### Enable bundle injection
+
+```sql
+-- Enable vocabulary bundle metadata in NL→SPARQL prompts (default: on)
+SET pg_ripple.nl_sparql_include_bundles = on;
+```
+
+When enabled, `sparql_from_nl()` queries the triple store for:
+
+- `skos:prefLabel` — preferred labels for vocabulary terms
+- `dcterms:title` — dataset and resource titles
+- `schema:name` — Schema.org type names
+- `foaf:name` — FOAF person/org names
+
+This metadata is prepended to the LLM prompt as grounding context, helping the
+model generate property URIs that match your actual data.
+
+### Disable for performance
+
+For datasets that do not use these vocabulary predicates, disable to skip the
+extra SPI query:
+
+```sql
+SET pg_ripple.nl_sparql_include_bundles = off;
+```
+
