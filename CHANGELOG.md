@@ -31,11 +31,11 @@ cargo-audit advisory lifecycle policy; and a categorical GUC reference at
   delete rows older than the configured retention window from
   `er_unresolved_entities`, `er_cluster_sizes`, and `er_resolution_dashboard`.
 
-- **M16-05** `rule_version_stamp BIGINT NOT NULL DEFAULT 0` column added to
-  `_pg_ripple.rule_explanations`. `store_rules()` increments the stamp on every
-  rule-set update. `explain_rule()` rejects DB-cached explanations whose stamp
-  is older than the current value, preventing stale explanations after rule
-  edits.
+- **M16-05** Added `rule_version_stamp` to `_pg_ripple.rule_explanations`;
+  migration: `sql/pg_ripple--0.115.0--0.116.0.sql`. `pg_ripple.store_rules()`
+  increments the stamp on every rule-set update. `pg_ripple.explain_rule()`
+  rejects DB-cached explanations whose stamp is older than the current value,
+  preventing stale explanations after rule edits.
 
 - **M16-06** `audit.toml` advisory lifecycle-policy comment block with explicit
   `expires` dates (2026-12-01) for the `pkcs1`/`rsa` advisories. Establishes a
