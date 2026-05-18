@@ -214,3 +214,17 @@ SELECT length(pg_ripple.export_pagerank('csv', NULL, E'attacker\'; DROP TABLE pg
 
 SELECT length(pg_ripple.export_pagerank('csv', NULL, '<evil>topic</evil>')) >= 0
     AS sec04_angle_bracket_safe;
+
+-- ── Tests 38-40 (M16-04): direction enum — forward / reverse / both ──────────
+-- These tests mirror the Direction enum added to pagerank_handlers.rs
+-- (v0.115.0 M16-04) to confirm all three accepted direction strings work at
+-- the SQL layer.
+SELECT COUNT(*) >= 0 AS direction_forward_ok
+FROM pg_ripple.pagerank_run(direction => 'forward', max_iterations => 5);
+
+SELECT COUNT(*) >= 0 AS direction_reverse_ok
+FROM pg_ripple.pagerank_run(direction => 'reverse', max_iterations => 5);
+
+-- direction='both' (undirected) treats every edge as bidirectional.
+SELECT COUNT(*) >= 0 AS direction_both_ok
+FROM pg_ripple.pagerank_run(direction => 'both', max_iterations => 5);

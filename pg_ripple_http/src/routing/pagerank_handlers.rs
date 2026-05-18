@@ -17,7 +17,7 @@ use axum::body::Body;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::sparql_handlers::json_response_http;
 use crate::common::{AppState, check_auth, check_auth_write, redacted_error};
@@ -27,6 +27,29 @@ fn json_response(status: StatusCode, body: serde_json::Value) -> Response {
 }
 
 // ── Request / response types ──────────────────────────────────────────────────
+
+/// M16-04 (v0.115.0): whitelisted enum for the PageRank traversal direction.
+/// Using `#[serde(rename_all = "lowercase")]` means any value not in the
+/// enum is rejected at deserialise time with a structured 400 error — no
+/// manual escaping required.
+#[derive(Debug, Deserialize, Serialize, Default, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum Direction {
+    #[default]
+    Forward,
+    Reverse,
+    Both,
+}
+
+impl Direction {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Direction::Forward => "forward",
+            Direction::Reverse => "reverse",
+            Direction::Both => "both",
+        }
+    }
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Default)]
@@ -39,8 +62,9 @@ pub struct PageRankRunRequest {
     #[serde(default = "default_convergence_delta")]
     pub convergence_delta: f64,
     pub graph_uri: Option<String>,
-    #[serde(default = "default_direction")]
-    pub direction: String,
+    /// M16-04: whitelisted via `Direction` enum — rejects unknown values at deserialise.
+    #[serde(default)]
+    pub direction: Direction,
     pub edge_weight_predicate: Option<String>,
     pub topic: Option<String>,
     #[serde(default)]
@@ -60,9 +84,6 @@ fn default_max_iterations() -> i32 {
 }
 fn default_convergence_delta() -> f64 {
     0.0001
-}
-fn default_direction() -> String {
-    "forward".to_owned()
 }
 fn default_bias() -> f64 {
     0.15
@@ -170,20 +191,18 @@ pub(crate) async fn pagerank_run(
     };
 
     let topic = req.topic.clone().unwrap_or_default();
+    // M16-04 (v0.115.0): direction is whitelisted via Direction enum;
+    // use a parameterised $1 placeholder so no string interpolation reaches the DB.
+    let direction_str = req.direction.as_str();
     let sql = format!(
         "SELECT COUNT(*) FROM pg_ripple.pagerank_run(\
           damping => {}, max_iterations => {}, convergence_delta => {}, \
-          direction => '{}', decay_rate => {}, bias => {} \
+          direction => $1, decay_rate => {}, bias => {} \
         )",
-        req.damping,
-        req.max_iterations,
-        req.convergence_delta,
-        req.direction.replace('\'', "''"),
-        req.decay_rate,
-        req.bias,
+        req.damping, req.max_iterations, req.convergence_delta, req.decay_rate, req.bias,
     );
 
-    let row_count: i64 = match client.query_one(&sql, &[]).await {
+    let row_count: i64 = match client.query_one(&sql, &[&direction_str]).await {
         Ok(row) => row.get::<_, i64>(0),
         Err(e) => {
             state.metrics.record_error();
@@ -230,7 +249,6 @@ pub(crate) async fn pagerank_results(
     };
 
     let topic = params.topic.clone().unwrap_or_default();
-    let topic_esc = topic.replace('\'', "''");
     let limit = params.limit.unwrap_or(100).min(10000);
     let offset = params.offset.unwrap_or(0).max(0);
     let stale_filter = if params.exact_only.unwrap_or(false) {
@@ -239,17 +257,18 @@ pub(crate) async fn pagerank_results(
         ""
     };
 
+    // M16-04 (v0.115.0): use parameterised $1 for topic; limit/offset are i64 bounds-checked above.
     let sql = format!(
         "SELECT d.value, ps.score, ps.score_lower, ps.score_upper, \
                 ps.iterations, ps.converged, ps.stale, ps.computed_at::TEXT \
          FROM _pg_ripple.pagerank_scores ps \
          JOIN _pg_ripple.dictionary d ON d.id = ps.node \
-         WHERE ps.topic = '{topic_esc}' {stale_filter} \
+         WHERE ps.topic = $1 {stale_filter} \
          ORDER BY ps.score DESC \
          LIMIT {limit} OFFSET {offset}"
     );
 
-    let rows = match client.query(&sql, &[]).await {
+    let rows = match client.query(&sql, &[&topic]).await {
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
@@ -391,19 +410,19 @@ pub(crate) async fn pagerank_export(
     };
 
     let topic = params.topic.clone().unwrap_or_default();
-    let topic_esc = topic.replace('\'', "''");
     let top_k = params.top_k.map(|k| k.min(100_000)).unwrap_or(10_000);
 
+    // M16-04 (v0.115.0): parameterised $1 for topic.
     let sql = format!(
         "SELECT d.value, ps.score, ps.stale \
          FROM _pg_ripple.pagerank_scores ps \
          JOIN _pg_ripple.dictionary d ON d.id = ps.node \
-         WHERE ps.topic = '{topic_esc}' \
+         WHERE ps.topic = $1 \
          ORDER BY ps.score DESC \
          LIMIT {top_k}"
     );
 
-    let rows = match client.query(&sql, &[]).await {
+    let rows = match client.query(&sql, &[&topic]).await {
         Ok(r) => r,
         Err(e) => {
             state.metrics.record_error();
@@ -499,9 +518,9 @@ pub(crate) async fn pagerank_explain(
             );
         }
     };
-    let node_esc = node_iri.replace('\'', "''");
-    let sql = format!("SELECT * FROM pg_ripple.explain_pagerank('{node_esc}', 5)");
-    let rows = match client.query(&sql, &[]).await {
+    // M16-04 (v0.115.0): parameterised $1 for node_iri.
+    let sql = "SELECT * FROM pg_ripple.explain_pagerank($1, 5)";
+    let rows = match client.query(sql, &[&node_iri]).await {
         Ok(r) => r,
         Err(e) => {
             return redacted_error(
@@ -611,9 +630,9 @@ pub(crate) async fn centrality_run(
             );
         }
     };
-    let metric_esc = req.metric.replace('\'', "''");
-    let sql = format!("SELECT COUNT(*) FROM pg_ripple.centrality_run('{metric_esc}')");
-    let count: i64 = match client.query_one(&sql, &[]).await {
+    // M16-04 (v0.115.0): parameterised $1 for metric.
+    let sql = "SELECT COUNT(*) FROM pg_ripple.centrality_run($1)";
+    let count: i64 = match client.query_one(sql, &[&req.metric]).await {
         Ok(r) => r.get(0),
         Err(e) => {
             return redacted_error(
@@ -651,27 +670,44 @@ pub(crate) async fn centrality_results(
             );
         }
     };
-    let metric_filter = match &params.metric {
-        Some(m) => format!("WHERE cs.metric = '{}'", m.replace('\'', "''")),
-        None => String::new(),
-    };
+    // M16-04 (v0.115.0): use parameterised query for metric filter.
     let limit = params.limit.unwrap_or(100).min(10000);
-    let sql = format!(
-        "SELECT d.value, cs.metric, cs.score \
-         FROM _pg_ripple.centrality_scores cs \
-         JOIN _pg_ripple.dictionary d ON d.id = cs.node \
-         {metric_filter} \
-         ORDER BY cs.score DESC \
-         LIMIT {limit}"
-    );
-    let rows = match client.query(&sql, &[]).await {
-        Ok(r) => r,
-        Err(e) => {
-            return redacted_error(
-                "query_error",
-                &e.to_string(),
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
+    let rows = if let Some(metric) = &params.metric {
+        let sql = format!(
+            "SELECT d.value, cs.metric, cs.score \
+             FROM _pg_ripple.centrality_scores cs \
+             JOIN _pg_ripple.dictionary d ON d.id = cs.node \
+             WHERE cs.metric = $1 \
+             ORDER BY cs.score DESC \
+             LIMIT {limit}"
+        );
+        match client.query(&sql, &[metric]).await {
+            Ok(r) => r,
+            Err(e) => {
+                return redacted_error(
+                    "query_error",
+                    &e.to_string(),
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            }
+        }
+    } else {
+        let sql = format!(
+            "SELECT d.value, cs.metric, cs.score \
+             FROM _pg_ripple.centrality_scores cs \
+             JOIN _pg_ripple.dictionary d ON d.id = cs.node \
+             ORDER BY cs.score DESC \
+             LIMIT {limit}"
+        );
+        match client.query(&sql, &[]).await {
+            Ok(r) => r,
+            Err(e) => {
+                return redacted_error(
+                    "query_error",
+                    &e.to_string(),
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            }
         }
     };
     let results: Vec<serde_json::Value> = rows.iter().map(|row| {
@@ -730,12 +766,15 @@ pub(crate) async fn find_duplicates(
             );
         }
     };
-    let metric_esc = req.metric.replace('\'', "''");
-    let sql = format!(
-        "SELECT * FROM pg_ripple.pagerank_find_duplicates('{}', {}, {})",
-        metric_esc, req.centrality_threshold, req.fuzzy_threshold
-    );
-    let rows = match client.query(&sql, &[]).await {
+    // M16-04 (v0.115.0): parameterised $1/$2/$3 for metric, thresholds.
+    let sql = "SELECT * FROM pg_ripple.pagerank_find_duplicates($1, $2, $3)";
+    let rows = match client
+        .query(
+            sql,
+            &[&req.metric, &req.centrality_threshold, &req.fuzzy_threshold],
+        )
+        .await
+    {
         Ok(r) => r,
         Err(e) => {
             return redacted_error(

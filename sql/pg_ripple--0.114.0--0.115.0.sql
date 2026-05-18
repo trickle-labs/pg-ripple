@@ -1,0 +1,34 @@
+-- Migration 0.114.0 → 0.115.0: HTTP API parity and observability (A16 Medium M16-02…M16-22)
+--
+-- This release adds HTTP REST coverage for post-v0.111.0 subsystems, new
+-- Prometheus metrics, SQL-injection fixes in the HTTP companion, and
+-- /metrics bearer-token auth.  All changes are in pg_ripple_http (the HTTP
+-- companion binary).  No SQL-visible schema changes are made to the extension.
+--
+-- New in this release (HTTP companion only):
+--   pg_ripple_http routes (M16-02):
+--     GET  /temporal/mark          — list temporal predicates
+--     POST /temporal/mark          — mark a predicate as temporal
+--     POST /temporal/point_in_time — set or clear the temporal snapshot point
+--     GET  /temporal/facts         — query temporal facts window
+--     POST /pprl/bloom_encode      — PPRL Bloom-filter encoding
+--     POST /pprl/dice_similarity   — Dice-coefficient similarity
+--     POST /dp/noisy_count         — differentially-private noisy count
+--     POST /dp/noisy_histogram     — differentially-private noisy histogram
+--     POST /entity-resolution/resolve       — resolve entities
+--     POST /entity-resolution/evaluate      — evaluate resolution quality
+--     POST /entity-resolution/monitoring/enable  — enable ER monitoring
+--     POST /entity-resolution/monitoring/disable — disable ER monitoring
+--     GET  /proof-tree/:s/:p/:o    — backward-chaining proof tree (JSONB)
+--     GET  /tenants                — list tenants
+--     POST /tenants                — create tenant
+--     GET  /tenants/:name          — tenant statistics
+--     DELETE /tenants/:name        — drop tenant
+--   Prometheus metrics (M16-03): er_stage_duration_seconds, sameas_assertions_total,
+--     bayesian_propagation_duration_seconds, temporal_facts_total,
+--     temporal_queries_total, pprl_bloom_encodes_total, llm_cache_hits_total,
+--     llm_cache_misses_total, proof_tree_duration_seconds, conflict_detections_total
+--   SQL injection fix (M16-04): parameterised $1 for direction/topic in pagerank handlers
+--   Health/readiness docs (M16-09): pg_ripple_http/README.md + values.yaml
+--   CI compat-check gate (M16-10): already in release.yml since v0.112.0
+--   Metrics bearer-token auth (M16-22): PG_RIPPLE_HTTP_METRICS_TOKEN env
