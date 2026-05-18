@@ -278,6 +278,7 @@ pub fn kge_stats() -> TableIterator<
         let mut ent = 0i64;
         let mut lu: Option<pgrx::datum::TimestampWithTimeZone> = None;
         // The query returns exactly one row (aggregate).
+        // A16-CQ: never_loop is intentional — loop used as a break-target for early exit.
         #[allow(clippy::never_loop)]
         for row in rows {
             ent = row.get::<i64>(1)?.unwrap_or(0);

@@ -23,6 +23,11 @@
 //!   - `relay`     — BIDI-OBS-01, BIDI-ATTR-01, BIDI-DIFF-01, BIDI-UPSERT-01
 //!   - `subscribe` — BIDIOPS: queue, schema-evolution, auth, reconciliation, dash, audit
 
+// A16-CQ: bidirectional relay types involve multi-layered futures and callback
+// chains that unavoidably produce complex type signatures.
+// Module-level attribute consolidates per-function type_complexity annotations (L16-01).
+#![allow(clippy::type_complexity)]
+
 pub mod protocol;
 pub mod relay;
 pub mod subscribe;
@@ -157,7 +162,6 @@ mod pg_ripple {
     /// Columns: `graph_iri`, `graph_id`, `triple_count`, `last_write_at`,
     /// `conflicts_total`, `subscriptions_active`.
     #[pg_extern]
-    #[allow(clippy::type_complexity)]
     pub fn graph_stats(
         graph_iri: default!(Option<&str>, "NULL"),
     ) -> TableIterator<
@@ -218,7 +222,6 @@ mod pg_ripple {
 
     /// List dead-lettered events for a subscription (paginated).
     #[pg_extern]
-    #[allow(clippy::type_complexity)]
     pub fn list_dead_letters(
         subscription_name: &str,
         outbox_table: default!(Option<&str>, "NULL"),
@@ -311,7 +314,6 @@ mod pg_ripple {
 
     /// List all tokens for a subscription (metadata only; raw tokens not stored).
     #[pg_extern]
-    #[allow(clippy::type_complexity)]
     pub fn list_subscription_tokens(
         subscription_name: &str,
     ) -> TableIterator<
@@ -347,7 +349,6 @@ mod pg_ripple {
     ///
     /// Marked VOLATILE because it issues an UPDATE to set the lease timestamp.
     #[pg_extern(volatile)]
-    #[allow(clippy::type_complexity)]
     pub fn reconciliation_next(
         subscription_name: &str,
     ) -> TableIterator<
@@ -380,7 +381,6 @@ mod pg_ripple {
 
     /// Return per-subscription operational status.
     #[pg_extern]
-    #[allow(clippy::type_complexity)]
     pub fn bidi_status() -> TableIterator<
         'static,
         (
@@ -410,7 +410,6 @@ mod pg_ripple {
 
     /// Return overall bidi health: `healthy`, `degraded`, `paused`, or `failing`.
     #[pg_extern]
-    #[allow(clippy::type_complexity)]
     pub fn bidi_health() -> TableIterator<
         'static,
         (

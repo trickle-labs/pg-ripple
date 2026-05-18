@@ -213,6 +213,7 @@ pub(crate) fn list_construct_rules() -> pgrx::JsonB {
 pub(crate) fn explain_construct_rule(name: &str) -> Vec<(String, String)> {
     catalog::ensure_catalog();
 
+    // A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
     #[allow(clippy::type_complexity)]
     let row: Option<(String, Option<String>, Option<Vec<String>>, Option<i32>)> =
         Spi::connect(|c| {

@@ -40,6 +40,7 @@ mod pg_ripple {
     /// - `iri_template`: `https://target.example.com/contacts/{id}` for linkback expansion
     /// - `iri_match_pattern`: prefix or regex for late-binding IRI rewrite
     #[pg_extern]
+    // A16-CQ: too_many_arguments is necessary here — all parameters are required by the calling convention.
     #[allow(clippy::too_many_arguments)]
     pub fn register_json_mapping(
         name: &str,
@@ -395,6 +396,7 @@ fn check_mapping_consistency(mapping_name: &str, context: &serde_json::Value, sh
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    // A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
     #[allow(unused_imports)]
     use pgrx::prelude::*;
 }

@@ -7,11 +7,16 @@
 //! - PT601–PT607: embedding / vector errors (v0.27.0)
 //! - PT640–PT642: result-set / export overflow errors (v0.40.0)
 
+// A16-CQ: All error enum variants are part of the public API surface and may be
+// instantiated by extension consumers or future callers outside this crate.
+// Consolidating individual #[allow(dead_code)] items into a single module-level
+// attribute is intentional (L16-01 reduction target).
+#![allow(dead_code)]
+
 use thiserror::Error;
 
 /// Uncertain knowledge engine errors (PT0301–PT0307) — v0.87.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum UncertainKnowledgeError {
     /// PT0301 — `@weight` value outside [0.0, 1.0] or NaN.
@@ -71,7 +76,6 @@ pub enum UncertainKnowledgeError {
 
 /// Dictionary-layer errors (PT001–PT099).
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum DictionaryError {
     /// The term string exceeded the maximum allowed length.
@@ -89,7 +93,6 @@ pub enum DictionaryError {
 
 /// Storage-layer errors (PT100–PT199).
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum StorageError {
     /// The predicate VP table could not be located in the catalog.
@@ -107,7 +110,6 @@ pub enum StorageError {
 
 /// Embedding / vector subsystem errors (PT601–PT607) — v0.27.0 / v0.28.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum EmbeddingError {
     /// PT601 — embedding API URL not configured.
@@ -150,7 +152,6 @@ pub enum EmbeddingError {
 
 /// Datalog optimization errors (PT501–PT502) — v0.29.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum DatalogOptError {
     /// PT501 — magic sets transformation failed due to a circular binding pattern.
@@ -180,7 +181,6 @@ pub enum DatalogOptError {
 
 /// Datalog aggregation errors (PT510–PT511) — v0.30.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum DatalogAggError {
     /// PT510 — aggregation-stratification violation.
@@ -210,7 +210,6 @@ pub enum DatalogAggError {
 
 /// Well-founded semantics errors (PT520) — v0.32.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum WfsError {
     /// PT520 — well-founded fixpoint did not converge within `wfs_max_iterations`.
@@ -230,7 +229,6 @@ pub enum WfsError {
 
 /// LLM integration errors (PT700–PT702) — v0.49.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum LlmError {
     /// PT700 — LLM endpoint not configured or unreachable.
@@ -264,7 +262,6 @@ pub enum LlmError {
 
 /// SHACL-AF errors (PT480–PT481) — v0.53.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum ShAFError {
     /// PT480 — `sh:rule` (SHACL-AF) detected but not compiled.
@@ -288,7 +285,6 @@ pub enum ShAFError {
 
 /// NS-RL evaluation errors (PT0461–PT0462) — v0.110.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum NsrlEvaluationError {
     /// PT0461 — `evaluate_resolution()` gold graph is empty or does not exist.
@@ -302,7 +298,6 @@ pub enum NsrlEvaluationError {
 
 /// Lattice errors (PT540–PT541) — v0.36.0 / v0.45.0.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum LatticeError {
     /// PT540 — lattice fixpoint did not converge within the iteration limit.

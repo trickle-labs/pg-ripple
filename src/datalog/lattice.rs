@@ -64,6 +64,11 @@
 //!
 //! - `PT540` — lattice fixpoint did not converge within the iteration limit.
 
+// A16-CQ: lattice types and helper structs are part of the public API; not all
+// variants are referenced in all configurations.
+// Module-level attribute consolidates per-item dead_code annotations (L16-01).
+#![allow(dead_code)]
+
 use pgrx::datum::DatumWithOid;
 use pgrx::prelude::*;
 
@@ -72,7 +77,6 @@ use pgrx::prelude::*;
 /// Built-in lattice types available without user registration.
 #[derive(Debug, Clone, PartialEq)]
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub enum BuiltinLattice {
     /// MIN lattice: join = MIN, bottom = +infinity.
     /// Suitable for trust propagation, shortest-path aggregation.
@@ -91,7 +95,6 @@ pub enum BuiltinLattice {
 impl BuiltinLattice {
     /// Return the name string used in the lattice catalog.
     // Q15-01: internal API field; kept for public API surface or future extension consumers.
-    #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         match self {
             BuiltinLattice::Min => "min",
@@ -107,7 +110,6 @@ impl BuiltinLattice {
     /// the joined value. The first `%s` is the existing column expression;
     /// the second `%s` is the newly computed value expression.
     // Q15-01: internal API field; kept for public API surface or future extension consumers.
-    #[allow(dead_code)]
     pub fn join_sql_expr(&self) -> &'static str {
         match self {
             BuiltinLattice::Min => "LEAST(%s, %s)",
@@ -120,7 +122,6 @@ impl BuiltinLattice {
     /// Return the bottom element for this lattice (as a numeric dict ID placeholder).
     /// This is a sentinel value; the actual bottom is encoded when inserting.
     // Q15-01: internal API field; kept for public API surface or future extension consumers.
-    #[allow(dead_code)]
     pub fn bottom_sentinel(&self) -> &'static str {
         match self {
             BuiltinLattice::Min => "9223372036854775807", // i64::MAX as "infinity"
@@ -132,7 +133,6 @@ impl BuiltinLattice {
 
     /// Parse a lattice name string to the corresponding BuiltinLattice.
     // Q15-01: internal API field; kept for public API surface or future extension consumers.
-    #[allow(dead_code)]
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
             "min" | "minlattice" => Some(BuiltinLattice::Min),
@@ -149,7 +149,6 @@ impl BuiltinLattice {
 /// A registered lattice type (built-in or user-defined).
 #[derive(Debug, Clone)]
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub struct LatticeType {
     /// Lattice name (e.g. "min", "trust", "my_lattice").
     pub name: String,
@@ -296,7 +295,6 @@ pub fn get_lattice(name: &str) -> Option<LatticeType> {
 /// - The variables to combine (`?trust1`, `?trust2`)
 #[derive(Debug, Clone)]
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub struct LatticeRule {
     /// Head predicate dictionary ID.
     pub head_pred_id: i64,
@@ -318,7 +316,6 @@ pub struct LatticeRule {
 /// 1. An `INSERT … ON CONFLICT DO UPDATE` that applies the lattice join.
 /// 2. Returns the change count (used for fixpoint convergence check).
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub fn compile_lattice_rule_to_sql(
     head_pred_id: i64,
     subject_col: &str,
@@ -508,7 +505,6 @@ pub fn run_infer_lattice(rule_set: &str, lattice_name: &str) -> serde_json::Valu
 ///
 /// Returns `(triples_derived, iterations)`.
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub fn run_trust_propagation_demo(
     knows_pred_iri: &str,
     trust_pred_iri: &str,
@@ -563,7 +559,6 @@ pub fn run_trust_propagation_demo(
 
 /// Build a read expression for a predicate (dedicated table or vp_rare subquery).
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 fn vp_read_expr(pred_id: i64) -> String {
     let has_dedicated = Spi::get_one_with_args::<i64>(
         "SELECT table_oid::bigint FROM _pg_ripple.predicates \
@@ -587,6 +582,7 @@ fn vp_read_expr(pred_id: i64) -> String {
 #[pgrx::pg_schema]
 mod tests {
     use super::*;
+    // A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
     #[allow(unused_imports)]
     use pgrx::prelude::*;
 

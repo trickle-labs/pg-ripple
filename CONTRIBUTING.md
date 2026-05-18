@@ -257,3 +257,17 @@ cargo clippy --features pg18 -- -D warnings
 Open an issue on GitHub describing the problem, your PostgreSQL and Rust
 versions, and the full error output.  For architectural questions, read
 [plans/implementation_plan.md](plans/implementation_plan.md) first.
+
+---
+
+## AI-assisted contributions (L16-15, v0.117.0)
+
+If you are using an AI coding assistant (GitHub Copilot, Cursor, Claude, etc.)
+to contribute to pg_ripple, read **[AGENTS.md](AGENTS.md)** before starting.
+
+[AGENTS.md](AGENTS.md) is the authoritative reference for:
+- Code conventions (`unsafe` annotation, error-handling patterns, SPI usage)
+- Build and test commands (`cargo pgrx test pg18`, `cargo pgrx regress pg18`)
+- Git workflow and branch policy
+- Migration script requirements (every release must have one)
+- PR description format (Unicode-safe body-file workflow)

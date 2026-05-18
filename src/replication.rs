@@ -127,6 +127,30 @@ pub fn register_logical_apply_worker() {
 /// `last_writer_wins` conflict strategy: if a triple with the same (s, p, g)
 /// already exists with a higher SID, the incoming triple is dropped.
 ///
+/// # Restart behaviour
+///
+/// PostgreSQL restarts this worker automatically when it exits, using the
+/// restart delay set by [`register_logical_apply_worker`] (currently 30 s).
+/// The constant `BGWORKER_RESTART_TIME` in the pgrx BGW API maps to the
+/// `bgw_restart_time` field; 30 seconds provides crash-loop backoff without
+/// leaving the replication pipeline stalled for too long.
+///
+/// ## Crash-loop backoff
+///
+/// If the worker crashes during startup (e.g., because the database is still
+/// recovering), PostgreSQL will retry after the configured restart interval.
+/// Workers that crash repeatedly are not killed by PostgreSQL — operators
+/// should monitor `pg_stat_activity` and PostgreSQL server logs for worker
+/// restart messages.  The `pg_ripple_cdc_replication_slot_lag_bytes` Prometheus
+/// gauge goes stale when the worker is down, providing an alertable signal.
+///
+/// ## BGWORKER_RESTART_TIME constant
+///
+/// `set_restart_time(Some(Duration::from_secs(30)))` in
+/// [`register_logical_apply_worker`] corresponds to 30 seconds between crash
+/// and restart.  This is intentionally shorter than the default (60 s) so that
+/// transient network or SPI errors do not cause long CDC gaps.
+///
 /// # Safety
 ///
 /// Called by PostgreSQL as a C entry point; `#[pg_guard]` and
@@ -203,6 +227,7 @@ pub extern "C-unwind" fn pg_ripple_logical_apply_worker_main(_arg: pg_sys::Datum
 
 #[cfg(any(test, feature = "pg_test"))]
 #[pg_schema]
+// A16-CQ: test helper — unwrap/expect are acceptable in test-only code.
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use pgrx::prelude::*;

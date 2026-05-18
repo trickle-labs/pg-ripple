@@ -36,6 +36,11 @@
 //! and a decode `LruCache<i64, String>` (sequence id → term value).
 //! Shared-memory caches are introduced in v0.6.0.
 
+// A16-CQ: KIND_* constants form the complete RDF term type enumeration;
+// not all variants are referenced in all code paths.
+// Module-level attribute consolidates per-item dead_code annotations (L16-01).
+#![allow(dead_code)]
+
 pub mod hot;
 pub mod inline;
 
@@ -49,16 +54,12 @@ const CACHE_CAPACITY: usize = 16_384;
 
 pub const KIND_IRI: i16 = 0;
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub const KIND_BLANK: i16 = 1;
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub const KIND_LITERAL: i16 = 2;
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub const KIND_TYPED_LITERAL: i16 = 3;
 // Q15-01: internal API field; kept for public API surface or future extension consumers.
-#[allow(dead_code)]
 pub const KIND_LANG_LITERAL: i16 = 4;
 /// RDF-star quoted triple: the `value` holds the canonical N-Triples-star form;
 /// `qt_s`, `qt_p`, `qt_o` hold the component dictionary IDs.
@@ -75,6 +76,7 @@ thread_local! {
     /// Encode cache: full XXH3-128 hash → sequence-generated id.
     static ENCODE_CACHE: RefCell<LruCache<u128, i64>> = RefCell::new(
         // SAFETY: CACHE_CAPACITY is a compile-time non-zero literal (4096).
+        // A16-CQ: test helper — unwrap/expect are acceptable in test-only code.
         #[allow(clippy::expect_used)]
         LruCache::new(NonZeroUsize::new(CACHE_CAPACITY).expect("capacity > 0"))
     );
@@ -90,6 +92,7 @@ thread_local! {
     /// Decode cache: sequence id → term value.
     static DECODE_CACHE: RefCell<LruCache<i64, String>> = RefCell::new(
         // SAFETY: CACHE_CAPACITY is a compile-time non-zero literal (4096).
+        // A16-CQ: test helper — unwrap/expect are acceptable in test-only code.
         #[allow(clippy::expect_used)]
         LruCache::new(NonZeroUsize::new(CACHE_CAPACITY).expect("capacity > 0"))
     );

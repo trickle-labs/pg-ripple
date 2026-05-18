@@ -13,11 +13,13 @@
 pub mod filter_dispatch;
 pub mod filter_expr;
 
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 pub(crate) use filter_dispatch::{
     Modifiers, encode_ground_term, extract_modifiers, literal_lexical_value, sanitize_sql_ident,
     translate_order_by, translate_values,
 };
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 pub(crate) use filter_expr::{
     expr_as_text_sql, expr_is_raw_numeric, expr_is_raw_text, translate_comparison_sides,

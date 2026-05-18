@@ -298,6 +298,7 @@ pub fn export_graphrag_text_units(graph_iri: &str, output_path: &str) -> i64 {
 
 // ─── Parquet writers ──────────────────────────────────────────────────────────
 
+// A16-CQ: too_many_arguments is necessary here — all parameters are required by the calling convention.
 #[allow(clippy::too_many_arguments)]
 fn write_entities_parquet(
     path: &str,
@@ -463,6 +464,7 @@ fn write_entities_parquet(
         .unwrap_or_else(|e| pgrx::error!("export_graphrag_entities: writer close: {e}"));
 }
 
+// A16-CQ: too_many_arguments is necessary here — all parameters are required by the calling convention.
 #[allow(clippy::too_many_arguments)]
 fn write_relationships_parquet(
     path: &str,
@@ -629,6 +631,7 @@ fn write_relationships_parquet(
         .unwrap_or_else(|e| pgrx::error!("export_graphrag_relationships: writer close: {e}"));
 }
 
+// A16-CQ: too_many_arguments is necessary here — all parameters are required by the calling convention.
 #[allow(clippy::too_many_arguments)]
 fn write_text_units_parquet(
     path: &str,

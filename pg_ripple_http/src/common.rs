@@ -85,6 +85,9 @@ pub struct AppState {
     /// When `Some`, the metrics endpoint requires `Authorization: Bearer <token>`.
     /// Uses constant-time comparison to prevent timing side-channels.
     pub metrics_token: Option<String>,
+    /// L16-06 (v0.117.0): `Bearer realm=` value used in `WWW-Authenticate` response header.
+    /// Read from `PG_RIPPLE_HTTP_AUTH_REALM` at startup; defaults to `"pg_ripple"`.
+    pub auth_realm: String,
 }
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -117,24 +120,27 @@ pub fn redacted_error(category: &str, detail: &str, status: StatusCode) -> Respo
 
 /// Check the `Authorization` header against the read token. Returns `Err`
 /// with a `401 Unauthorized` response if authentication fails.
+// A16-CQ: result_large_err expected — error type is inherently large due to pgrx Response payload.
 #[allow(clippy::result_large_err)]
 pub fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
-    check_token(state.auth_token.as_deref(), headers)
+    check_token(state.auth_token.as_deref(), headers, &state.auth_realm)
 }
 
 /// Check the `Authorization` header against the Datalog write token (if
 /// configured) or fall back to the main auth token.
+// A16-CQ: result_large_err expected — error type is inherently large due to pgrx Response payload.
 #[allow(clippy::result_large_err)]
 pub fn check_auth_write(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
     let token = state
         .datalog_write_token
         .as_deref()
         .or(state.auth_token.as_deref());
-    check_token(token, headers)
+    check_token(token, headers, &state.auth_realm)
 }
 
+// A16-CQ: result_large_err expected — error type is inherently large due to pgrx Response payload.
 #[allow(clippy::result_large_err)]
-fn check_token(expected: Option<&str>, headers: &HeaderMap) -> Result<(), Response> {
+fn check_token(expected: Option<&str>, headers: &HeaderMap, realm: &str) -> Result<(), Response> {
     if let Some(expected) = expected {
         let provided = headers
             .get("authorization")
@@ -150,11 +156,13 @@ fn check_token(expected: Option<&str>, headers: &HeaderMap) -> Result<(), Respon
             // HTTP-401-WWW-AUTH-01 (v0.83.0): RFC 7235 §4.1 requires WWW-Authenticate
             // on every 401.  Absence breaks OAuth client auto-retry and browser dialogs.
             // AUTH-RESP-FMT-01 (v0.83.0): body is structured JSON for client consistency.
+            // L16-06 (v0.117.0): realm is configurable via PG_RIPPLE_HTTP_AUTH_REALM.
             let body = serde_json::json!({"error": "PT401", "message": "unauthorized"}).to_string();
+            let www_auth = format!("Bearer realm=\"{realm}\"");
             // SAFETY: status code and header values are compile-time constants; builder never fails.
             return Err(Response::builder()
                 .status(StatusCode::UNAUTHORIZED)
-                .header("www-authenticate", "Bearer realm=\"pg_ripple\"")
+                .header("www-authenticate", www_auth)
                 .header("content-type", "application/json")
                 .body(Body::from(body))
                 .expect("infallible: hardcoded valid HTTP headers"));

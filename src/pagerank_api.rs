@@ -26,6 +26,7 @@ mod pg_ripple {
     /// SELECT * FROM pg_ripple.pagerank_run(damping => 0.85, max_iterations => 50);
     /// ```
     #[allow(clippy::too_many_arguments)]
+    // A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
     #[allow(clippy::type_complexity)]
     #[pg_extern]
     fn pagerank_run(

@@ -12,6 +12,7 @@ use super::protocol::{now_tstz, parse_uuid};
 
 // ── BIDIOPS-QUEUE-01: Dead-letter management ──────────────────────────────────
 
+// A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
 #[allow(clippy::type_complexity)]
 pub fn list_dead_letters_impl(
     subscription_name: &str,
@@ -368,6 +369,7 @@ pub fn revoke_subscription_token_impl(token_hash: &[u8]) {
     .unwrap_or_else(|e| pgrx::warning!("revoke_subscription_token: {e}"));
 }
 
+// A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
 #[allow(clippy::type_complexity)]
 pub fn list_subscription_tokens_impl(
     subscription_name: &str,
@@ -450,6 +452,7 @@ pub fn reconciliation_enqueue_impl(
     recon_id
 }
 
+// A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
 #[allow(clippy::type_complexity)]
 pub fn reconciliation_next_impl(
     subscription_name: &str,
@@ -581,6 +584,7 @@ pub fn reconciliation_resolve_impl(reconciliation_id: i64, action: &str, note: O
 
 // ── BIDIOPS-DASH-01: Consolidated operations surface ──────────────────────────
 
+// A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
 #[allow(clippy::type_complexity)]
 pub fn bidi_status_impl() -> Vec<(
     String,
