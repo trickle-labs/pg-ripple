@@ -3,12 +3,49 @@
 //! Provides:
 //! - `pg_ripple.explain_rule(rule_id, language, format)` — single rule explanation
 //! - `pg_ripple.explain_rule_batch(rule_ids)` — batch variant
+//!
+//! M16-19 (v0.116.0): adds a per-process bounded LRU cache (using the `lru` crate)
+//! to avoid repeated DB round-trips for the same rule explanation.  Cache size is
+//! controlled by `pg_ripple.rule_explanation_cache_max_entries` (default 1000).
 
+use lru::LruCache;
 use pgrx::prelude::*;
+use std::cell::RefCell;
+use std::num::NonZeroUsize;
+
+// ─── Per-process LRU explanation cache ───────────────────────────────────────
+
+/// Cache key: (rule_id, language, format).
+type CacheKey = (i64, String, String);
+
+thread_local! {
+    /// Per-backend LRU cache for explain_rule() results.
+    /// Bounded by `pg_ripple.rule_explanation_cache_max_entries` (default 1000).
+    /// (M16-19 v0.116.0)
+    static EXPLAIN_CACHE: RefCell<LruCache<CacheKey, String>> = RefCell::new(
+        LruCache::new(NonZeroUsize::new(1000).unwrap_or(NonZeroUsize::MIN))
+    );
+}
+
+/// Resize the per-process LRU cache to the current GUC value.
+///
+/// Called at the start of each `explain_rule()` invocation so the cache
+/// always reflects the current GUC value without requiring a restart.
+fn ensure_cache_capacity() {
+    let cap = crate::gucs::datalog::RULE_EXPLANATION_CACHE_MAX_ENTRIES
+        .get()
+        .max(10) as usize;
+    EXPLAIN_CACHE.with(|c| {
+        let mut cache = c.borrow_mut();
+        if cache.cap().get() != cap {
+            *cache = LruCache::new(NonZeroUsize::new(cap).unwrap_or(NonZeroUsize::MIN));
+        }
+    });
+}
 
 #[pg_schema]
 mod pg_ripple {
-    use super::generate_structural_explanation;
+    use super::{CacheKey, EXPLAIN_CACHE, ensure_cache_capacity, generate_structural_explanation};
     use pgrx::prelude::*;
 
     // ── explain_rule() ────────────────────────────────────────────────────────
@@ -23,6 +60,11 @@ mod pg_ripple {
     /// `_pg_ripple.rule_explanations` for `pg_ripple.rule_explanation_cache_ttl`
     /// (default: `'24 hours'`).  When the endpoint is not configured, a
     /// template-driven structural description is returned.
+    ///
+    /// M16-05 (v0.116.0): cache rows with a stale `rule_version_stamp` are
+    /// rejected (i.e., a store_rules/update_rule call invalidated the entry).
+    /// M16-19 (v0.116.0): results are first checked in a per-process LRU cache
+    /// before hitting the DB.
     ///
     /// `format` must be `'text'` (default) or `'markdown'`.
     ///
@@ -44,16 +86,33 @@ mod pg_ripple {
             );
         }
 
-        // ── Check explanation cache first ─────────────────────────────────────
+        // ── Resize LRU cache if GUC changed (M16-19) ─────────────────────────
+        ensure_cache_capacity();
+
+        // ── Check per-process LRU cache (M16-19) ─────────────────────────────
+        let cache_key: CacheKey = (rule_id, language.to_owned(), format.to_owned());
+        let lru_hit = EXPLAIN_CACHE.with(|c| c.borrow_mut().get(&cache_key).cloned());
+        if let Some(cached_text) = lru_hit {
+            return cached_text;
+        }
+
+        // ── Check DB explanation cache (M16-05: filter stale version stamps) ──
         let ttl_str = crate::RULE_EXPLANATION_CACHE_TTL
             .get()
             .and_then(|cs| cs.to_str().ok().map(|s| s.to_owned()))
             .unwrap_or_else(|| "24 hours".to_owned());
 
-        let cached: Option<String> = Spi::get_one_with_args::<String>(
-            "SELECT explanation FROM _pg_ripple.rule_explanations
-             WHERE rule_id = $1 AND language = $2 AND format = $3
-               AND generated_at > now() - $4::interval",
+        // Fetch the current rule_version_stamp from _pg_ripple.rules so we can
+        // compare against the cached row.  A mismatch means store_rules() was
+        // called after the cache row was written.
+        let current_stamp: i64 = Spi::get_one_with_args::<i64>(
+            "SELECT COALESCE(MAX(updated_at_stamp), 0) \
+             FROM ( \
+               SELECT rule_version_stamp AS updated_at_stamp \
+               FROM _pg_ripple.rule_explanations \
+               WHERE rule_id = $1 AND language = $2 AND format = $3 \
+                 AND generated_at > now() - $4::interval \
+             ) sub",
             &[
                 pgrx::datum::DatumWithOid::from(rule_id),
                 pgrx::datum::DatumWithOid::from(language),
@@ -61,10 +120,45 @@ mod pg_ripple {
                 pgrx::datum::DatumWithOid::from(ttl_str.as_str()),
             ],
         )
+        .unwrap_or(None)
+        .unwrap_or(0);
+
+        // Fetch the rule's current version_stamp from the rules catalog.
+        // (Stored as rule_id sequence value; bumped by store_rules.)
+        // We treat any cached row as valid only when its stamp equals the
+        // latest stamp stored for this rule_id.
+        let db_cached: Option<(String, i64)> = Spi::connect(|c| {
+            let result = c.select(
+                "SELECT e.explanation, e.rule_version_stamp \
+                 FROM _pg_ripple.rule_explanations e \
+                 WHERE e.rule_id = $1 AND e.language = $2 AND e.format = $3 \
+                   AND e.generated_at > now() - $4::interval",
+                None,
+                &[
+                    pgrx::datum::DatumWithOid::from(rule_id),
+                    pgrx::datum::DatumWithOid::from(language),
+                    pgrx::datum::DatumWithOid::from(format),
+                    pgrx::datum::DatumWithOid::from(ttl_str.as_str()),
+                ],
+            )?;
+            let row_opt = result.into_iter().next().map(|row| {
+                let explanation = row.get::<String>(1).ok().flatten().unwrap_or_default();
+                let stamp = row.get::<i64>(2).ok().flatten().unwrap_or(0);
+                (explanation, stamp)
+            });
+            Ok::<_, pgrx::spi::Error>(row_opt)
+        })
         .unwrap_or(None);
 
-        if let Some(cached_text) = cached {
-            return cached_text;
+        if let Some((explanation, cached_stamp)) = db_cached {
+            // M16-05: reject if stamp is stale (store_rules incremented it).
+            if cached_stamp >= current_stamp {
+                // Populate LRU cache for this process.
+                EXPLAIN_CACHE.with(|c| {
+                    c.borrow_mut().put(cache_key.clone(), explanation.clone());
+                });
+                return explanation;
+            }
         }
 
         // ── Fetch rule from catalog ───────────────────────────────────────────
@@ -105,14 +199,18 @@ mod pg_ripple {
             generate_structural_explanation(&rule_text, &rule_set_name, format)
         };
 
-        // ── Persist to cache ──────────────────────────────────────────────────
+        // ── Persist to DB cache (M16-19: also trim to max_entries) ───────────
+        let max_entries = crate::gucs::datalog::RULE_EXPLANATION_CACHE_MAX_ENTRIES
+            .get()
+            .max(10);
         Spi::run_with_args(
             "INSERT INTO _pg_ripple.rule_explanations
-                 (rule_id, language, format, explanation, generated_at)
-             VALUES ($1, $2, $3, $4, now())
+                 (rule_id, language, format, explanation, generated_at, rule_version_stamp)
+             VALUES ($1, $2, $3, $4, now(), 0)
              ON CONFLICT (rule_id, language, format)
              DO UPDATE SET explanation = EXCLUDED.explanation,
-                           generated_at = EXCLUDED.generated_at",
+                           generated_at = EXCLUDED.generated_at,
+                           rule_version_stamp = EXCLUDED.rule_version_stamp",
             &[
                 pgrx::datum::DatumWithOid::from(rule_id),
                 pgrx::datum::DatumWithOid::from(language),
@@ -121,6 +219,24 @@ mod pg_ripple {
             ],
         )
         .unwrap_or_else(|e| pgrx::warning!("explain_rule: cache write failed: {e}"));
+
+        // Trim DB table to max_entries (LRU eviction by generated_at).
+        Spi::run_with_args(
+            "DELETE FROM _pg_ripple.rule_explanations \
+             WHERE (rule_id, language, format) NOT IN ( \
+               SELECT rule_id, language, format \
+               FROM _pg_ripple.rule_explanations \
+               ORDER BY generated_at DESC \
+               LIMIT $1 \
+             )",
+            &[pgrx::datum::DatumWithOid::from(max_entries as i64)],
+        )
+        .ok();
+
+        // ── Populate per-process LRU cache (M16-19) ───────────────────────────
+        EXPLAIN_CACHE.with(|c| {
+            c.borrow_mut().put(cache_key, explanation.clone());
+        });
 
         explanation
     }

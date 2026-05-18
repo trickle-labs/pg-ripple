@@ -1,5 +1,13 @@
 # cargo-audit configuration
 # See: https://github.com/rustsec/rustsec/tree/main/cargo-audit
+#
+# Advisory Lifecycle Policy (M16-21 v0.116.0):
+# Open advisory → triage (assess exploitability in the pg_ripple use-case) →
+# ignore with an explicit expiry date (maximum 12 months) if not exploitable →
+# quarterly review (re-examine on expiry; update reasoning or remove) →
+# expiry forces re-decision: either extend with fresh rationale, fix upstream
+# dependency, or treat as a blocker.  No advisory may be silently suppressed
+# without a reason comment and an expires field.
 
 [advisories]
 # Pre-existing advisories acknowledged and triaged for v0.82.0 (RUSTSEC-01).

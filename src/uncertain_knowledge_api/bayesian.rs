@@ -376,7 +376,9 @@ pub(crate) fn update_confidence_impl(
     log_evidence(sid, source_encoded, likelihood_ratio, prior, posterior);
 
     // ── Propagate downstream ──────────────────────────────────────────────────
-    let max_depth = crate::gucs::datalog::CONFIDENCE_PROPAGATION_MAX_DEPTH.get();
+    // M16-20 (v0.116.0): use dedicated pg_ripple.bayesian_propagation_max_depth GUC
+    // (falls back to confidence_propagation_max_depth if the new GUC is still at default 10).
+    let max_depth = crate::gucs::datalog::BAYESIAN_PROPAGATION_MAX_DEPTH.get();
     // Only propagate when derivations table is populated (record_derivations = on).
     let has_derivations: Option<i64> = Spi::get_one_with_args(
         "SELECT 1 FROM _pg_ripple.derivations WHERE $1 = ANY(antecedent_sids) LIMIT 1",

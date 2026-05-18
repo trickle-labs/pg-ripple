@@ -130,3 +130,37 @@ mod pg_ripple {
         }
     }
 }
+
+/// Prune ER monitoring tables older than `pg_ripple.er_monitoring_retention_days`.
+///
+/// Called by the merge background worker on each tick (worker 0 only).
+/// Silently skips tables that don't exist yet (before `enable_er_monitoring()` is called).
+/// (M16-01 v0.116.0)
+pub fn er_monitoring_prune() {
+    let days = crate::gucs::storage::ER_MONITORING_RETENTION_DAYS.get();
+    let interval = format!("{days} days");
+
+    // er_unresolved_entities uses checked_at
+    Spi::run_with_args(
+        "DELETE FROM _pg_ripple.er_unresolved_entities \
+         WHERE checked_at < now() - $1::interval",
+        &[pgrx::datum::DatumWithOid::from(interval.as_str())],
+    )
+    .ok(); // table may not exist; ignore error
+
+    // er_cluster_sizes uses computed_at
+    Spi::run_with_args(
+        "DELETE FROM _pg_ripple.er_cluster_sizes \
+         WHERE computed_at < now() - $1::interval",
+        &[pgrx::datum::DatumWithOid::from(interval.as_str())],
+    )
+    .ok();
+
+    // er_resolution_dashboard uses computed_at
+    Spi::run_with_args(
+        "DELETE FROM _pg_ripple.er_resolution_dashboard \
+         WHERE computed_at < now() - $1::interval",
+        &[pgrx::datum::DatumWithOid::from(interval.as_str())],
+    )
+    .ok();
+}

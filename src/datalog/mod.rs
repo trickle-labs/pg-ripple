@@ -408,6 +408,16 @@ pub fn store_rules(rule_set: &str, rules: &[Rule]) -> i64 {
         }
     }
 
+    // M16-05 (v0.116.0): invalidate rule_explanations cache for this rule_set
+    // by incrementing rule_version_stamp so stale explanation rows are rejected.
+    Spi::run_with_args(
+        "UPDATE _pg_ripple.rule_explanations \
+         SET rule_version_stamp = rule_version_stamp + 1 \
+         WHERE rule_id IN (SELECT id FROM _pg_ripple.rules WHERE rule_set = $1)",
+        &[pgrx::datum::DatumWithOid::from(rule_set)],
+    )
+    .ok(); // table may not exist yet on first load; ignore error
+
     count
 }
 

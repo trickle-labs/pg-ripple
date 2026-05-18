@@ -292,10 +292,14 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
             BackgroundWorker::transaction(std::panic::AssertUnwindSafe(|| {
                 run_merge_cycle_for_worker_cached(worker_idx, n_workers, &mut pred_cache);
             }));
-            // Only worker 0 runs validation and embedding queue drain.
+            // Only worker 0 runs validation, embedding queue drain, and housekeeping.
             if worker_idx == 0 {
                 BackgroundWorker::transaction(|| {
                     run_validation_cycle();
+                });
+                // M16-01 (v0.116.0): prune ER monitoring tables older than retention window.
+                BackgroundWorker::transaction(|| {
+                    crate::er_monitoring::er_monitoring_prune();
                 });
             }
         }));

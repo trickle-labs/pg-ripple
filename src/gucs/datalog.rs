@@ -280,3 +280,30 @@ pub static BLOOM_MAX_INPUT_LENGTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i3
 /// - `'off'`: disable validation entirely (preserve pre-v0.112.0 behaviour).
 pub static STRICT_GOAL_VALIDATION: pgrx::GucSetting<Option<std::ffi::CString>> =
     pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+// ─── v0.116.0 GUCs ───────────────────────────────────────────────────────────
+
+/// GUC: maximum depth of the proof tree assembled by `justify()` and
+/// `explain_inference()`.  Beyond this depth the builder inserts a sentinel
+/// `{"max_depth_reached": true}` node and raises PT0480 via `pgrx::warning!`.
+/// Default: 64.  Range: 1–1024.  (M16-07 v0.116.0)
+pub static PROOF_TREE_MAX_DEPTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(64);
+
+/// GUC: maximum total node count of the proof tree assembled by `justify()` and
+/// `explain_inference()`.  When the builder would exceed this count it stops
+/// expanding antecedents and raises PT0481 via `pgrx::warning!`.
+/// Default: 10000.  Range: 10–10000000.  (M16-07 v0.116.0)
+pub static PROOF_TREE_MAX_NODES: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(10_000);
+
+/// GUC: maximum in-process LRU cache entries for `explain_rule()` results.
+/// When the cache reaches this size the least-recently-used entry is evicted.
+/// The DB table `_pg_ripple.rule_explanations` is also trimmed to this size on
+/// each cache-miss write.  Default: 1000.  Range: 10–100000.  (M16-19 v0.116.0)
+pub static RULE_EXPLANATION_CACHE_MAX_ENTRIES: pgrx::GucSetting<i32> =
+    pgrx::GucSetting::<i32>::new(1_000);
+
+/// GUC: maximum depth for Bayesian confidence propagation in
+/// `src/uncertain_knowledge_api/bayesian.rs::propagate_downstream`.
+/// Derivation chains longer than this are queued in `_pg_ripple.confidence_stale`
+/// for background reprocessing.  Default: 10.  Range: 1–10000.  (M16-20 v0.116.0)
+pub static BAYESIAN_PROPAGATION_MAX_DEPTH: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(10);

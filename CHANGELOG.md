@@ -13,6 +13,81 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.116.0] — 2026-05-27 — A16 Medium: Correctness, Security GUCs, and CHANGELOG Hygiene
+
+**Ten correctness, security, and observability improvements: bounded ER
+monitoring retention with background pruning; rule-explanation LRU cache with
+version-stamp stale detection; proof-tree depth and node-count GUCs with
+structured warnings; FOAF-integrity parse-error fix (functional → SPO triple
+notation); Schema.org, DCTERMS, and FOAF vocabulary bundle standalone pg_regress
+tests; bidi-relay overflow drop-policy GUC; Bayesian propagation depth GUC;
+cargo-audit advisory lifecycle policy; and a categorical GUC reference at
+`docs/gucs.md`.**
+
+### Added
+
+- **M16-01** `pg_ripple.er_monitoring_retention_days` (integer, default 30,
+  Suset). Background worker now calls `er_monitoring_prune()` once per tick to
+  delete rows older than the configured retention window from
+  `er_unresolved_entities`, `er_cluster_sizes`, and `er_resolution_dashboard`.
+
+- **M16-05** `rule_version_stamp BIGINT NOT NULL DEFAULT 0` column added to
+  `_pg_ripple.rule_explanations`. `store_rules()` increments the stamp on every
+  rule-set update. `explain_rule()` rejects DB-cached explanations whose stamp
+  is older than the current value, preventing stale explanations after rule
+  edits.
+
+- **M16-06** `audit.toml` advisory lifecycle-policy comment block with explicit
+  `expires` dates (2026-12-01) for the `pkcs1`/`rsa` advisories. Establishes a
+  quarterly review obligation.
+
+- **M16-07** `pg_ripple.proof_tree_max_depth` (integer, default 64, Userset)
+  and `pg_ripple.proof_tree_max_nodes` (integer, default 10 000, Userset).
+  `build_proof_tree()` emits `PT0480` (depth limit reached) and `PT0481` (node
+  limit reached) structured warnings instead of silent truncation or stack
+  overflow.
+
+- **M16-08** Vocabulary bundle standalone pg_regress tests:
+  `skos_dcterms.sql`, `skos_schema_org.sql`, `skos_foaf.sql`. Each test
+  exercises `load_datalog_bundle()` + `load_shape_bundle()` + idempotency +
+  cleanup for the respective bundle family.
+  **Bug fix**: `FOAF_INTEGRITY_RULES` constants corrected from functional
+  notation `foaf:knows(?x, ?x)` → SPO triple notation `?x foaf:knows ?x`,
+  resolving the parse error that prevented `load_shape_bundle('foaf-integrity')`
+  from succeeding.
+
+- **M16-11** `pg_ripple.bidi_relay_drop_policy` (string, Userset). Overflow
+  warning in `bidi/relay.rs` now logs the configured drop-policy value.
+  Supported values: `NULL` (block — default), `'drop-oldest'`, `'drop-newest'`.
+
+- **M16-19** Bounded per-process LRU cache in `explain_rule()` controlled by
+  `pg_ripple.rule_explanation_cache_max_entries` (integer, default 1 000,
+  Userset). Cache capacity is resized at call time when the GUC changes.
+
+- **M16-20** `pg_ripple.bayesian_propagation_max_depth` (integer, default 10,
+  Userset). `propagate_downstream()` in `uncertain_knowledge_api/bayesian.rs`
+  now reads this GUC instead of using a hard-coded constant, separating the
+  Bayesian depth limit from the general `confidence_propagation_max_depth` GUC.
+
+- **M16-21** `audit.toml` lifecycle-policy header block documenting the
+  open → triage → ignore-with-expiry → quarterly-review → re-decision cycle.
+
+- **M16-23** `docs/gucs.md` — categorical GUC reference grouping all 227 GUCs
+  into 19 subsystem categories with type, default, context, and description.
+  Includes a v0.116.0 summary table and advisory lifecycle policy section.
+
+### Migration
+
+Run `ALTER EXTENSION pg_ripple UPDATE TO '0.116.0'` or apply
+`sql/pg_ripple--0.115.0--0.116.0.sql` manually. The only DDL change is:
+
+```sql
+ALTER TABLE _pg_ripple.rule_explanations
+    ADD COLUMN IF NOT EXISTS rule_version_stamp BIGINT NOT NULL DEFAULT 0;
+```
+
+---
+
 ## [0.115.0] — 2026-05-26 — A16 Medium: HTTP API Parity and Observability
 
 **Six HTTP API and observability improvements: new REST endpoints for temporal

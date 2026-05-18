@@ -1,0 +1,87 @@
+-- pg_regress test: DCTERMS vocabulary bundle activation path (M16-08 v0.116.0)
+-- Exercises the dcterms vocabulary bundle independently via load_datalog_bundle()
+-- and load_shape_bundle('dcterms-integrity').
+SET search_path TO pg_ripple, public;
+-- 1. Load the 'dcterms' Datalog bundle
+SELECT pg_ripple.load_datalog_bundle('dcterms')
+    IS NOT DISTINCT FROM NULL AS dcterms_loaded;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ dcterms_loaded 
+----------------
+ f
+(1 row)
+
+-- 2. Bundle must be recorded in _pg_ripple.datalog_bundles
+SELECT count(*) >= 1 AS dcterms_bundle_registered
+FROM _pg_ripple.datalog_bundles
+WHERE bundle_name = 'dcterms';
+ dcterms_bundle_registered 
+---------------------------
+ t
+(1 row)
+
+-- 3. 'dcterms:' prefix must be registered
+SELECT count(*) >= 1 AS dcterms_prefix_registered
+FROM _pg_ripple.prefixes
+WHERE prefix = 'dcterms';
+ dcterms_prefix_registered 
+---------------------------
+ t
+(1 row)
+
+-- 4. At least one rule must be stored for the dcterms rule set
+SELECT count(*) >= 1 AS dcterms_rules_stored
+FROM _pg_ripple.rules
+WHERE rule_set = 'dcterms';
+ dcterms_rules_stored 
+----------------------
+ t
+(1 row)
+
+-- 5. Load dcterms-integrity shape bundle
+SELECT pg_ripple.load_shape_bundle('dcterms-integrity')
+    IS NOT DISTINCT FROM NULL AS dcterms_integrity_loaded;
+ dcterms_integrity_loaded 
+--------------------------
+ f
+(1 row)
+
+-- 6. dcterms-integrity rules must be stored
+SELECT count(*) >= 1 AS dcterms_integrity_rules_stored
+FROM _pg_ripple.rules
+WHERE rule_set = 'dcterms-integrity';
+ dcterms_integrity_rules_stored 
+--------------------------------
+ t
+(1 row)
+
+-- 7. Re-loading is idempotent — count stays >= 1
+SELECT pg_ripple.load_datalog_bundle('dcterms')
+    IS NOT DISTINCT FROM NULL AS dcterms_reload_idempotent;
+ dcterms_reload_idempotent 
+---------------------------
+ f
+(1 row)
+
+SELECT count(*) >= 1 AS dcterms_rules_still_stored
+FROM _pg_ripple.rules
+WHERE rule_set = 'dcterms';
+ dcterms_rules_still_stored 
+----------------------------
+ t
+(1 row)
+
+-- ─── Cleanup ──────────────────────────────────────────────────────────────────
+SELECT pg_ripple.drop_rules('dcterms') >= 0 AS dcterms_cleanup;
+ dcterms_cleanup 
+-----------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('dcterms-integrity') >= 0 AS dcterms_integrity_cleanup;
+ dcterms_integrity_cleanup 
+---------------------------
+ t
+(1 row)
+
+DELETE FROM _pg_ripple.datalog_bundles WHERE bundle_name IN ('dcterms', 'dcterms-integrity');

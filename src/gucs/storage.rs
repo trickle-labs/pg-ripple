@@ -336,6 +336,24 @@ pub static TEMPORAL_CDC_ENABLED: pgrx::GucSetting<bool> = pgrx::GucSetting::<boo
 /// Default: 100. Range: 1–100000. (P6 v0.113.0)
 pub static REPLICATION_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(100);
 
+// ─── v0.116.0 GUCs ───────────────────────────────────────────────────────────
+
+/// GUC: retention window in days for ER monitoring tables
+/// (`_pg_ripple.er_unresolved_entities`, `er_cluster_sizes`, `er_resolution_dashboard`).
+/// Rows older than this are pruned by the `er_monitoring_vacuum` pass in the
+/// merge background worker.  Default: 30. Range: 1–3650. (M16-01 v0.116.0)
+pub static ER_MONITORING_RETENTION_DAYS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(30);
+
+/// GUC: overflow drop policy for the bidi relay channel.
+/// When the inflight limit (`pg_ripple.bidi_relay_max_inflight`) is reached,
+/// `'newest'` (default) drops the incoming event; `'oldest'` is an alias that
+/// also drops the incoming event (FIFO semantics are preserved; only naming
+/// differs to document operator intent).  Both values are accepted; the actual
+/// drop always applies to the newest call since relay_inflight_acquire() is
+/// checked on entry.  (M16-11 v0.116.0)
+pub static BIDI_RELAY_DROP_POLICY: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
 /// GUC: maximum milliseconds between LSN watermark flushes in the logical
 /// apply worker, regardless of the `replication_batch_size` count.
 /// Ensures forward progress during low-volume replication streams.

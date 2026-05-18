@@ -744,4 +744,61 @@ pub fn register() {
             None,
         );
     }
+
+    // ── v0.116.0 GUCs ────────────────────────────────────────────────────────
+
+    // M16-07: Proof-tree depth and node guards.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.proof_tree_max_depth",
+        c"Maximum depth of the proof tree assembled by justify() and explain_inference(). \
+          Beyond this depth the builder inserts a sentinel node and emits PT0480. \
+          Default: 64. Range: 1-1024. (M16-07 v0.116.0)",
+        c"",
+        &crate::gucs::datalog::PROOF_TREE_MAX_DEPTH,
+        1,
+        1024,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.proof_tree_max_nodes",
+        c"Maximum total node count of the proof tree assembled by justify() and \
+          explain_inference(). When exceeded the builder stops and emits PT0481. \
+          Default: 10000. Range: 10-10000000. (M16-07 v0.116.0)",
+        c"",
+        &crate::gucs::datalog::PROOF_TREE_MAX_NODES,
+        10,
+        10_000_000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    // M16-19: Bounded rule explanation LRU cache.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.rule_explanation_cache_max_entries",
+        c"Maximum entries in the per-process LRU cache for explain_rule() results. \
+          Also used to trim _pg_ripple.rule_explanations to this size on each cache-miss write. \
+          Default: 1000. Range: 10-100000. (M16-19 v0.116.0)",
+        c"",
+        &crate::gucs::datalog::RULE_EXPLANATION_CACHE_MAX_ENTRIES,
+        10,
+        100_000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+
+    // M16-20: Bayesian propagation depth GUC.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.bayesian_propagation_max_depth",
+        c"Maximum depth for Bayesian confidence propagation in propagate_downstream(). \
+          Chains longer than this are queued in _pg_ripple.confidence_stale for background \
+          reprocessing. Default: 10. Range: 1-10000. (M16-20 v0.116.0)",
+        c"",
+        &crate::gucs::datalog::BAYESIAN_PROPAGATION_MAX_DEPTH,
+        1,
+        10_000,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

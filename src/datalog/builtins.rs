@@ -683,25 +683,25 @@ const FOAF_RULES: &str = r#"
 const FOAF_INTEGRITY_RULES: &str = r#"
 # FOAF-IC-01: foaf:knows self-reference
 ?x foaf:ic_violation "FOAF-IC-01: a person cannot know themselves (foaf:knows self-loop)" :-
-    foaf:knows(?x, ?x) .
+    ?x foaf:knows ?x .
 
 # FOAF-IC-02: foaf:made mutual reference (x made y and y made x)
 ?x foaf:ic_violation "FOAF-IC-02: circular foaf:made: x made y and y made x" :-
-    foaf:made(?x, ?y),
-    foaf:made(?y, ?x) .
+    ?x foaf:made ?y,
+    ?y foaf:made ?x .
 
 # FOAF-IC-03: foaf:account self-reference
 ?x foaf:ic_violation "FOAF-IC-03: an agent cannot have itself as an account" :-
-    foaf:account(?x, ?x) .
+    ?x foaf:account ?x .
 
 # FOAF-IC-04: foaf:accountFor and foaf:account self-reference (inverse of same pair)
 ?x foaf:ic_violation "FOAF-IC-04: circular foaf:account/accountFor on same pair" :-
-    foaf:account(?x, ?y),
-    foaf:account(?y, ?x) .
+    ?x foaf:account ?y,
+    ?y foaf:account ?x .
 
 # FOAF-IC-05: foaf:maker self-reference
 ?x foaf:ic_violation "FOAF-IC-05: a resource cannot be its own maker (foaf:maker self-loop)" :-
-    foaf:maker(?x, ?x) .
+    ?x foaf:maker ?x .
 "#;
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

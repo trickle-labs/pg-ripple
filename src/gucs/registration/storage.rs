@@ -1010,4 +1010,33 @@ pub fn register() {
         GucContext::Suset,
         GucFlags::default(),
     );
+
+    // ── v0.116.0 GUCs ────────────────────────────────────────────────────────
+
+    // M16-01: ER monitoring retention GUC.
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.er_monitoring_retention_days",
+        c"Retention window in days for ER monitoring tables \
+          (er_unresolved_entities, er_cluster_sizes, er_resolution_dashboard). \
+          Rows older than this are pruned by the merge background worker. \
+          Default: 30. Range: 1-3650. (M16-01 v0.116.0)",
+        c"",
+        &crate::gucs::storage::ER_MONITORING_RETENTION_DAYS,
+        1,
+        3650,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+
+    // M16-11: Bidi relay drop policy GUC.
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.bidi_relay_drop_policy",
+        c"Overflow drop policy for the bidi relay channel: 'newest' (default) or \
+          'oldest'. Both values drop the incoming event when the inflight limit is \
+          reached. (M16-11 v0.116.0)",
+        c"",
+        &crate::gucs::storage::BIDI_RELAY_DROP_POLICY,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

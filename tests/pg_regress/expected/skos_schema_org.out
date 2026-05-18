@@ -1,0 +1,77 @@
+-- pg_regress test: Schema.org vocabulary bundle activation path (M16-08 v0.116.0)
+-- Exercises the 'schema' vocabulary bundle independently via load_datalog_bundle().
+SET search_path TO pg_ripple, public;
+-- 1. Load the 'schema' Datalog bundle
+SELECT pg_ripple.load_datalog_bundle('schema')
+    IS NOT DISTINCT FROM NULL AS schema_loaded;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ schema_loaded 
+---------------
+ f
+(1 row)
+
+-- 2. Bundle must be recorded in _pg_ripple.datalog_bundles
+SELECT count(*) >= 1 AS schema_bundle_registered
+FROM _pg_ripple.datalog_bundles
+WHERE bundle_name = 'schema';
+ schema_bundle_registered 
+--------------------------
+ t
+(1 row)
+
+-- 3. At least one rule must be stored for the schema rule set
+SELECT count(*) >= 1 AS schema_rules_stored
+FROM _pg_ripple.rules
+WHERE rule_set = 'schema';
+ schema_rules_stored 
+---------------------
+ t
+(1 row)
+
+-- 4. Load schema-integrity shape bundle
+SELECT pg_ripple.load_shape_bundle('schema-integrity')
+    IS NOT DISTINCT FROM NULL AS schema_integrity_loaded;
+ schema_integrity_loaded 
+-------------------------
+ f
+(1 row)
+
+-- 5. schema-integrity rules must be stored
+SELECT count(*) >= 1 AS schema_integrity_rules_stored
+FROM _pg_ripple.rules
+WHERE rule_set = 'schema-integrity';
+ schema_integrity_rules_stored 
+-------------------------------
+ t
+(1 row)
+
+-- 6. Re-loading is idempotent — count stays >= 1
+SELECT pg_ripple.load_datalog_bundle('schema')
+    IS NOT DISTINCT FROM NULL AS schema_reload_idempotent;
+ schema_reload_idempotent 
+--------------------------
+ f
+(1 row)
+
+SELECT count(*) >= 1 AS schema_rules_still_stored
+FROM _pg_ripple.rules
+WHERE rule_set = 'schema';
+ schema_rules_still_stored 
+---------------------------
+ t
+(1 row)
+
+-- ─── Cleanup ──────────────────────────────────────────────────────────────────
+SELECT pg_ripple.drop_rules('schema') >= 0 AS schema_cleanup;
+ schema_cleanup 
+----------------
+ t
+(1 row)
+
+SELECT pg_ripple.drop_rules('schema-integrity') >= 0 AS schema_integrity_cleanup;
+ schema_integrity_cleanup 
+--------------------------
+ t
+(1 row)
+
+DELETE FROM _pg_ripple.datalog_bundles WHERE bundle_name IN ('schema', 'schema-integrity');

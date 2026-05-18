@@ -634,17 +634,19 @@ pgrx::extension_sql!(
 -- One row per (rule_id, language, format).
 -- TTL controlled by pg_ripple.rule_explanation_cache_ttl (default '24 hours').
 CREATE TABLE IF NOT EXISTS _pg_ripple.rule_explanations (
-    rule_id       BIGINT      NOT NULL,
-    language      TEXT        NOT NULL DEFAULT 'en',
-    format        TEXT        NOT NULL DEFAULT 'text',
-    explanation   TEXT        NOT NULL,
-    generated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    rule_id             BIGINT      NOT NULL,
+    language            TEXT        NOT NULL DEFAULT 'en',
+    format              TEXT        NOT NULL DEFAULT 'text',
+    explanation         TEXT        NOT NULL,
+    generated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    rule_version_stamp  BIGINT      NOT NULL DEFAULT 0,
     PRIMARY KEY (rule_id, language, format)
 );
 COMMENT ON TABLE _pg_ripple.rule_explanations IS
     'Plain-English explanation cache for Datalog rules (v0.110.0). '
     'One row per (rule_id, language, format). '
-    'TTL controlled by pg_ripple.rule_explanation_cache_ttl (default 24 hours).';
+    'TTL controlled by pg_ripple.rule_explanation_cache_ttl (default 24 hours). '
+    'rule_version_stamp incremented on store_rules/update_rule to invalidate stale entries (M16-05 v0.116.0).';
 
 -- owl:sameAs anomaly log (v0.110.0 ANOMALY-01)
 -- Append-only log of any owl:sameAs assertion that would exceed

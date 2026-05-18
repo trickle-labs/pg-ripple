@@ -143,13 +143,17 @@ SELECT pg_ripple.load_rules_builtin('foaf') > 0 AS foaf_rules_count_positive;
 
 -- ─── FOAF-04: foaf-integrity bundle ──────────────────────────────────────────
 SELECT pg_ripple.load_shape_bundle('foaf-integrity') IS NOT DISTINCT FROM NULL AS foaf_integrity_loaded;
-ERROR:  load_shape_bundle('foaf-integrity'): parse error: line 1: expected 3 terms in triple pattern, got 2: foaf:knows(?x, ?x); line 2: expected 3 terms in triple pattern, got 2: foaf:made(?x, ?y); line 3: expected 3 terms in triple pattern, got 2: foaf:account(?x, ?x); line 4: expected 3 terms in triple pattern, got 2: foaf:account(?x, ?y); line 5: expected 3 terms in triple pattern, got 2: foaf:maker(?x, ?x)
+ foaf_integrity_loaded 
+-----------------------
+ f
+(1 row)
+
 SELECT count(*) >= 1 AS foaf_integrity_in_catalog
 FROM pg_ripple.active_datalog_bundles
 WHERE bundle_name = 'foaf-integrity';
  foaf_integrity_in_catalog 
 ---------------------------
- f
+ t
 (1 row)
 
 -- ─── CROSS-01: all three bundles visible in active_datalog_bundles ────────────

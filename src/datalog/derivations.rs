@@ -610,12 +610,29 @@ fn triple_for_sid(sid: i64) -> Option<(i64, i64, i64)> {
 ///
 /// `visited` guards against cycles in the derivation graph.
 /// `depth` prevents stack overflow on pathological derivation chains.
+/// `node_count` tracks total nodes built to enforce `pg_ripple.proof_tree_max_nodes`.
+/// (M16-07 v0.116.0): depth capped by `pg_ripple.proof_tree_max_depth` (PT0480);
+/// node count capped by `pg_ripple.proof_tree_max_nodes` (PT0481).
 fn build_proof_tree(
     sid: i64,
     visited: &mut std::collections::HashSet<i64>,
     depth: u32,
+    node_count: &mut u32,
+    max_depth: u32,
+    max_nodes: u32,
 ) -> serde_json::Value {
-    const MAX_DEPTH: u32 = 64;
+    // Node-count overflow guard — PT0481.
+    *node_count += 1;
+    if *node_count > max_nodes {
+        pgrx::warning!(
+            "PT0481: proof tree exceeded pg_ripple.proof_tree_max_nodes={max_nodes}; \
+             truncating further antecedents"
+        );
+        return serde_json::json!({
+            "sid": sid,
+            "max_nodes_reached": true
+        });
+    }
 
     // Cycle guard.
     if !visited.insert(sid) {
@@ -624,7 +641,13 @@ fn build_proof_tree(
             "cycle": true
         });
     }
-    if depth >= MAX_DEPTH {
+
+    // Depth overflow guard — PT0480.
+    if depth >= max_depth {
+        pgrx::warning!(
+            "PT0480: proof tree exceeded pg_ripple.proof_tree_max_depth={max_depth}; \
+             truncating at depth {depth}"
+        );
         visited.remove(&sid);
         return serde_json::json!({
             "sid": sid,
@@ -661,7 +684,14 @@ fn build_proof_tree(
     for (rule_name, rule_set, antecedent_sids) in &derivation_rows {
         let mut antecedents_json: Vec<serde_json::Value> = Vec::new();
         for &ant_sid in antecedent_sids {
-            antecedents_json.push(build_proof_tree(ant_sid, visited, depth + 1));
+            antecedents_json.push(build_proof_tree(
+                ant_sid,
+                visited,
+                depth + 1,
+                node_count,
+                max_depth,
+                max_nodes,
+            ));
         }
         rules_json.push(serde_json::json!({
             "rule": rule_name,
@@ -689,7 +719,10 @@ pub fn justify_impl(subject: &str, predicate: &str, object: &str) -> Option<serd
     let o_id = dict_id_for(object)?;
     let sid = sid_for_triple(s_id, p_id, o_id)?;
 
+    let max_depth = crate::gucs::datalog::PROOF_TREE_MAX_DEPTH.get().max(1) as u32;
+    let max_nodes = crate::gucs::datalog::PROOF_TREE_MAX_NODES.get().max(10) as u32;
     let mut visited = std::collections::HashSet::new();
-    let tree = build_proof_tree(sid, &mut visited, 0);
+    let mut node_count: u32 = 0;
+    let tree = build_proof_tree(sid, &mut visited, 0, &mut node_count, max_depth, max_nodes);
     Some(tree)
 }

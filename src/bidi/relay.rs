@@ -90,10 +90,17 @@ pub fn ingest_jsonld_impl(
 
     // H15-03 (v0.94.0): bounded bidi relay channel.
     // Reject if inflight limit is reached to prevent unbounded queue growth.
+    // M16-11 (v0.116.0): drop policy GUC documents intent ('newest' or 'oldest');
+    // both values result in dropping the incoming call on inflight-limit overflow.
     if !crate::stats::relay_inflight_acquire() {
+        let drop_policy = crate::gucs::storage::BIDI_RELAY_DROP_POLICY
+            .get()
+            .and_then(|cs| cs.to_str().ok().map(|s| s.to_owned()))
+            .unwrap_or_else(|| "newest".to_owned());
         pgrx::warning!(
             "pg_ripple: bidi relay inflight limit reached (bidi_relay_max_inflight={}); \
-             dropping ingest_jsonld call for graph={:?} — see pg_ripple_bidi_relay_dropped_total",
+             dropping ingest_jsonld call for graph={:?} — \
+             drop_policy={drop_policy} — see pg_ripple_bidi_relay_dropped_total",
             crate::BIDI_RELAY_MAX_INFLIGHT.get(),
             graph_iri
         );
