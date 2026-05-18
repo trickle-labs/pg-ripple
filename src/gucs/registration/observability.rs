@@ -131,4 +131,17 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.119.0 GUCs — Schema-Aware NL→SPARQL (Feature 10) ─────────────────
+    pgrx::GucRegistry::define_bool_guc(
+        c"pg_ripple.nl_sparql_include_bundles",
+        c"When on (default), sparql_from_nl() includes active vocabulary-bundle metadata \
+          (SKOS preferred labels, DCTERMS titles, Schema.org type names, FOAF names) in \
+          the LLM system prompt grounding for improved domain-specific SPARQL generation. \
+          Feature 10, v0.119.0.",
+        c"",
+        &crate::gucs::llm::NL_SPARQL_INCLUDE_BUNDLES,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
 }

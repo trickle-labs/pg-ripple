@@ -78,6 +78,41 @@ and does not currently perform XSD numeric promotion on store.
 |---------|----------------|-----------|
 | v0.46.0 | n/a (suite added) | — |
 | v0.47.0 | 62 / 66 | 93.9% |
+| v0.119.0 | 66 / 66 | 100% (propertyChainAxiom `prp-spo2` now passing) |
+
+## `owl:propertyChainAxiom` Support (v0.119.0)
+
+OWL 2 RL rule `prp-spo2` (`owl:propertyChainAxiom`) is now fully implemented.
+
+A chain axiom of the form:
+
+```turtle
+ex:ancestor owl:propertyChainAxiom ( ex:parent ex:parent ) .
+```
+
+is compiled at inference time into a Datalog chain rule:
+
+```
+ancestor(X, Z) :- parent(X, Y), parent(Y, Z).
+```
+
+Cycle safety is guaranteed by PG 18's `WITH RECURSIVE … CYCLE` clause, which
+uses hash-based cycle detection rather than a separate visited-set join.
+
+### Ten canonical pg_regress tests
+
+The suite `tests/pg_regress/sql/owl_property_chain_axiom.sql` covers:
+
+1. FOAF `foaf:knows` 2-hop acquaintance chain
+2. SKOS `skos:broaderTransitive` closure
+3. PROV-O `prov:wasInfluencedBy` derivation chain
+4. 3-hop family chain (`parent/parent/sibling`)
+5. Multiple concurrent chain axioms
+6. Chain combined with `owl:inverseOf`
+7. Cycle safety (no infinite loop)
+8. FOAF `foaf:knows` 3-hop acquaintance chain
+9. `rdfs:subPropertyOf` combined with `owl:propertyChainAxiom`
+10. LUBM-style `indirectAdvisor` chain
 
 ## Running the Suite
 

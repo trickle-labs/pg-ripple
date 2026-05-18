@@ -81,3 +81,11 @@ pub static EXPLANATION_CACHE_TTL_SECS: pgrx::GucSetting<i32> = pgrx::GucSetting:
 /// GUC: maximum number of candidate rules returned by `suggest_rules()` (v0.105.0).
 /// Default: 20. Range: 1–200.
 pub static SUGGEST_RULES_MAX_CANDIDATES: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(20);
+
+// ─── v0.119.0 Schema-Aware NL→SPARQL GUCs ────────────────────────────────────
+
+/// GUC: when `on` (default), `sparql_from_nl()` includes active vocabulary-bundle
+/// metadata (SKOS preferred labels, DCTERMS titles, Schema.org type names, FOAF
+/// names) in the LLM system prompt to improve domain-specific translation accuracy.
+/// Feature 10, v0.119.0.
+pub static NL_SPARQL_INCLUDE_BUNDLES: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(true);

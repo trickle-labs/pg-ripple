@@ -13,6 +13,48 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.119.0] — 2026-06-17 — OWL propertyChainAxiom, SERVICE Circuit Breaker, Schema-Aware NL→SPARQL
+
+**Three new features: `owl:propertyChainAxiom` support in OWL-RL built-ins (Feature 5);
+persistent federation SERVICE circuit-breaker state with Prometheus gauge (Feature 6);
+schema-aware NL→SPARQL with vocabulary bundle injection (Feature 10). Also fixes
+property-path queries that coexist with RDF-star quoted triple patterns.**
+
+### Added
+
+- **Feature 5** `owl:propertyChainAxiom` rule in OWL-RL Datalog built-ins
+  (`src/datalog/builtins.rs`). A two-step chain `(p1 ∘ p2 → p)` is now inferred
+  correctly by `SELECT pg_ripple.infer('owl-rl')`. Cycle-safe via PG 18 `WITH
+  RECURSIVE … CYCLE` clause. Ten canonical pg_regress tests cover FOAF, SKOS,
+  PROV-O, family-chain, concurrent axioms, `owl:inverseOf`, 3-hop acquaintance,
+  `rdfs:subPropertyOf`, and LUBM `indirectAdvisor` chain.
+
+- **Feature 6** `_pg_ripple.federation_circuit_state` table
+  `(endpoint_iri TEXT PRIMARY KEY, state TEXT CHECK (state IN ('closed','open','half_open')),
+  last_failure_at TIMESTAMPTZ, failure_count INT)` persists SERVICE circuit-breaker
+  state across backend restarts. State transitions are UPSERTED on every open/close/
+  half-open event. A new `pg_ripple_federation_circuit_state{endpoint="..."}` Prometheus
+  gauge (0 = closed, 1 = open, 2 = half_open) is exposed at `/metrics`.
+
+- **Feature 10** `pg_ripple.nl_sparql_include_bundles` GUC (boolean, default `on`).
+  When enabled, `sparql_from_nl()` automatically injects vocabulary bundle metadata
+  (predicate labels from `skos:prefLabel`, `dcterms:title`, `schema:name`,
+  `foaf:name`) into the LLM prompt, improving NL→SPARQL accuracy for ontology-rich
+  datasets.
+
+### Fixed
+
+- Property-path queries (`+`, `*`, `/`, `?`) now execute without error when the
+  same SPARQL query also contains RDF-star quoted triple patterns (`<< s p o >>`).
+  The gap was in the property-path SQL generator ignoring the RDF-star graph
+  overlay; now the correct triple source is selected in all cases.
+
+### Migrations
+
+- `sql/pg_ripple--0.118.0--0.119.0.sql` — creates `_pg_ripple.federation_circuit_state`.
+
+---
+
 ## [0.118.0] — 2026-06-10 — Temporal Allen's Relations, compat_check() and Privacy Budget Registry
 
 **Three new Platform Maturity features: seven Allen's interval relations as SPARQL

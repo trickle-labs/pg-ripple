@@ -1,0 +1,311 @@
+-- pg_regress test: owl:propertyChainAxiom inference (Feature 5, v0.119.0)
+-- 10 canonical tests: FOAF knows chain, SKOS broaderTransitive, PROV-O
+-- derivation chains, and 7 additional chain scenarios.
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SELECT pg_ripple.triple_count() >= 0 AS extension_loaded;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ extension_loaded 
+------------------
+ t
+(1 row)
+
+SET search_path TO pg_ripple, public;
+-- Load OWL RL built-in rules.
+SELECT pg_ripple.load_rules_builtin('owl-rl') >= 0 AS owl_rl_loaded;
+ owl_rl_loaded 
+---------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 1: FOAF knows 2-hop chain
+-- owl:propertyChainAxiom: foaf:knows2hop := foaf:knows / foaf:knows
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/foaf/alice> <http://xmlns.com/foaf/0.1/knows> <https://pca.test/foaf/bob> .' || E'\n' ||
+    '<https://pca.test/foaf/bob>   <http://xmlns.com/foaf/0.1/knows> <https://pca.test/foaf/carol> .' || E'\n' ||
+    '<https://pca.test/foaf/knows2hop> <http://www.w3.org/2002/07/owl#propertyChainAxiom> <https://pca.test/foaf/c1> .' || E'\n' ||
+    '<https://pca.test/foaf/c1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://xmlns.com/foaf/0.1/knows> .' || E'\n' ||
+    '<https://pca.test/foaf/c1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/foaf/c2> .' || E'\n' ||
+    '<https://pca.test/foaf/c2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://xmlns.com/foaf/0.1/knows> .' || E'\n' ||
+    '<https://pca.test/foaf/c2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .'
+) = 7 AS foaf_chain_triples_loaded;
+ foaf_chain_triples_loaded 
+---------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS foaf_chain_inferred;
+ foaf_chain_inferred 
+---------------------
+ t
+(1 row)
+
+-- After inference, total triple count should be at least 7.
+SELECT pg_ripple.triple_count() >= 7 AS foaf_chain_test_ok;
+ foaf_chain_test_ok 
+--------------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 2: SKOS broaderTransitive closure via 2-hop chain
+-- owl:propertyChainAxiom: skos:broader2step := skos:broader / skos:broader
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/skos/Dog>    <http://www.w3.org/2004/02/skos/core#broader> <https://pca.test/skos/Animal> .' || E'\n' ||
+    '<https://pca.test/skos/Animal> <http://www.w3.org/2004/02/skos/core#broader> <https://pca.test/skos/LivingThing> .' || E'\n' ||
+    '<https://pca.test/skos/broader2step> <http://www.w3.org/2002/07/owl#propertyChainAxiom> <https://pca.test/skos/s1> .' || E'\n' ||
+    '<https://pca.test/skos/s1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://www.w3.org/2004/02/skos/core#broader> .' || E'\n' ||
+    '<https://pca.test/skos/s1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/skos/s2> .' || E'\n' ||
+    '<https://pca.test/skos/s2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://www.w3.org/2004/02/skos/core#broader> .' || E'\n' ||
+    '<https://pca.test/skos/s2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .'
+) = 7 AS skos_chain_triples_loaded;
+ skos_chain_triples_loaded 
+---------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS skos_chain_inferred;
+ skos_chain_inferred 
+---------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 14 AS skos_broader_chain_ok;
+ skos_broader_chain_ok 
+-----------------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 3: PROV-O derivation chain
+-- owl:propertyChainAxiom: prov:wasDerivedFrom2 := prov:wasGeneratedBy / prov:used
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/prov/D1> <http://www.w3.org/ns/prov#wasGeneratedBy> <https://pca.test/prov/A1> .' || E'\n' ||
+    '<https://pca.test/prov/A1> <http://www.w3.org/ns/prov#used>            <https://pca.test/prov/E1> .' || E'\n' ||
+    '<https://pca.test/prov/derivedFrom2> <http://www.w3.org/2002/07/owl#propertyChainAxiom> <https://pca.test/prov/p1> .' || E'\n' ||
+    '<https://pca.test/prov/p1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://www.w3.org/ns/prov#wasGeneratedBy> .' || E'\n' ||
+    '<https://pca.test/prov/p1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/prov/p2> .' || E'\n' ||
+    '<https://pca.test/prov/p2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://www.w3.org/ns/prov#used> .' || E'\n' ||
+    '<https://pca.test/prov/p2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .'
+) = 7 AS prov_chain_triples_loaded;
+ prov_chain_triples_loaded 
+---------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS prov_chain_inferred;
+ prov_chain_inferred 
+---------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 21 AS prov_derivation_chain_ok;
+ prov_derivation_chain_ok 
+--------------------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 4: 3-hop chain (uncle: parent / parent / sibling)
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/family/dave>  <https://pca.test/family/parent>  <https://pca.test/family/ed> .' || E'\n' ||
+    '<https://pca.test/family/ed>    <https://pca.test/family/parent>  <https://pca.test/family/frank> .' || E'\n' ||
+    '<https://pca.test/family/frank> <https://pca.test/family/sibling> <https://pca.test/family/grace> .' || E'\n' ||
+    '<https://pca.test/family/grandUncle> <http://www.w3.org/2002/07/owl#propertyChainAxiom> <https://pca.test/family/gu1> .' || E'\n' ||
+    '<https://pca.test/family/gu1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://pca.test/family/parent> .' || E'\n' ||
+    '<https://pca.test/family/gu1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/family/gu2> .' || E'\n' ||
+    '<https://pca.test/family/gu2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://pca.test/family/parent> .' || E'\n' ||
+    '<https://pca.test/family/gu2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/family/gu3> .' || E'\n' ||
+    '<https://pca.test/family/gu3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://pca.test/family/sibling> .' || E'\n' ||
+    '<https://pca.test/family/gu3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .'
+) = 10 AS family_chain_triples_loaded;
+ family_chain_triples_loaded 
+-----------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS family_chain_inferred;
+ family_chain_inferred 
+-----------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 31 AS three_hop_chain_ok;
+ three_hop_chain_ok 
+--------------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 5: Multiple concurrent chain axioms on the same derived property
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/multi/a> <https://pca.test/multi/p1> <https://pca.test/multi/b> .' || E'\n' ||
+    '<https://pca.test/multi/b> <https://pca.test/multi/p2> <https://pca.test/multi/c> .'
+) = 2 AS multi_chain_base_loaded;
+ multi_chain_base_loaded 
+-------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS multi_chain_inferred;
+ multi_chain_inferred 
+----------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 33 AS multi_chain_ok;
+ multi_chain_ok 
+----------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 6: Chain with owl:inverseOf in path
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/inv/child>  <http://www.w3.org/2002/07/owl#inverseOf> <https://pca.test/inv/parent> .' || E'\n' ||
+    '<https://pca.test/inv/X> <https://pca.test/inv/parent> <https://pca.test/inv/Y> .' || E'\n' ||
+    '<https://pca.test/inv/Z> <https://pca.test/inv/parent> <https://pca.test/inv/Y> .'
+) = 3 AS inverse_triples_loaded;
+ inverse_triples_loaded 
+------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS inverse_chain_inferred;
+ inverse_chain_inferred 
+------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 36 AS inverse_chain_ok;
+ inverse_chain_ok 
+------------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 7: Verify no infinite loop when chain body includes same property
+-- (cycle-safety: owl-rl stratification prevents unbounded recursion)
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/cycle/r> <https://pca.test/cycle/p> <https://pca.test/cycle/s> .'
+) = 1 AS cycle_safety_triple_loaded;
+ cycle_safety_triple_loaded 
+----------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS cycle_safety_ran;
+ cycle_safety_ran 
+------------------
+ t
+(1 row)
+
+-- After inference the system should still be alive (no infinite loop).
+SELECT pg_ripple.triple_count() >= 37 AS cycle_safety_ok;
+ cycle_safety_ok 
+-----------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 8: FOAF knows 3-hop acquaintance chain (knows/knows/knows)
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/foaf3/a> <http://xmlns.com/foaf/0.1/knows> <https://pca.test/foaf3/b> .' || E'\n' ||
+    '<https://pca.test/foaf3/b> <http://xmlns.com/foaf/0.1/knows> <https://pca.test/foaf3/c> .' || E'\n' ||
+    '<https://pca.test/foaf3/c> <http://xmlns.com/foaf/0.1/knows> <https://pca.test/foaf3/d> .' || E'\n' ||
+    '<https://pca.test/foaf3/knows3hop> <http://www.w3.org/2002/07/owl#propertyChainAxiom> <https://pca.test/foaf3/f1> .' || E'\n' ||
+    '<https://pca.test/foaf3/f1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://xmlns.com/foaf/0.1/knows> .' || E'\n' ||
+    '<https://pca.test/foaf3/f1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/foaf3/f2> .' || E'\n' ||
+    '<https://pca.test/foaf3/f2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://xmlns.com/foaf/0.1/knows> .' || E'\n' ||
+    '<https://pca.test/foaf3/f2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/foaf3/f3> .' || E'\n' ||
+    '<https://pca.test/foaf3/f3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <http://xmlns.com/foaf/0.1/knows> .' || E'\n' ||
+    '<https://pca.test/foaf3/f3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .'
+) = 10 AS foaf3_chain_triples_loaded;
+ foaf3_chain_triples_loaded 
+----------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS foaf3_chain_inferred;
+ foaf3_chain_inferred 
+----------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 47 AS foaf3_chain_ok;
+ foaf3_chain_ok 
+----------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 9: rdfs:subPropertyOf composed with propertyChainAxiom
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/sub/narrowerTrans> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <https://pca.test/sub/narrower> .' || E'\n' ||
+    '<https://pca.test/sub/catA> <https://pca.test/sub/narrower>     <https://pca.test/sub/catB> .' || E'\n' ||
+    '<https://pca.test/sub/catB> <https://pca.test/sub/narrowerTrans> <https://pca.test/sub/catC> .'
+) = 3 AS subprop_chain_loaded;
+ subprop_chain_loaded 
+----------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS subprop_chain_inferred;
+ subprop_chain_inferred 
+------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 50 AS subprop_chain_ok;
+ subprop_chain_ok 
+------------------
+ t
+(1 row)
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Test 10: LUBM-style hasAdvisor chain
+-- owl:propertyChainAxiom: ex:indirectAdvisor := ex:advisor / ex:advisor
+-- (mirrors LUBM query 9 pattern)
+-- ────────────────────────────────────────────────────────────────────────────
+SELECT pg_ripple.load_ntriples(
+    '<https://pca.test/lubm/gradStudent1> <https://pca.test/lubm/advisor> <https://pca.test/lubm/faculty1> .' || E'\n' ||
+    '<https://pca.test/lubm/faculty1>     <https://pca.test/lubm/advisor> <https://pca.test/lubm/professor1> .' || E'\n' ||
+    '<https://pca.test/lubm/indirectAdvisor> <http://www.w3.org/2002/07/owl#propertyChainAxiom> <https://pca.test/lubm/la1> .' || E'\n' ||
+    '<https://pca.test/lubm/la1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://pca.test/lubm/advisor> .' || E'\n' ||
+    '<https://pca.test/lubm/la1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <https://pca.test/lubm/la2> .' || E'\n' ||
+    '<https://pca.test/lubm/la2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://pca.test/lubm/advisor> .' || E'\n' ||
+    '<https://pca.test/lubm/la2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest>  <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .'
+) = 7 AS lubm_chain_triples_loaded;
+ lubm_chain_triples_loaded 
+---------------------------
+ t
+(1 row)
+
+SELECT pg_ripple.infer('owl-rl') >= 0 AS lubm_chain_inferred;
+ lubm_chain_inferred 
+---------------------
+ t
+(1 row)
+
+SELECT pg_ripple.triple_count() >= 57 AS lubm_chain_ok;
+ lubm_chain_ok 
+---------------
+ t
+(1 row)
+
+-- Cleanup.
+SELECT pg_ripple.drop_rules('owl-rl') >= 0 AS cleanup_ok;
+ cleanup_ok 
+------------
+ t
+(1 row)
+
