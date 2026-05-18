@@ -42,6 +42,7 @@ mod pg_ripple {
             name!(evidence_path, Option<String>),
         ),
     > {
+        // A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
         #[allow(clippy::type_complexity)]
         let rows: Vec<(
             String,
@@ -799,6 +800,7 @@ mod pg_ripple {
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    // A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
     #[allow(unused_imports)]
     use pgrx::prelude::*;
 }

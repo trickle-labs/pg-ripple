@@ -72,4 +72,53 @@ Arrow Flight bulk export is **experimental** in v0.71.0. The HMAC-SHA256 signing
 expiry and nonce checking are fully implemented (v0.67.0 FLIGHT-SEC-02). Chunked HTTP
 streaming via `Body::from_stream` is confirmed and validated (v0.71.0 FLIGHT-STREAM-01).
 
+---
+
+## v1 → v2 HMAC Ticket Migration (L16-05)
+
+pg_ripple v0.72.0 introduced **v2 tickets** with a nonce-based replay-protection
+cache (`FLIGHT-NONCE-01`).  Older v1 tickets (pre-v0.72.0) lack a `nonce` field
+and are therefore accepted only when `arrow_unsigned_tickets_allowed = on`.
+
+### What constitutes a valid v1 ticket
+
+A **v1 ticket** is any ticket JSON that:
+- Contains `query` and `exp` fields.
+- **Does not** contain a `nonce` field.
+- Has a valid HMAC-SHA256 `sig` computed over `query + exp` (no nonce in the signed payload).
+
+v1 tickets are not subject to replay protection because the nonce cache does not
+apply to them.  They are therefore **inherently replayable** until expiry.
+
+### Migration path
+
+1. **Generate new v2 tickets** — include a random `nonce` (hex string, ≥ 12 bytes of entropy)
+   in every new ticket and sign over `query + exp + nonce`.
+2. **Transition window** — v2 tickets are accepted immediately.  v1 tickets continue to be
+   accepted for the remainder of their `exp` window when the server is running
+   `arrow_unsigned_tickets_allowed = on`.  Set this to `off` once all active clients
+   have migrated to v2 tickets.
+3. **Identify expired v1 tickets** — a v1 ticket is expired when `exp < now()` (Unix timestamp).
+   Use the following to check a raw ticket JSON:
+   ```bash
+   echo '<ticket_json>' | python3 -c "
+   import json, sys, time
+   t = json.load(sys.stdin)
+   exp = t.get('exp', 0)
+   print('expired' if exp < time.time() else f'valid until {time.ctime(exp)}')
+   print('v1 ticket (no nonce)' if 'nonce' not in t else 'v2 ticket (has nonce)')
+   "
+   ```
+4. **Disable v1 acceptance** — once all tickets in flight have migrated, set
+   `ARROW_UNSIGNED_TICKETS_ALLOWED=false` in the `pg_ripple_http` environment and restart.
+
+### Summary
+
+| Feature | v1 ticket | v2 ticket |
+|---------|-----------|-----------|
+| Replay protection | None (replayable until expiry) | Nonce cache (one-time use) |
+| HMAC input | `query + exp` | `query + exp + nonce` |
+| `nonce` field | Absent | Present (≥ 12 bytes hex) |
+| Server requirement | `arrow_unsigned_tickets_allowed = on` | Always accepted (default) |
+
 See also: [HTTP API](http-api.md), [Architecture](architecture.md), [Compatibility Matrix](../operations/compatibility.md).

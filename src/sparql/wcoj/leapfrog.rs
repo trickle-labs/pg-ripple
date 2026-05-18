@@ -270,6 +270,7 @@ pub fn try_leapfrog_select(query: &spargebra::Query) -> Option<Vec<LftiBinding>>
 /// a purely flat BGP pattern.  Returns `None` if the pattern is not a flat BGP.
 type FlatBgpTriple = (Option<String>, Option<String>, Option<String>);
 
+// A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
 #[allow(clippy::type_complexity)]
 fn extract_flat_bgp(pattern: &spargebra::algebra::GraphPattern) -> Option<Vec<FlatBgpTriple>> {
     use spargebra::algebra::GraphPattern;

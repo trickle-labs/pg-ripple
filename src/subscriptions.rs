@@ -62,6 +62,7 @@ mod pg_ripple {
 
     /// List all registered SPARQL subscriptions.
     #[pg_extern]
+    // A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
     #[allow(clippy::type_complexity)]
     pub fn list_sparql_subscriptions() -> TableIterator<
         'static,
@@ -171,6 +172,7 @@ pub fn notify_affected_subscriptions(affected_graph_ids: &[i64]) {
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    // A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
     #[allow(unused_imports)]
     use pgrx::prelude::*;
 }

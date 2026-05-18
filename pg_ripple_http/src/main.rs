@@ -36,7 +36,7 @@ use common::{AppState, env_or};
 /// Connections to older extension versions log a prominent warning. The extension
 /// is still served (degraded mode) so that rolling upgrades do not hard-fail.
 /// Set `PG_RIPPLE_HTTP_STRICT_COMPAT=1` to convert the warning to a fatal startup error.
-const COMPATIBLE_EXTENSION_MIN: &str = "0.115.0";
+const COMPATIBLE_EXTENSION_MIN: &str = "0.116.0";
 
 /// Check that the installed pg_ripple extension version is within the known-compatible
 /// range for this pg_ripple_http build.  Logs a warning if it is not.
@@ -295,6 +295,10 @@ async fn main() {
             "PG_RIPPLE_HTTP_METRICS_TOKEN set: GET /metrics requires Authorization: Bearer <token>"
         );
     }
+    // L16-06 (v0.117.0): configurable WWW-Authenticate realm.
+    let auth_realm =
+        std::env::var("PG_RIPPLE_HTTP_AUTH_REALM").unwrap_or_else(|_| "pg_ripple".to_owned());
+    tracing::debug!("auth realm: {auth_realm}");
     let state = Arc::new(AppState {
         pool,
         auth_token,
@@ -317,6 +321,8 @@ async fn main() {
         cors_is_permissive,
         // M16-22 (v0.115.0): metrics endpoint bearer token.
         metrics_token,
+        // L16-06 (v0.117.0): configurable WWW-Authenticate realm.
+        auth_realm,
     });
 
     // CORS layer — wildcard "*" requires explicit opt-in; empty means deny all cross-origin.

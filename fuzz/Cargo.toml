@@ -145,3 +145,29 @@ name = "confidence_loader"
 path = "fuzz_targets/confidence_loader.rs"
 test = false
 doc = false
+
+# M16-13 (v0.117.0): four new fuzz targets for temporal queries, PPRL Bloom
+# encoding, rule authoring validation, and SKOS bundle loading.
+[[bin]]
+name = "temporal_query"
+path = "fuzz_targets/temporal_query.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "pprl_bloom_encode"
+path = "fuzz_targets/pprl_bloom_encode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "rule_authoring_validate"
+path = "fuzz_targets/rule_authoring_validate.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "skos_bundle"
+path = "fuzz_targets/skos_bundle.rs"
+test = false
+doc = false

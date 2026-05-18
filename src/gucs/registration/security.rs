@@ -1,9 +1,11 @@
 //! GUC registration for security and access control (Q13-01, v0.84.0).
 //! Split from registration.rs for navigability.
 
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 use crate::gucs::*;
 use pgrx::guc::{GucContext, GucFlags};
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 use pgrx::prelude::*;
 

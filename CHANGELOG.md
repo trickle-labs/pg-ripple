@@ -13,6 +13,82 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.117.0] — 2026-06-03 — A16 Low-Severity Polish, Tests and Supply-Chain
+
+**Seventeen low-severity polish items: allow-suppression count reduced to ≤186;
+crash-recovery and benchmark suite documentation; replication worker doc-comment;
+Arrow Flight ticket migration guide; configurable HTTP auth realm; install/upgrade
+guide; Docker image-tag pinning policy; build-artifact gitignore cleanup; SBOM diff
+date stamping; cosign SBOM signing in CI; version-bump release workflow; SSE
+concurrency tests; CONTRIBUTING.md AGENTS.md link; entity-resolution and temporal
+write-race concurrency tests; and four new fuzz targets.**
+
+### Added
+
+- **L16-01** `#[allow(…)]` suppression count reduced from 214 to ≤186; `// A16-CQ:`
+  justification comments added to all remaining suppressions in 48 source files.
+
+- **L16-02** `tests/crash_recovery/README.md` — documents all 15 crash-recovery
+  test scripts, PGDATA requirements, invocation pattern, and recovery verification
+  steps.
+
+- **L16-03** `benchmarks/README.md` — documents all benchmark SQL files, how to run
+  locally, CI benchmark gating, CSV history format, and the BSBM regression gate.
+
+- **L16-04** Doc-comment on `pg_ripple_logical_apply_worker_main` extended with
+  sections on restart behaviour, crash-loop backoff, and the 30 s
+  `BGWORKER_RESTART_TIME` constant.
+
+- **L16-05** Arrow Flight v1→v2 HMAC ticket migration guide added to `docs/src/reference/arrow-flight.md`
+  with "What constitutes a valid v1 ticket", migration path, and summary table.
+
+- **L16-06** `PG_RIPPLE_HTTP_AUTH_REALM` environment variable: configures the
+  `Bearer realm=` value returned in `WWW-Authenticate` headers; defaults to
+  `pg_ripple`.  Documented in `pg_ripple_http/README.md`.
+
+- **L16-07** `sql/INSTALL.md` — step-by-step install and upgrade guide covering
+  all 119 migration scripts from v0.1.0 to current, with checksum verification.
+
+- **L16-08** `docker/README.md` — image-tag pinning policy, upgrade procedure, and
+  multi-service pinning example updated to v0.117.0.
+
+- **L16-09/10** `.gitignore` updated to exclude build artefacts
+  (`clippy_all.txt`, `clippy_output.txt`, `cargo_check_output.txt`,
+  `build_output.txt`, `regression.diffs`, `sbom_diff.md`); removed from git index.
+
+- **L16-11** `scripts/generate_sbom_diff.sh` — generates `sbom_diff.md` with a
+  `**Generated:** YYYY-MM-DD` header stamped dynamically on each invocation or CI run.
+
+- **L16-12** Release workflow (`.github/workflows/release.yml`) now signs the SBOM
+  with cosign keyless signing (sigstore) and attaches the `.cosign.bundle` file to
+  the GitHub release.
+
+- **L16-13** `RELEASE.md` — pre-tagging checklist now documents
+  `just bump-version-dry` / `just bump-version <new> <floor>` workflow.
+
+- **L16-14** Concurrency tests:
+  - `tests/concurrency/sse_burst_subscriber.sh` — 100 simultaneous SSE connections,
+    asserts ≥95 % receive at least one event.
+  - `tests/concurrency/sse_reconnect_during_merge.sh` — asserts no event gap when
+    an SSE client reconnects with `Last-Event-ID` while the merge worker runs.
+
+- **L16-15** `CONTRIBUTING.md` — new "AI-assisted contributions" section with
+  explicit link to `AGENTS.md` and a summary of what it governs.
+
+- **M16-12** Concurrency tests:
+  - `tests/concurrency/entity_resolution_concurrent_resolves.sh` — N concurrent
+    `owl:sameAs` canonicalization operations must converge to a single canonical IRI.
+  - `tests/concurrency/temporal_versioned_write_race.sh` — N concurrent writes to
+    the same subject/predicate assert no silent data loss via SID uniqueness.
+
+- **M16-13** Four new fuzz targets registered in `fuzz/Cargo.toml`:
+  - `temporal_query` — temporal SPARQL query parser (no-panic invariant)
+  - `pprl_bloom_encode` — PPRL Bloom filter bit-vector bounds (no-panic + length)
+  - `rule_authoring_validate` — Datalog/CONSTRUCT rule parser + SQL metachar check
+  - `skos_bundle` — SKOS Turtle/N-Triples loader (no-panic on any byte sequence)
+
+---
+
 ## [0.116.0] — 2026-05-27 — A16 Medium: Correctness, Security GUCs, and CHANGELOG Hygiene
 
 **Ten correctness, security, and observability improvements: bounded ER

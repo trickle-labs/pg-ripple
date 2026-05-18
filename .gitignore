@@ -15,3 +15,12 @@ docs/book/
 secrets/
 tests/pg_regress/regression.diffs
 tests/pg_regress/regression.out
+
+# L16-09/10 (v0.117.0): build artifacts and diagnostic output files.
+# These are generated during local builds and CI runs and should not be committed.
+clippy_all.txt
+clippy_output.txt
+cargo_check_output.txt
+build_output.txt
+regression.diffs
+sbom_diff.md

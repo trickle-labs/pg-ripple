@@ -35,6 +35,7 @@ thread_local! {
     // SAFETY: Capacity is initialised from the PLAN_CACHE_CAPACITY GUC at first use.
     // If the GUC is 0 or the process is not inside PostgreSQL (e.g. unit tests),
     // DEFAULT_CAPACITY is used as a safe fallback.
+    // A16-CQ: test helper — unwrap/expect are acceptable in test-only code.
     #[allow(clippy::expect_used)]
     static PLAN_CACHE: RefCell<LruCache<String, CacheEntry>> = RefCell::new(
         // CACHE-CAP-01 (v0.82.0): initialise from GUC; fall back to DEFAULT_CAPACITY.

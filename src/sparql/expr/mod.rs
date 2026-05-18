@@ -169,6 +169,7 @@ pub(super) fn function_name(func: &Function) -> &'static str {
         Function::IsNumeric => "isNUMERIC",
         Function::Regex => "REGEX",
         Function::Custom(_) => "custom function",
+        // A16-CQ: unreachable_patterns suppressed to keep match arms exhaustive for future enum variants.
         #[allow(unreachable_patterns)]
         _ => "unknown function",
     }

@@ -71,6 +71,17 @@ Perform these steps in order.
 
 2. **Tag the release**
 
+   Before tagging, verify the version bump and compatibility constant are correct:
+
+   ```bash
+   # L16-13 (v0.117.0): verify version bump before tagging.
+   just bump-version-dry         # preview what would change
+   just bump-version <new> <floor>   # apply the bump (updates Cargo.toml, pg_ripple.control,
+                                     # COMPATIBLE_EXTENSION_MIN in pg_ripple_http/src/main.rs)
+   # Then inspect the changes:
+   git diff --stat
+   ```
+
    Use an annotated tag with the version number:
 
    ```bash

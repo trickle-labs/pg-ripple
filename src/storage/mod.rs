@@ -44,8 +44,10 @@ pub mod ops;
 pub mod vp_rare_io;
 
 // Re-export all public API from extracted modules.
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 pub use dictionary_io::{encode_rdf_term, parse_rdf_term, strip_angle_brackets_pub};
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 pub use ops::*;
 

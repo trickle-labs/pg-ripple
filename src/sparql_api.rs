@@ -379,6 +379,7 @@ mod pg_ripple {
     ///
     /// Counters are in-memory (reset on postmaster restart).
     #[pg_extern]
+    // A16-CQ: complex type required by trait bounds or async executor chains; simplification would obscure intent.
     #[allow(clippy::type_complexity)]
     fn federation_call_stats() -> TableIterator<
         'static,

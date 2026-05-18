@@ -51,6 +51,7 @@ impl Direction {
     }
 }
 
+// A16-CQ: dead_code expected — item is part of the public API surface or used conditionally.
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Default)]
 pub struct PageRankRunRequest {
@@ -108,6 +109,7 @@ fn default_export_format() -> String {
     "csv".to_owned()
 }
 
+// A16-CQ: dead_code expected — item is part of the public API surface or used conditionally.
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct CentralityRunRequest {

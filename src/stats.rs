@@ -131,6 +131,7 @@ mod pg_ripple {
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    // A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
     #[allow(unused_imports)]
     use pgrx::prelude::*;
 }

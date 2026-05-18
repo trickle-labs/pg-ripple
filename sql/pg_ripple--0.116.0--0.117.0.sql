@@ -1,0 +1,25 @@
+-- Migration 0.116.0 → 0.117.0
+-- Release: A16 — Low-Severity Polish, Tests and Supply-Chain (v0.117.0)
+--
+-- Schema changes: NONE
+--
+-- This release delivers documentation, code-quality polish, supply-chain
+-- hardening, and new test coverage only.  No DDL changes are required.
+--
+-- New features (pure Rust / no SQL schema impact):
+--   L16-01: #[allow()] suppression count reduced to ≤186; A16-CQ comments added
+--   L16-02: tests/crash_recovery/README.md — crash recovery test documentation
+--   L16-03: benchmarks/README.md — benchmark suite documentation
+--   L16-04: doc-comment on pg_ripple_logical_apply_worker_main
+--   L16-05: Arrow Flight v1→v2 HMAC ticket migration guide
+--   L16-06: PG_RIPPLE_HTTP_AUTH_REALM env var — configurable Bearer realm
+--   L16-07: sql/INSTALL.md — install + upgrade guide for all 119 migration scripts
+--   L16-08: docker/README.md — image tag pinning policy
+--   L16-09/10: .gitignore — artifact files removed from git tracking
+--   L16-11: scripts/generate_sbom_diff.sh — SBOM diff with dynamic date header
+--   L16-12: cosign SBOM signing step added to release.yml
+--   L16-13: RELEASE.md — version bump workflow documented
+--   L16-14: SSE concurrency tests (sse_burst_subscriber, sse_reconnect_during_merge)
+--   L16-15: CONTRIBUTING.md — AGENTS.md reference added
+--   M16-12: Concurrency tests (entity_resolution_concurrent_resolves, temporal_versioned_write_race)
+--   M16-13: Four new fuzz targets (temporal_query, pprl_bloom_encode, rule_authoring_validate, skos_bundle)

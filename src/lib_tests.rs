@@ -2,6 +2,7 @@
 
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
+// A16-CQ: test helper — unwrap/expect are acceptable in test-only code.
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use pgrx::prelude::*;

@@ -34,6 +34,7 @@ pub(crate) use decode::{
 };
 // get_endpoint_complexity is used within federation/decode.rs only; re-exported for
 // future external consumers (federation health API).
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 pub(crate) use decode::get_endpoint_complexity;
 pub(crate) use http::{execute_remote, execute_remote_partial};
@@ -43,11 +44,13 @@ pub(crate) use policy::{
 };
 // normalise_federation_url is used within policy.rs only; re-exported for
 // future external consumers (URL normalisation utility).
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 pub(crate) use policy::normalise_federation_url;
 // Vector endpoint API: register_vector_endpoint is used from graphrag_admin.rs;
 // is_vector_endpoint_registered and query_vector_endpoint are internal to decode.rs
 // but re-exported as part of the public vector search API.
 pub use decode::register_vector_endpoint;
+// A16-CQ: unused_imports here is intentional for test/cfg-gated code paths.
 #[allow(unused_imports)]
 pub use decode::{is_vector_endpoint_registered, query_vector_endpoint};

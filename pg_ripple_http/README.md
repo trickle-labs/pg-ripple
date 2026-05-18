@@ -35,6 +35,7 @@ All configuration is via environment variables:
 | `PG_RIPPLE_HTTP_PORT` | `7878` | HTTP listening port |
 | `PG_RIPPLE_HTTP_POOL_SIZE` | `16` | Database connection pool size |
 | `PG_RIPPLE_HTTP_AUTH_TOKEN` | (unset) | If set, requests must include `Authorization: Bearer <token>` |
+| `PG_RIPPLE_HTTP_AUTH_REALM` | `pg_ripple` | Value used in the `Bearer realm=` field of `WWW-Authenticate` response headers (L16-06, v0.117.0) |
 | `PG_RIPPLE_HTTP_METRICS_TOKEN` | (unset) | If set, `GET /metrics` requires `Authorization: Bearer <token>` (M16-22) |
 | `PG_RIPPLE_HTTP_RATE_LIMIT` | `0` | Max requests/sec per client IP (0 = disabled) |
 | `PG_RIPPLE_HTTP_CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*` for all |
