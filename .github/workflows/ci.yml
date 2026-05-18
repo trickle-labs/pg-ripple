@@ -1419,7 +1419,7 @@ jobs:
     name: Validate feature status evidence (v0.67.0)
     needs: [test, regress]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 50  # increased from 20: pgrx build + pg18 install takes 25-40 min
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
@@ -1510,7 +1510,7 @@ jobs:
     name: Validate feature status on populated DB (v0.74.0 GATE-06)
     needs: [test, regress]
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 50  # increased from 25: pgrx build + pg18 install takes 25-40 min
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
