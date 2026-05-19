@@ -36,6 +36,7 @@ runs:
     # ── Caching ───────────────────────────────────────────────────────────
     - name: Cache Cargo registry
       uses: actions/cache@v5
+      continue-on-error: true  # Transient cache-service failures must not block the build.
       with:
         path: |
           ~/.cargo/registry/index
@@ -58,6 +59,7 @@ runs:
     - name: Cache cargo-pgrx binary
       id: cache-cargo-pgrx
       uses: actions/cache@v5
+      continue-on-error: true  # Transient cache-service failures must not block the build.
       with:
         path: |
           ~/.cargo/bin/cargo-pgrx
@@ -72,6 +74,7 @@ runs:
     - name: Cache pgrx home (~/.pgrx)
       id: cache-pgrx-home
       uses: actions/cache@v5
+      continue-on-error: true  # Transient cache-service failures must not block the build.
       with:
         path: ~/.pgrx
         key: pgrx-home-pg18-pgrx0.18.0-${{ runner.os }}-${{ runner.arch }}
