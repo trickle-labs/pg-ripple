@@ -231,7 +231,7 @@ pub fn run_kge_cycle() -> (i64, i64, f64) {
                 .collect::<Vec<_>>()
                 .join(",")
         );
-        let _ = Spi::run_with_args(
+        Spi::run_with_args(
             "INSERT INTO _pg_ripple.kge_embeddings (entity_id, embedding, model) \
              VALUES ($1, $2::double precision[], $3) \
              ON CONFLICT (entity_id) DO UPDATE SET \
@@ -243,7 +243,8 @@ pub fn run_kge_cycle() -> (i64, i64, f64) {
                 pgrx::datum::DatumWithOid::from(emb_str.as_str()),
                 pgrx::datum::DatumWithOid::from(model_name.as_str()),
             ],
-        );
+        )
+        .unwrap_or_else(|e| pgrx::warning!("kge embedding update: {e}"));
     }
 
     (n_entities_stored, n_triples, avg_loss)
