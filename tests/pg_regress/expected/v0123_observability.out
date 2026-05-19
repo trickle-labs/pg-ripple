@@ -53,7 +53,7 @@ SELECT 'allen_before' IN (
       AND routine_type = 'FUNCTION'
 ) AS obs2305_allen_before_exists;
  obs2305_allen_before_exists 
-------------------------------
+-----------------------------
  t
 (1 row)
 
