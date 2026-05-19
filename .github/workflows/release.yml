@@ -187,7 +187,6 @@ jobs:
     name: Build (${{ matrix.artifact_suffix }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
-    continue-on-error: ${{ matrix.os == 'windows-2022' }}
     strategy:
       fail-fast: false
       matrix:

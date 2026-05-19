@@ -56,7 +56,13 @@ RUN mkdir -p src && printf '// workspace stub — not compiled in Dockerfile.htt
 
 # Pre-fetch dependencies in a separate layer so source edits don't bust the
 # cache for the long download step.
-RUN cargo fetch --locked
+# Note: --locked is intentionally omitted here.  The Docker build context
+# contains only a stub src/lib.rs for the pgrx extension (the full extension
+# is not built in this image), so the workspace resolves fewer packages than
+# the repo Cargo.lock records.  cargo fetch without --locked correctly
+# downloads only what pg_ripple_http needs.  The actual binary build uses
+# cargo build which respects the lock file for pg_ripple_http itself.
+RUN cargo fetch
 
 # Build only the HTTP companion service.  The pgrx extension (root workspace
 # member) is intentionally excluded from this build.
