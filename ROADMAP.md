@@ -275,6 +275,26 @@
 | [v0.119.0](roadmap/v0.119.0.md) | **OWL propertyChainAxiom, SERVICE circuit breaker, and schema-aware NL→SPARQL** — **(Feature 5)** implement `owl:propertyChainAxiom` inference in the OWL-RL Datalog rule set: `?x owl:propertyChainAxiom (?p1 ?p2 … ?pn)` compiles to an n-step Datalog chain rule with a single derived head; add 10 canonical pg_regress examples covering FOAF `knows` chain, SKOS broader transitive closure, and PROV-O derivation chains; add the test to the LUBM CI gate; **(Feature 6)** federated SERVICE circuit breaker: `_pg_ripple.federation_circuit_state (endpoint_iri TEXT PRIMARY KEY, state TEXT CHECK (state IN ('closed','open','half_open')), last_failure_at TIMESTAMPTZ, failure_count INT)` table; tripped to `'open'` after `pg_ripple.federation_circuit_failure_threshold` consecutive failures (default 5); transitions to `'half_open'` after `pg_ripple.federation_circuit_recovery_secs` seconds (default 60); expose `pg_ripple_federation_circuit_state{endpoint}` Prometheus gauge; **(Property paths over RDF-star gap)** compile `?x ?p ?y` patterns inside `<<...>>` quote context to a `temporal_facts`-style routing path in the SPARQL algebra so property paths traverse reified edges natively; add 5 pg_regress tests; **(OWL-RL sh:propertyChainAxiom regress)** extend `tests/pg_regress/sql/owl_rl_sameas.sql` with `owl:propertyChainAxiom` cycle-safety tests; **(Feature 10)** extend `sparql_from_nl()` to include active vocabulary-bundle metadata (SKOS preferred labels, DCTERMS titles, Schema.org type names, FOAF names) in the LLM system prompt grounding — improves domain-specific translation accuracy; `pg_ripple.nl_sparql_include_bundles BOOLEAN` GUC (default `on`) | Released ✅ | Large | [Full details](roadmap/v0.119.0.md) |
 | [v0.120.0](roadmap/v0.120.0.md) | **Operational & ecosystem features: explain_pagerank HTTP, diagnostic snapshot, rule-library federation, read-replica routing** — **(Feature 7)** `GET /pagerank/explain/{node_iri}` HTTP endpoint wrapping the existing `explain_pagerank()` SQL function and returning a JSON body `{"node": "...", "score": 0.xx, "top_contributors": [{...}], "method": "..."}` — enables dashboard drill-down without raw SQL; **(Feature 8)** `GET /admin/diagnostic-snapshot` HTTP endpoint (requires `check_auth_write`) that bundles: pg_ripple schema introspection (`_pg_ripple.*` table row counts), all non-sensitive GUC values, 60-second Prometheus metrics snapshot, extension version, and HTTP companion version into a single JSON archive suitable for support tickets; **(Tenant quota HTTP gap)** add `GET /tenants/{name}/quota` and `POST /tenants/{name}/quota` endpoints wrapping `_pg_ripple.quota_*` trigger data; **(Helm PodDisruptionBudget)** add a `podDisruptionBudget` stanza to `charts/pg_ripple/values.yaml` with `minAvailable: 1` as default; document in `charts/pg_ripple/README.md`; **(Feature 11)** `pg_ripple.publish_rule_library(name TEXT, endpoint_uri TEXT)` publishes a named rule library as an Arrow Flight endpoint (`GET /rule-libraries/{name}/stream`); `pg_ripple.subscribe_rule_library(source_uri TEXT, name TEXT)` fetches and installs from a remote Flight endpoint — enables rule-library marketplace federation between pg_ripple instances; **(Feature 12)** read-replica routing in `pg_ripple_http`: honour `?replica=ok` query parameter on read-only SPARQL SELECT / CONSTRUCT / ASK requests — proxy to the read-replica DSN configured in `PG_RIPPLE_HTTP_REPLICA_DSN` env when set; log routing decision at DEBUG level; document in `pg_ripple_http/README.md`; **(Feature 9)** `just generate-helm-values TENANT=<name>` recipe that queries `_pg_ripple.tenants` and emits a per-tenant `values-<name>.yaml` fragment for use with `helm install` | ✅ Released | Large | [Full details](roadmap/v0.120.0.md) |
 
+### Assessment 17 Remediation (v0.121.0 – v0.123.0)
+
+> These three versions address all findings from [plans/PLAN_OVERALL_ASSESSMENT_17.md](plans/PLAN_OVERALL_ASSESSMENT_17.md): v0.121.0 closes the two High security findings (H17-01 SSRF bypass in `subscribe_rule_library`, SEC-M-03 CGNAT/multicast SSRF gaps) and all medium/low bug and security items from §1–§2; v0.122.0 decomposes all eight remaining god modules (H17-02) and adds pg_regress coverage for all untested v0.119.0–v0.120.0 features plus WatDiv correctness gating; v0.123.0 delivers observability completeness, documentation updates, advisory management, and the blog posts needed before v1.0.0.
+
+| Version | Theme | Status | Scope | Full details |
+|---------|-------|--------|-------|-------------- |
+| [v0.121.0](roadmap/v0.121.0.md) | **A17 security hardening & bug remediation** — **(H17-01 / SEC-H-01)** replace `subscribe_rule_library()` string-contains SSRF guard in `src/rule_library.rs:800–820` with `crate::sparql::federation::policy::resolve_and_check_endpoint(source_uri)?`; add pg_regress test for SSRF bypass via IPv6-mapped addresses (`::ffff:192.168.x.x`), decimal-encoded IPs, and CGNAT endpoints; add fuzz target `rule_library_ssrf.rs` covering the subscription URL validation path and rule-library stream parser — closes the last uncovered SSRF surface; **(SEC-M-03)** add CGNAT (`100.64.0.0/10`, RFC 6598), IPv4 multicast (`224.0.0.0/4`), this-network (`0.0.0.0/8`), and IPv4-mapped IPv6 (`::ffff:0:0/96`) to `is_private_ip()` in `src/federation_registry.rs:64–107` and `src/sparql/federation/policy.rs`; add pg_regress test asserting `100.64.x.x` is rejected by the SSRF blocklist; **(SEC-M-04)** add `// SAFETY-SQL: pred_id is i64, no injection possible` comment to three `format!`-based DDL calls in `src/datalog/magic.rs:410,431,456`; replace each `let _ = Spi::run_with_args(...)` with `unwrap_or_else(|e| pgrx::warning!("magic: {e}"))` to surface DDL errors; **(SEC-L-01)** enforce `Content-Type: text/event-stream; charset=utf-8` explicitly on all SSE responses in `pg_ripple_http/src/routing/rule_library_handler.rs`; **(BUG-M-01)** replace six `let _ = pgrx::Spi::run(...)` calls in `src/maintenance_api.rs:35,44,71,77,165,272` with `unwrap_or_else(|e| pgrx::error!(...))` for user-triggered maintenance paths and `pgrx::warning!` for background worker paths so silent degradation is eliminated; **(BUG-M-02)** replace `let _ =` in `src/kge.rs:234` and `src/llm/mod.rs:730` with `unwrap_or_else(|e| pgrx::warning!("kge embedding update: {e}"))` and `unwrap_or_else(|e| pgrx::warning!("llm cache write: {e}"))`; **(BUG-M-03)** add `// CLIPPY-OK: side-effect only — errors from parse_head_object are expected and non-fatal here` to `src/datalog/conflict.rs:457`; **(BUG-L-01)** add null-pointer guard `if newval.is_null() { return; }` before `unsafe { CStr::from_ptr(newval) }` in `src/gucs/registration/observability.rs:21` to eliminate UB on NULL GUC callback; **(OBS-L-01)** call `write_mutation_journal("publish_rule_library", ...)` and `write_mutation_journal("subscribe_rule_library", ...)` at end of both functions in `src/rule_library.rs:720,779` following the `src/schema/tables.rs` pattern so all schema-mutating rule-library operations appear in the audit trail; add migration script `sql/pg_ripple--0.120.0--0.121.0.sql` (no schema changes; comment-only documenting security fixes) | Planned | Large | [Full details](roadmap/v0.121.0.md) |
+| [v0.122.0](roadmap/v0.122.0.md) | **A17 god-module decomposition & test coverage closure** — **(H17-02 / PERF-M-02)** split `src/sparql/expr/functions.rs` (1,252 LOC) into eight sub-modules: `functions.rs` (dispatch table only), `string.rs`, `datetime.rs`, `numeric.rs`, `iri.rs`, `aggregate.rs`, `geo.rs`, `temporal.rs` — following the `src/datalog/builtins.rs` split pattern established in v0.79.0; **(H17-02 / PERF-L-01)** split `src/storage/ops/scan.rs` (1,171 LOC) into `scan.rs` (BGP dispatch), `htap.rs` (delta/main merge union), `brin.rs` (BRIN-aware scan path), `tombstone.rs` (tombstone-skip optimisation); **(H17-02)** split `src/bulk_load.rs` (1,173 LOC) into `bulk_load.rs` (entry points and routing), `copy_path.rs` (UNNEST-array INSERT path), `dict_encode.rs` (dictionary batch encoding), `ntriples.rs`, `turtle.rs`; **(PERF-M-03)** split `pg_ripple_http/src/routing/admin_handlers.rs` (1,168 LOC) into `routing/admin/mod.rs`, `health.rs`, `diagnostic.rs` (diagnostic-snapshot bundle), `bench.rs` (bench-history), `maintenance.rs`; **(PERF-L-02)** split `src/llm/mod.rs` (1,070 LOC) into `llm/mod.rs`, `prompt.rs`, `cache.rs`, `schema_aware.rs`; additionally split `src/datalog/compiler/mod.rs` (1,068 LOC) into `mod.rs`, `emit_cte.rs`, `emit_union.rs`, `aggregate.rs`; split `src/gucs/registration/storage.rs` (1,058 LOC) into `storage.rs`, `copy_path.rs`, `htap.rs`, `dictionary.rs`; split `src/datalog/parser.rs` (1,030 LOC) into `parser.rs`, `lexer.rs`, `ast.rs`; after all splits verify CI module-size lint gate passes with zero files > 1,000 LOC; add dedicated pg_regress tests: `tests/pg_regress/sql/v0120_rule_library_federation.sql` (publish + subscribe round-trip + inference verification across two named instances), `v0120_diagnostic_snapshot.sql` (HTTP `/admin/diagnostic-snapshot` JSON structure and required key presence), `v0120_read_replica_routing.sql` (`?replica=ok` routing decision and primary fallback behavior), `v0120_compat_check.sql` (JSON schema validation: `extension_version`, `http_min_version`, `compatible` keys present and correctly typed); add HTTP integration test for `/pagerank/explain/{node_iri}` response schema; add `tests/pg_regress/sql/v0120_tenant_quota.sql`; gate WatDiv correctness — `bench_workload('watdiv')` output validated against reference answer set (correctness, not just performance score); publish Apache Jena pass rate as CI badge updating `docs/src/conformance.md`; add migration script `sql/pg_ripple--0.121.0--0.122.0.sql` (no schema changes) | Planned | Large | [Full details](roadmap/v0.122.0.md) |
+| [v0.123.0](roadmap/v0.123.0.md) | **A17 observability, documentation & advisory management** — **(OBS-M-01)** add `pg_ripple_http_replica_pool_size{pool="replica"}` gauge and `pg_ripple_http_replica_pool_available{pool="replica"}` gauge to `pg_ripple_http/src/metrics.rs` so operators can alert on pool exhaustion; document Prometheus alert rule example in `docs/src/operations/read-replicas.md`; **(OBS-M-02)** add `pg_ripple_rule_library_stream_duration_seconds` latency histogram and `pg_ripple_rule_library_subscribe_errors_total` counter to `metrics.rs` and wire into `routing/rule_library_handler.rs` request instrumentation; **(ERG-M-01)** document `pg_ripple.compat_check()` JSON schema (keys: `extension_version STRING`, `http_min_version STRING`, `compatible BOOL`) in `docs/src/reference/sql-api.md` with a copy-pasteable example return value; **(ERG-M-02 / DOC-M-02)** create `docs/src/guides/rule-library-federation.md` with a complete worked example: publish named rule library on instance A over Arrow Flight, subscribe from instance B, verify inference over shared rules, monitor with Prometheus counters from OBS-M-02; **(ERG-M-03)** extend `docs/src/operations/read-replicas.md` with `?replica=ok` routing semantics, the list of eligible query types (SELECT, CONSTRUCT, ASK only), pool exhaustion fallback to primary, Prometheus alerting recipes using OBS-M-01 gauges; **(ERG-L-01)** add `pg_ripple.bench_workload_result(profile TEXT DEFAULT 'bsbm') → TABLE(run_id BIGINT, profile TEXT, started_at TIMESTAMPTZ, duration_ms BIGINT, queries_per_second FLOAT8, triples_processed BIGINT)` convenience SQL wrapper returning the last run from `_pg_ripple.bench_history` for ad-hoc benchmarking without writing raw SQL; **(DOC-M-01)** update `docs/src/operations/compatibility.md` with eight new rows for v0.113.0–v0.120.0 each including the corresponding `pg_ripple_http` companion version; **(DOC-M-03)** add function signatures, parameter descriptions, return schemas, and example queries for `compat_check()`, `bench_workload()`, `publish_rule_library()`, `subscribe_rule_library()`, and all seven Allen's interval relation functions (`pg:before`, `pg:meets`, `pg:overlaps`, `pg:during`, `pg:finishes`, `pg:starts`, `pg:equals`) to `docs/src/reference/sql-api.md`; **(DOC-L-01)** publish `blog/owl-property-chain-axiom.md`, `blog/federation-circuit-breaker.md`, `blog/allen-interval-relations.md`, `blog/rule-library-federation.md` with worked examples ahead of v1.0.0; **(SEC-M-01 / M17-01)** schedule Q3-2026 `cargo-audit` checkpoint in GitHub issue tracker for RUSTSEC-2024-0436 and RUSTSEC-2023-0071 (RSA Marvin-attack, both expiring 2026-12-01); extend `audit.toml` ignore expiry to 2027-01-01 if no upstream `rsa` crate patch is available; update ignore comment with "RSA not used for untrusted input — re-evaluated Q3-2026" rationale; **(SEC-M-02)** read RUSTSEC-2026-0104 advisory for `paste` proc-macro; verify compile-time-only unsoundness claim; add detailed mitigation rationale to `audit.toml:38`; if verification shows potential runtime impact, pin `paste` to last pre-advisory version; add migration script `sql/pg_ripple--0.122.0--0.123.0.sql` (adds `bench_workload_result` SQL function DDL) | Planned | Large | [Full details](roadmap/v0.123.0.md) |
+
+### Pre-GA Feature Expansion (v0.124.0 – v0.126.0)
+
+> These three versions ship the three highest-priority new features from [plans/PLAN_OVERALL_ASSESSMENT_17.md §11](plans/PLAN_OVERALL_ASSESSMENT_17.md): SPARQL 1.2 property path algebra execution (FEAT-01), temporal graph snapshots with time-travel SPARQL (FEAT-02), and per-endpoint federation credentials with OAuth2 and API-key support (FEAT-03). They run in parallel with the external security audit and 72-hour load test preparation required for v1.0.0 GA.
+
+| Version | Theme | Status | Scope | Full details |
+|---------|-------|--------|-------|-------------- |
+| [v0.124.0](roadmap/v0.124.0.md) | **SPARQL 1.2 property path algebra execution (FEAT-01)** — `spargebra` and `sparopt` already have `features = ["sparql-12", "sep-0006"]` enabled (`Cargo.toml:30–31`); this release wires execution: implement bidirectional inverse path (`^p`), path alternatives at the operator level (`p1|p2` beyond simple IRI union), zero-or-one quantifier (`p?`) via `OPTIONAL`-based unrolling, negated property sets (`!(p1|p2)`), and nested inverse sequences in `src/sparql/property_path.rs`; extend the `WITH RECURSIVE … CYCLE` template for all new operator combinations ensuring all paths use PostgreSQL 18's `CYCLE` clause for hash-based cycle detection; emit `PT0501 ERROR: SPARQL 1.2 path operator not yet supported` for any unimplemented variant so gaps are explicit rather than silently incorrect; add 20 pg_regress test cases covering each new operator and five key combinations (inverse-sequence, alternation with quantifier, negated-with-inverse, nested inverse, cycle detection); add 5 OWL 2 RL property-chain tests exercising n-hop recursive `owl:propertyChainAxiom` (n=4, n=5) via the new path engine; update `docs/src/reference/sparql12-status.md` with per-feature execution-status table; update W3C SPARQL 1.2 tracking issue in GitHub; add migration script `sql/pg_ripple--0.123.0--0.124.0.sql` (no schema changes) | Planned | Large | [Full details](roadmap/v0.124.0.md) |
+| [v0.125.0](roadmap/v0.125.0.md) | **Temporal graph snapshots — point-in-time named graphs (FEAT-02)** — `pg_ripple.graph_at(graph_iri TEXT, snapshot_time TIMESTAMPTZ) → TEXT` SQL function that materialises a named-graph snapshot from `_pg_ripple.temporal_facts` at the given timestamp and registers it in `_pg_ripple.graph_snapshots (snapshot_id BIGINT DEFAULT nextval('snapshot_id_seq') PRIMARY KEY, graph_iri TEXT NOT NULL, snapshot_iri TEXT NOT NULL UNIQUE, captured_at TIMESTAMPTZ NOT NULL, triple_count BIGINT, expires_at TIMESTAMPTZ)`; time-travel SPARQL via `GRAPH <snapshot-iri> { … }` pattern routed to snapshot data (read-only VP scan of snapshotted named graph, no write path); `pg_ripple.snapshot_retention_days` GUC (default 30) for automatic snapshot GC via background merge-worker tick; `pg_ripple.graph_diff(graph_iri TEXT, from_ts TIMESTAMPTZ, to_ts TIMESTAMPTZ) → TABLE(s BIGINT, p BIGINT, o BIGINT, change TEXT)` returning `'added'`/`'removed'` delta rows enabling audit-compliance workflows and incremental Turtle/N-Quads exports; `GET /temporal/graphs/{iri}/snapshot?at=<iso8601>` HTTP endpoint returning snapshot content as Turtle; `GET /temporal/graphs/{iri}/diff?from=<iso8601>&to=<iso8601>` HTTP endpoint returning N-Quads delta; Prometheus gauge `pg_ripple_graph_snapshots_total` tracking live snapshot count; 15 pg_regress tests covering snapshot creation, time-travel SPARQL query, diff export delta correctness, retention GC row deletion, and concurrent snapshot creation race; blog post `blog/temporal-graph-snapshots.md`; add migration script `sql/pg_ripple--0.124.0--0.125.0.sql` adding `graph_snapshots` table and `snapshot_id_seq` sequence | Planned | Large | [Full details](roadmap/v0.125.0.md) |
+| [v0.126.0](roadmap/v0.126.0.md) | **Per-endpoint federation credentials — OAuth2 Bearer and API-key (FEAT-03)** — `_pg_ripple.federation_credentials (endpoint_iri TEXT PRIMARY KEY REFERENCES _pg_ripple.federation_endpoints, auth_type TEXT NOT NULL CHECK (auth_type IN ('bearer','apikey','none')), encrypted_token BYTEA NOT NULL, header_name TEXT NOT NULL DEFAULT 'Authorization', created_at TIMESTAMPTZ DEFAULT now(), rotated_at TIMESTAMPTZ)` table with tokens stored via `pgcrypto pgp_sym_encrypt` using a server-managed symmetric key configured in `pg_ripple.federation_credential_key` GUC (never logged, never visible via `SHOW`); `pg_ripple.set_federation_credential(endpoint_iri TEXT, auth_type TEXT, token TEXT) → void` SQL function (SECURITY DEFINER SET search_path = pg_ripple, _pg_ripple, public) that encrypts the token before insert/update; reqwest-based federation call path in `src/sparql/federation/execute.rs` decrypts and injects the `Authorization: Bearer …` or custom API-key header per-request at query time, never caching the plaintext; `pg_ripple.rotate_federation_credential(endpoint_iri TEXT, new_token TEXT) → void` for zero-downtime token rotation via atomic UPDATE; `pg_ripple.federation_credential_audit() → TABLE(endpoint_iri TEXT, auth_type TEXT, token_age_days FLOAT8, last_used_at TIMESTAMPTZ)` for operational audit without exposing plaintext tokens; `GET /federation/{endpoint}/auth-status` HTTP endpoint (write-auth required) returning credential age and auth type; SSRF guard validates endpoint URI *before* credential lookup so attackers cannot use credential oracle for SSRF probing; 10 pg_regress tests covering credential storage, injection verification via mock SPARQL endpoint, rotation atomicity, audit query (no plaintext), SSRF bypass prevention with credentials present; add migration script `sql/pg_ripple--0.125.0--0.126.0.sql` adding `federation_credentials` table | Planned | Large | [Full details](roadmap/v0.126.0.md) |
+
 ## v1.0.0 GA Entry Criteria (H16-07, v0.112.0)
 
 pg_ripple enters general availability (v1.0.0) only when **all** of the following criteria are met.
@@ -291,13 +311,14 @@ Each criterion has a corresponding CI gate or documented evidence requirement.
 
 Progress against these criteria is tracked in each assessment report and confirmed before tagging v1.0.0.
 
-### Stable Release & Ecosystem (v1.0.0 – v1.2.0)
+### Stable Release & Ecosystem (v1.0.0 – v1.3.0)
 
 | Version | Theme | Status | Scope | Full details |
 |---------|-------|--------|-------|-------------- |
-| [v1.0.0](roadmap/v1.0.0-full.md) | **Production hardening & GA release** — satisfies all GA Entry Criteria (H16-07 / ROAD-15-01): **(a)** zero open High findings for two consecutive assessments; **(b)** zero unannotated `unsafe` blocks (enforced by `clippy::undocumented_unsafe_blocks` in CI); **(c)** HTTP companion compatibility window policy written and enforced by `release.yml` CI gate; **(d)** all pg_regress tests passing on PG18 + both supported minor versions; **(e)** `pg_ripple.cdx.json` SBOM signed with `cosign` and published to the GitHub release page; **(f)** external third-party security audit report on file (TrailOfBits/Cure53 or equivalent); plus: 72-hour continuous load test (`bench-bsbm-100m` + WatDiv) with results published; API stability matrix for every `#[pg_extern]` and GUC auto-generated from `cargo doc` JSON and committed to `docs/src/reference/api-stability.md`; documentation final audit and freeze; `pg_ripple.bench_workload()` results baseline for BSBM/WatDiv/PageRank published | Planned | Medium | [Full details](roadmap/v1.0.0-full.md) |
-| [v1.1.0](roadmap/v1.1.0.md) | Post-1.0 ecosystem: Cypher/GQL read-only transpiler (`MATCH … RETURN`) + write operations (`CREATE`/`SET`/`DELETE`), Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink, materialized SPARQL views, dbt adapter, SPARQL endpoint FDW, pgai in-database embedding generation, logical replication for pg_ripple knowledge graphs | Planned | Large | [Full details](roadmap/v1.1.0-full.md) |
-| [v1.2.0](roadmap/v1.2.0.md) | **Custom IndexAM for triple patterns** (WC-01): a native PostgreSQL index access method understanding `(s, p, o, g)` quad patterns, enabling parallel index-only scans for SPARQL BGPs and 2–5× faster large-graph scans; **declarative VP table partitioning** (WC-03): `PARTITION BY LIST (g)` for large multi-tenant deployments with per-tenant partition pruning | Planned | Very Large | [Full details](roadmap/v1.2.0-full.md) |
+| [v1.0.0](roadmap/v1.0.0-full.md) | **Production hardening & GA release** — satisfies all GA Entry Criteria (H16-07 / ROAD-15-01): **(a)** zero open High findings for two consecutive assessments (A17 remediation arc closes H17-01 and H17-02; A18 confirms zero Highs); **(b)** zero unannotated `unsafe` blocks (enforced by `clippy::undocumented_unsafe_blocks = "deny"` in CI); **(c)** HTTP companion compatibility window policy written and enforced by `release.yml` CI gate; **(d)** all 290+ pg_regress tests passing on PG18 (including v0.121.0–v0.126.0 tests); **(e)** `pg_ripple.cdx.json` SBOM signed with `cosign` and published to the GitHub release page; **(f)** external third-party security audit report on file (TrailOfBits/Cure53 or equivalent — scheduled between v0.123.0 and v1.0.0); plus: 72-hour continuous load test (`bench-bsbm-100m` + WatDiv) with results published to `docs/src/benchmarks/`; API stability matrix for every `#[pg_extern]` and GUC auto-generated from `cargo doc` JSON and committed to `docs/src/reference/api-stability.md`; documentation final audit and freeze; `pg_ripple.bench_workload()` baseline results for BSBM/WatDiv/PageRank published | Planned | Medium | [Full details](roadmap/v1.0.0-full.md) |
+| [v1.1.0](roadmap/v1.1.0.md) | **Post-GA ecosystem & performance** — Cypher/GQL read-only transpiler (`MATCH … RETURN`) + write operations (`CREATE`/`SET`/`DELETE`) enabling graph-database users to query pg_ripple without learning SPARQL; Jupyter SPARQL kernel for interactive notebook exploration; LangChain/LlamaIndex tool packages for LLM orchestration workflows; Kafka CDC sink for event-driven knowledge graph updates; materialized SPARQL views with configurable refresh; dbt adapter; SPARQL endpoint FDW; pgai in-database embedding generation; logical replication for pg_ripple knowledge graphs across instances; **(FEAT-04 / PERF-M-01)** true `COPY FROM STDIN WITH (FORMAT binary)` bulk load path via `pgrx::copy_in` API eliminating parse/plan overhead for 100M+ triple loads (2–3× improvement over UNNEST-array path activated in v0.113.0); **(FEAT-07)** SPARQL federation mTLS client-certificate support and JWKS-endpoint-backed JWT verification for enterprise SPARQL endpoints requiring mutual TLS — extends the OAuth2/API-key credentials from v0.126.0 | Planned | Large | [Full details](roadmap/v1.1.0-full.md) |
+| [v1.2.0](roadmap/v1.2.0.md) | **Custom IndexAM & declarative partitioning** — **(WC-01)** native PostgreSQL index access method for `(s, p, o, g)` quad patterns enabling parallel index-only scans for SPARQL BGPs and 2–5× faster large-graph scans; **(WC-03)** declarative VP table partitioning: `PARTITION BY LIST (g)` for large multi-tenant deployments with per-tenant partition pruning; **(FEAT-09)** Knowledge Graph Diff/Delta Export: `pg_ripple.kg_diff(graph_iri, from_version, to_version) → TABLE` and `GET /graphs/{iri}/delta?from=&to=` HTTP endpoint exporting added/removed quads as N-Quads or JSON-LD patches for external consumers (event sourcing, CDC, audit compliance); **(FEAT-07 extended)** SPARQL endpoint federation JWKS endpoint for RS256/ES256 JWT verification — completes the enterprise auth story from v1.1.0 | Planned | Very Large | [Full details](roadmap/v1.2.0-full.md) |
+| [v1.3.0](roadmap/v1.3.0.md) | **OWL 2 EL/QL profiles, columnar cold-tier storage, and GNN integration** — **(FEAT-05)** OWL 2 EL profile full rule-set in Datalog: OWL 2 EL is widely used in biomedical ontologies (SNOMED CT, Gene Ontology, NCIt) and has tractable reasoning; implement the normative rule tables for EL (`cls-oo`, `prp-ap`, `cax-sco`, `scm-cls`, `scm-op`, `scm-dp` and EL-specific rules) with a dedicated fixpoint strategy optimised for the EL complexity class; add OWL 2 QL profile targeting large ABox instances with efficient first-order-rewritable queries; extend `_pg_ripple.owl_profiles` catalog with `'EL'` and `'QL'` entries; add 50 OWL 2 EL pg_regress tests using SNOMED-subset fixture; **(FEAT-06)** columnar cold-tier storage via Parquet — VP tables with billions of triples exceeding the HTAP hot-tier threshold can be archived to a Parquet cold tier using `pg_parquet` FDW or DuckDB FDW; `pg_ripple.tier_threshold_triples` GUC (default 100M) controls automatic cold-tiering; SPARQL query router transparently unions hot VP table with cold Parquet scan; 5–20× storage compression and 5–20× scan throughput improvement for analytical SPARQL; **(FEAT-08)** Graph Neural Network integration — in-database GNN training bridge: `pg_ripple.gnn_encode(model_name TEXT, graph_iri TEXT) → TABLE(entity BIGINT, embedding FLOAT4[])` exporting entity embeddings from a trained PyG/DGL model via a Python extension bridge; `pg_ripple.gnn_predict_links(model_name TEXT, subject BIGINT, k INT) → TABLE(object BIGINT, score FLOAT4)` for link prediction queries over trained embeddings, replacing the TransE/RotatE-only approach from v0.57.0 with full GNN model support; requires `pg_python` or `plpython3u` bridge | Planned | Very Large | [Full details](roadmap/v1.3.0.md) |
 
 ## How these versions fit together
 
@@ -556,17 +577,79 @@ v0.120.0       ─── New features: GET /pagerank/explain/{node} HTTP endpoin
                │   over Arrow Flight; read-replica routing (?replica=ok);
                │   just generate-helm-values recipe
        │
+v0.121.0       ─── A17 security & bug remediation: subscribe_rule_library SSRF fix
+               │   via resolve_and_check_endpoint (H17-01/SEC-H-01); CGNAT/multicast/
+               │   0.0.0.0 SSRF blocklist additions to is_private_ip (SEC-M-03);
+               │   magic.rs SQL SAFETY-SQL comment + error surfacing (SEC-M-04);
+               │   maintenance_api / kge / llm SPI error surfacing (BUG-M-01/02);
+               │   conflict.rs parse-result CLIPPY-OK comment (BUG-M-03);
+               │   observability.rs null-pointer UB guard (BUG-L-01);
+               │   rule-library SSE Content-Type header (SEC-L-01);
+               │   mutation journal for publish/subscribe (OBS-L-01);
+               │   fuzz target rule_library_ssrf.rs; CGNAT SSRF pg_regress test
+       │
+v0.122.0       ─── A17 god-module decomposition & test coverage:
+               │   sparql/expr/functions.rs (1,252 LOC) → 8 sub-modules;
+               │   bulk_load.rs (1,173 LOC) → 5 sub-modules;
+               │   storage/ops/scan.rs (1,171 LOC) → 4 sub-modules;
+               │   admin_handlers.rs (1,168 LOC) → 5 sub-modules;
+               │   llm/mod.rs + datalog/compiler/mod.rs + gucs/registration/storage.rs
+               │   + datalog/parser.rs splits; CI module-size gate: 0 files > 1k LOC;
+               │   pg_regress for rule-library round-trip, diagnostic-snapshot,
+               │   read-replica ?replica=ok, compat_check() JSON schema,
+               │   tenant quota; WatDiv correctness gate; Apache Jena pass-rate badge
+       │
+v0.123.0       ─── A17 observability, docs & advisories: replica-pool Prometheus
+               │   gauges (OBS-M-01); rule-library stream metrics (OBS-M-02);
+               │   compat_check() JSON schema doc (ERG-M-01); rule-library
+               │   federation guide (ERG-M-02/DOC-M-02); read-replica ops doc
+               │   (ERG-M-03); bench_workload_result() TABLE variant (ERG-L-01);
+               │   compatibility matrix v0.113–v0.120 (DOC-M-01); SQL API ref
+               │   v0.118–v0.120 functions (DOC-M-03); 4 blog posts (DOC-L-01);
+               │   RSA RUSTSEC Q3-2026 re-audit scheduled (SEC-M-01/M17-01);
+               │   paste RUSTSEC-2026-0104 compile-time verification (SEC-M-02)
+       │
+v0.124.0       ─── SPARQL 1.2 property path execution (FEAT-01):
+               │   ^p inverse, p? quantifier, negated property sets, nested
+               │   inverse sequences; CYCLE clause on all new paths; PT0501 for
+               │   unimplemented variants; 20 pg_regress + 5 OWL chain tests;
+               │   sparql12-status.md updated; parser was already enabled via
+               │   Cargo.toml features = ["sparql-12", "sep-0006"]
+       │
+v0.125.0       ─── Temporal graph snapshots (FEAT-02): graph_at() point-in-time
+               │   materialisation; graph_snapshots catalog table; time-travel
+               │   SPARQL via GRAPH <snapshot-iri>; snapshot_retention_days GUC;
+               │   graph_diff() added/removed delta TABLE; HTTP /temporal/…/snapshot
+               │   and /diff endpoints; 15 pg_regress tests; blog post
+       │
+v0.126.0       ─── Per-endpoint federation credentials (FEAT-03): OAuth2 Bearer
+               │   and API-key per federation endpoint; pgcrypto-encrypted token
+               │   storage; set_federation_credential() + rotate_federation_credential();
+               │   federation_credential_audit() TABLE; GET /federation/{ep}/auth-status;
+               │   SSRF guard before credential lookup; 10 pg_regress tests
+       │
 v1.0.0         ─── Stable release: all GA Entry Criteria met (zero open Highs ×2
                │   assessments; zero unannotated unsafe; compat CI gate; signed SBOM;
                │   external security audit); 72-hour continuous load test;
                │   API stability matrix; documentation freeze; benchmark results published
        │
-v1.1           ─── Post-stable: Cypher/GQL transpiler (read-only + write ops), Jupyter
-               │   kernel, LangChain/LlamaIndex tools, Kafka CDC sink, materialized SPARQL
-               │   views, dbt adapter, SPARQL endpoint FDW, pgai embedding, logical replication
+v1.1           ─── Post-stable ecosystem & performance: Cypher/GQL transpiler
+               │   (read-only + write ops), Jupyter kernel, LangChain/LlamaIndex
+               │   tools, Kafka CDC sink, materialized SPARQL views, dbt adapter,
+               │   SPARQL endpoint FDW, pgai embedding, logical replication;
+               │   true COPY FROM STDIN binary bulk load path (FEAT-04 / PERF-M-01,
+               │   2–3× over UNNEST-array); federation mTLS client-cert support
+               │   and JWKS-backed JWT verification (FEAT-07)
        │
-v1.2           ─── Custom IndexAM for triple patterns (WC-01); declarative VP table
-               │   partitioning by named graph (WC-03)
+v1.2           ─── Custom IndexAM for triple patterns (WC-01); declarative VP
+               │   table partitioning by named graph (WC-03); Knowledge Graph
+               │   Diff/Delta Export API (FEAT-09); JWKS JWT extended
+       │
+v1.3           ─── OWL 2 EL/QL profiles (FEAT-05): full EL rule-set in Datalog,
+               │   biomedical ontology support (SNOMED, GO, NCIt); columnar
+               │   cold-tier storage via Parquet / DuckDB FDW (FEAT-06);
+               │   GNN integration — PyG/DGL bridge for in-database GNN training
+               │   and link prediction (FEAT-08)
 ```
 
 v0.1.0 through v0.5.1 build the complete core storage and query engine.
@@ -761,12 +844,50 @@ conformance-suite pass-rate badges.
 v1.0.0 is the stable release: a 72-hour continuous load test, a
 third-party security audit, an API stability matrix for every `#[pg_extern]` and GUC,
 documentation final audit and freeze, and public BSBM/WatDiv benchmark results.
+v0.121.0 through v0.123.0 address all findings from PLAN_OVERALL_ASSESSMENT_17:
+v0.121.0 is the security hardening release — it closes the H17-01 SSRF bypass in
+`subscribe_rule_library()` (replacing string-contains with the battle-tested
+`resolve_and_check_endpoint()` function), hardens the SSRF blocklist with CGNAT,
+multicast, and IPv4-mapped IPv6 ranges (SEC-M-03), surfaces silently-swallowed SPI
+errors across maintenance_api, kge, llm, and datalog/magic (BUG-M-01/02/03/04),
+fixes the null-pointer UB in the GUC observability callback (BUG-L-01), and wires
+mutation-journal entries for rule-library publish/subscribe operations (OBS-L-01);
+v0.122.0 eliminates all eight remaining god modules over 1,000 lines (H17-02) —
+decomposing sparql/expr/functions.rs, bulk_load.rs, storage/ops/scan.rs,
+admin_handlers.rs, llm/mod.rs, datalog/compiler/mod.rs, gucs/registration/storage.rs,
+and datalog/parser.rs into focused sub-modules — and closes all pg_regress test gaps
+for v0.119.0–v0.120.0 features including rule-library federation, diagnostic-snapshot,
+read-replica routing, compat_check(), and WatDiv correctness gating; v0.123.0 delivers
+observability completeness (replica-pool Prometheus gauges, rule-library stream metrics),
+full documentation for all v0.118–v0.120 features (rule-library guide, read-replica
+ops doc, SQL API reference, compatibility matrix rows), four new blog posts, and
+advisory management (RSA RUSTSEC Q3-2026 re-audit schedule, paste advisory verification).
+v0.124.0 through v0.126.0 ship the three highest-priority new features identified in
+Assessment 17: v0.124.0 executes SPARQL 1.2 property path algebra extensions (bidirectional
+inverse, zero-or-one quantifier, negated property sets) that the parser has been accepting
+since `features = ["sparql-12", "sep-0006"]` was enabled — converting a parser-only
+feature into a fully-tested execution path with twenty pg_regress tests; v0.125.0 adds
+temporal graph snapshots enabling point-in-time named-graph materialisation, time-travel
+SPARQL queries, and a `graph_diff()` delta export TABLE — delivering immutable audit history
+and compliance workflows on top of the Allen's interval relation engine from v0.118.0;
+v0.126.0 adds per-endpoint federation credentials with OAuth2 Bearer and API-key support,
+stored via pgcrypto encryption, injected at query time into reqwest federation calls —
+making pg_ripple the first PostgreSQL-native RDF store with cryptographically protected
+federation credential management.
 v1.1.0 delivers post-stable improvements: Cypher/GQL transpiler (read-only and write
 operations), Jupyter SPARQL kernel, LangChain/LlamaIndex tool packages, Kafka CDC sink,
 materialized SPARQL views, a dbt adapter, a SPARQL endpoint FDW, pgai in-database
-embedding generation, and logical replication for pg_ripple knowledge graphs. v1.2.0
-delivers the Custom IndexAM for triple patterns (WC-01) — a native PostgreSQL index
-access method that understands `(s, p, o, g)` quad patterns for parallel index-only
-BGP scans — and declarative VP table partitioning by named graph (WC-03) for large
-multi-tenant deployments.
+embedding generation, logical replication for pg_ripple knowledge graphs, the true
+`COPY FROM STDIN WITH (FORMAT binary)` bulk load path (FEAT-04) delivering another 2–3×
+throughput improvement over the UNNEST-array path, and SPARQL federation mTLS/JWKS
+enterprise authentication (FEAT-07). v1.2.0 delivers the Custom IndexAM for triple
+patterns (WC-01) — a native PostgreSQL index access method that understands `(s, p, o, g)`
+quad patterns for parallel index-only BGP scans — declarative VP table partitioning by
+named graph (WC-03) for large multi-tenant deployments, and the Knowledge Graph Diff/Delta
+Export API (FEAT-09) for event-sourcing and audit-compliance consumers. v1.3.0 delivers
+OWL 2 EL profile reasoning with full normative rule tables targeting biomedical ontologies
+(SNOMED CT, Gene Ontology, NCIt) and OWL 2 QL profile for large-ABox tractable reasoning
+(FEAT-05), Parquet columnar cold-tier storage via DuckDB FDW for 5–20× analytical SPARQL
+speedup on billion-triple graphs (FEAT-06), and Graph Neural Network integration
+bridging PyG/DGL models into in-database GNN training and link prediction (FEAT-08).
 
