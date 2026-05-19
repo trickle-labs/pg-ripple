@@ -35,6 +35,32 @@ The raw data is in [`tests/conformance/history.csv`](../../tests/conformance/his
 
 ---
 
+## CI Badges (v0.122.0)
+
+The Apache Jena pass rate is published as a CI badge after each main-branch build.
+The badge JSON is written to `results/jena-badge.json` by the `jena-suite` CI job.
+
+To reference the current pass rate in documentation or a README:
+
+```markdown
+![Jena](results/jena-badge.json)
+```
+
+The badge data format follows the [shields.io endpoint schema](https://shields.io/endpoint):
+
+```json
+{
+  "schemaVersion": 1,
+  "label": "Jena",
+  "message": "99% pass",
+  "color": "green"
+}
+```
+
+Color thresholds: green ≥ 95%, yellow ≥ 90%, orange ≥ 80%, red < 80%.
+
+---
+
 ## How to Regenerate
 
 ```bash

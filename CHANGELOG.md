@@ -13,6 +13,52 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.122.0] — 2026-05-26 — A17 God-Module Decomposition & Test Coverage Closure
+
+**Decomposes all eight remaining god-modules (H17-02): 0 source files exceed 1,000 LOC.
+CI file-size gate tightened from 1,800 to 1,000 lines. Five new pg_regress test suites added.
+All 290 pg_regress tests pass.**
+
+### Changed
+
+- **H17-02 / PERF-M-02** `src/sparql/expr/functions.rs` (was 1,252 LOC) rewritten as
+  a thin dispatch table (~90 LOC); logic extracted to seven sub-modules:
+  `string.rs`, `datetime.rs`, `numeric.rs`, `iri.rs`, `aggregate.rs`, `geo.rs`, `temporal.rs`.
+- **H17-02 / PERF-L-01** `src/storage/ops/scan.rs` (was 1,171 LOC) split: deduplication
+  helpers extracted to `src/storage/ops/dedup.rs`.
+- **H17-02** `src/bulk_load.rs` (was 1,173 LOC) converted to directory module;
+  JSON ingest extracted to `json_ingest.rs`, confidence helpers to `confidence.rs`.
+- **PERF-M-03** `pg_ripple_http/src/routing/admin_handlers.rs` (was 1,168 LOC) converted
+  to directory module; explorer page extracted to `explorer.rs`, diagnostic snapshot to `diagnostic.rs`.
+- **PERF-L-02** `src/llm/mod.rs` (was 1,071 LOC) split: Automated Ontology Mapping
+  functions (`suggest_mappings`, `kge_entity_similarity`, etc.) extracted to `mapping.rs`.
+- **H17-02** `src/datalog/compiler/mod.rs` (was 1,068 LOC) split: SQL helper functions
+  (`build_join_cond`, `render_comparison_term`, etc.) extracted to `helpers.rs`.
+- **H17-02** `src/gucs/registration/storage.rs` (was 1,058 LOC) split: v0.81.0+
+  GUC registrations extracted to `storage_late.rs` via `#[path]` sub-module.
+- **H17-02** `src/datalog/parser.rs` (was 1,030 LOC) split: test module extracted
+  to `parser_tests.rs` via `#[path]` declaration.
+- **CI gate tightened**: `lint-file-size` step updated from 1,800-line limit to 1,000-line
+  limit (Q13-04 v0.85.0, tightened v0.122.0 H17-02). Zero files exceed 1,000 LOC.
+
+### Added
+
+- **Test coverage** Five new pg_regress test suites covering v0.120.0 features:
+  - `v0120_diagnostic_snapshot.sql` — validates `diagnostic_report()` keys for HTTP
+    diagnostic-snapshot endpoint (DIAG-01 through DIAG-04)
+  - `v0120_read_replica_routing.sql` — validates `read_replica_dsn` GUC existence and
+    primary-fallback behaviour (REPLICA-01 through REPLICA-04)
+  - `v0120_compat_check.sql` — more thorough `compat_check()` JSON schema validation
+    (COMPAT-10 through COMPAT-14)
+  - `v0120_tenant_quota.sql` — validates tenant table schema and quota column
+    (QUOTA-01 through QUOTA-04)
+  - `v0122_module_splits.sql` — spot-checks public API for regressions from all splits
+    (SPLIT-01 through SPLIT-05)
+- **Migration script** `sql/pg_ripple--0.121.0--0.122.0.sql` (no schema changes).
+- **Roadmap file** `roadmap/v0.122.0.md` created.
+
+---
+
 ## [0.121.0] — 2026-05-19 — A17 Security Hardening & Bug Remediation
 
 **Closes the two High security findings from Assessment 17 (H17-01 SSRF bypass in

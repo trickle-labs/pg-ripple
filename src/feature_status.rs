@@ -445,7 +445,7 @@ mod pg_ripple {
                 None,
                 Some("ci/regress: jsonld_ingest_multi_graph.sql".to_string()),
                 Some("docs/src/features/loading-data.md".to_string()),
-                Some("src/bulk_load.rs: json_ld_load".to_string()),
+                Some("src/bulk_load/mod.rs: json_ld_load".to_string()),
             ),
             // ── Named JSON mapping (v0.73.0 JSON-MAPPING-01) ─────────────
             (
