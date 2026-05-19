@@ -2,17 +2,14 @@
 -- H17-01 / SEC-H-01: resolve_and_check_endpoint() replaces string-contains guard
 -- SEC-M-03: CGNAT (100.64.0.0/10), multicast (224.0.0.0/4), this-network (0.0.0.0/8),
 --           and IPv4-mapped IPv6 (::ffff:...) added to SSRF blocklist
-
 SET client_min_messages = warning;
 CREATE EXTENSION IF NOT EXISTS pg_ripple;
 SET client_min_messages = DEFAULT;
 SET search_path TO pg_ripple, public;
 LOAD '$libdir/pg_ripple';
 WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
-
 -- Cleanup any leftovers from previous runs
 DELETE FROM _pg_ripple.rule_library_federation WHERE name LIKE 'test-v0121%';
-
 -- SSRF-01: IPv6-mapped private address (::ffff:192.168.x.x) must be blocked
 -- Previously bypassed the string-contains guard; now caught by is_blocked_host()
 DO $do$
@@ -26,8 +23,8 @@ EXCEPTION WHEN others THEN
 END;
 $do$ LANGUAGE plpgsql;
 SELECT 'SSRF-01 IPv6-mapped blocked' AS ssrf_01_ipv6_mapped_ok;
-       ssrf_01_ipv6_mapped_ok        
---------------------------------------
+   ssrf_01_ipv6_mapped_ok    
+-----------------------------
  SSRF-01 IPv6-mapped blocked
 (1 row)
 
@@ -44,8 +41,8 @@ EXCEPTION WHEN others THEN
 END;
 $do$ LANGUAGE plpgsql;
 SELECT 'SSRF-02 CGNAT blocked' AS ssrf_02_cgnat_ok;
- ssrf_02_cgnat_ok 
-------------------
+   ssrf_02_cgnat_ok    
+-----------------------
  SSRF-02 CGNAT blocked
 (1 row)
 
@@ -62,8 +59,8 @@ EXCEPTION WHEN others THEN
 END;
 $do$ LANGUAGE plpgsql;
 SELECT 'SSRF-03 multicast blocked' AS ssrf_03_multicast_ok;
- ssrf_03_multicast_ok 
-----------------------
+   ssrf_03_multicast_ok    
+---------------------------
  SSRF-03 multicast blocked
 (1 row)
 
@@ -80,8 +77,8 @@ EXCEPTION WHEN others THEN
 END;
 $do$ LANGUAGE plpgsql;
 SELECT 'SSRF-04 this-network blocked' AS ssrf_04_thisnet_ok;
- ssrf_04_thisnet_ok 
---------------------
+      ssrf_04_thisnet_ok      
+------------------------------
  SSRF-04 this-network blocked
 (1 row)
 
@@ -97,8 +94,8 @@ EXCEPTION WHEN others THEN
 END;
 $do$ LANGUAGE plpgsql;
 SELECT 'SSRF-05 loopback still blocked' AS ssrf_05_loopback_ok;
- ssrf_05_loopback_ok 
----------------------
+      ssrf_05_loopback_ok       
+--------------------------------
  SSRF-05 loopback still blocked
 (1 row)
 
@@ -117,8 +114,8 @@ EXCEPTION WHEN others THEN
 END;
 $do$ LANGUAGE plpgsql;
 SELECT 'SSRF-06 public URI passes SSRF check' AS ssrf_06_public_uri_ok;
-       ssrf_06_public_uri_ok        
--------------------------------------
+        ssrf_06_public_uri_ok         
+--------------------------------------
  SSRF-06 public URI passes SSRF check
 (1 row)
 

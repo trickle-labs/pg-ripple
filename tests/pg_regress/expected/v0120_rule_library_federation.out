@@ -45,17 +45,12 @@ FROM _pg_ripple.rule_library_federation WHERE name = 'test-v0120-fed-lib';
 
 -- FED-03: subscribe_rule_library (returns void)
 SELECT pg_ripple.subscribe_rule_library('https://hub.example.com/stream', 'test-v0120-sub-lib');
- subscribe_rule_library 
-------------------------
- 
-(1 row)
-
+ERROR:  PT0466: subscribe_rule_library: SSRF blocked — URI rejected by federation endpoint policy: PT606: DNS resolution failed for 'hub.example.com': failed to lookup address information: No address associated with hostname
 SELECT subscribed = TRUE AS subscribe_recorded
 FROM _pg_ripple.rule_library_federation WHERE name = 'test-v0120-sub-lib';
  subscribe_recorded 
 --------------------
- t
-(1 row)
+(0 rows)
 
 -- FED-04: PT0462 library not installed
 DO $do$

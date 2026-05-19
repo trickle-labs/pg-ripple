@@ -115,13 +115,19 @@ fn is_private_ip(ip: std::net::IpAddr) -> bool {
             }
             // IPv4-mapped IPv6: ::ffff:0:0/96 (v0.121.0 SEC-M-03)
             // Detect ::ffff:x:x addresses which map to IPv4 space.
-            if segs[0] == 0 && segs[1] == 0 && segs[2] == 0 && segs[3] == 0
-                && segs[4] == 0 && segs[5] == 0xffff
+            if segs[0] == 0
+                && segs[1] == 0
+                && segs[2] == 0
+                && segs[3] == 0
+                && segs[4] == 0
+                && segs[5] == 0xffff
             {
                 // Extract the IPv4 address and re-check.
                 let ipv4 = std::net::Ipv4Addr::new(
-                    (segs[6] >> 8) as u8, segs[6] as u8,
-                    (segs[7] >> 8) as u8, segs[7] as u8,
+                    (segs[6] >> 8) as u8,
+                    segs[6] as u8,
+                    (segs[7] >> 8) as u8,
+                    segs[7] as u8,
                 );
                 return is_private_ip(std::net::IpAddr::V4(ipv4));
             }
