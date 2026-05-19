@@ -8,7 +8,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 
 use crate::common::{AppState, check_auth, json_error, redacted_error};
-use crate::spi_bridge::execute_sparql_with_traceparent;
+use crate::spi_bridge::{execute_sparql_with_traceparent, execute_sparql_with_traceparent_routed};
 // Re-use types and constants declared in parent routing module.
 use super::{
     CT_CSV, CT_FORM, CT_JSONLD, CT_NTRIPLES, CT_SPARQL_JSON, CT_SPARQL_QUERY, CT_SPARQL_UPDATE,
@@ -40,12 +40,23 @@ pub(crate) async fn sparql_get(
         }
     };
 
+    // Feature 12 (v0.120.0): read-replica routing.
+    let use_replica = params.replica.as_deref() == Some("ok");
+
     let accept = negotiate_accept(&headers, &query);
     let traceparent = headers
         .get("traceparent")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_owned());
-    execute_sparql_with_traceparent(&state, &query, false, &accept, traceparent.as_deref()).await
+    execute_sparql_with_traceparent_routed(
+        &state,
+        &query,
+        false,
+        &accept,
+        traceparent.as_deref(),
+        use_replica,
+    )
+    .await
 }
 
 // ─── SPARQL POST handler ─────────────────────────────────────────────────────
@@ -53,11 +64,15 @@ pub(crate) async fn sparql_get(
 pub(crate) async fn sparql_post(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
+    Query(params): Query<SparqlParams>,
     body: Body,
 ) -> Response {
     if let Err(r) = check_auth(&state, &headers) {
         return r;
     }
+
+    // Feature 12 (v0.120.0): read-replica routing via query parameter.
+    let use_replica = params.replica.as_deref() == Some("ok");
 
     let content_type = headers
         .get("content-type")
@@ -87,12 +102,13 @@ pub(crate) async fn sparql_post(
 
     if content_type.starts_with(CT_SPARQL_QUERY) {
         let accept = negotiate_accept(&headers, &body_str);
-        return execute_sparql_with_traceparent(
+        return execute_sparql_with_traceparent_routed(
             &state,
             &body_str,
             false,
             &accept,
             traceparent.as_deref(),
+            use_replica,
         )
         .await;
     }
@@ -110,8 +126,11 @@ pub(crate) async fn sparql_post(
     }
 
     if content_type.starts_with(CT_FORM) {
-        let params: SparqlParams = serde_urlencoded::from_str(&body_str).unwrap_or_default();
-        if let Some(update) = params.update {
+        let form_params: SparqlParams = serde_urlencoded::from_str(&body_str).unwrap_or_default();
+        // Form replica override takes precedence if not already set.
+        let effective_use_replica =
+            use_replica || form_params.replica.as_deref() == Some("ok");
+        if let Some(update) = form_params.update {
             let accept = negotiate_accept(&headers, &update);
             return execute_sparql_with_traceparent(
                 &state,
@@ -122,14 +141,15 @@ pub(crate) async fn sparql_post(
             )
             .await;
         }
-        if let Some(query) = params.query {
+        if let Some(query) = form_params.query {
             let accept = negotiate_accept(&headers, &query);
-            return execute_sparql_with_traceparent(
+            return execute_sparql_with_traceparent_routed(
                 &state,
                 &query,
                 false,
                 &accept,
                 traceparent.as_deref(),
+                effective_use_replica,
             )
             .await;
         }

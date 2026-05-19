@@ -1,0 +1,21 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+# PodDisruptionBudget (Feature 9, v0.120.0): prevent Kubernetes from evicting
+# all pg_ripple pods simultaneously during voluntary disruptions (node drains,
+# cluster upgrades, etc.).  Defaults to minAvailable: 1 so at least one pod
+# remains schedulable while others are being replaced.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pg-ripple.fullname" . }}
+  labels:
+    {{- include "pg-ripple.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- else if .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pg-ripple.selectorLabels" . | nindent 6 }}
+{{- end }}

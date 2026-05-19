@@ -69,6 +69,9 @@ pub(crate) const CT_FORM: &str = "application/x-www-form-urlencoded";
 pub(crate) struct SparqlParams {
     query: Option<String>,
     update: Option<String>,
+    /// Feature 12 (v0.120.0): when present and equal to "ok", read-only queries
+    /// are proxied to the read-replica DSN (if configured).
+    replica: Option<String>,
 }
 
 // ─── RAG request / response ───────────────────────────────────────────────────
@@ -236,6 +239,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route("/explorer", get(admin_handlers::explorer_page))
         // v0.118.0 Feature 1: Benchmark history endpoint.
         .route("/admin/bench-history", get(admin_handlers::bench_history))
+        // v0.120.0 Feature 8: Diagnostic snapshot endpoint.
+        .route(
+            "/admin/diagnostic-snapshot",
+            get(admin_handlers::diagnostic_snapshot),
+        )
         // v0.62.0: Arrow Flight bulk-export endpoint.
         .route("/flight/do_get", post(flight_do_get))
         // v0.73.0 SUB-01: Live SPARQL subscription SSE endpoint.
@@ -315,6 +323,15 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
             "/rule-libraries",
             get(rule_library_handler::list_rule_libraries),
         )
+        // v0.120.0 Feature 11: Rule-library federation (stream + subscribe).
+        .route(
+            "/rule-libraries/{name}/stream",
+            get(rule_library_handler::stream_rule_library),
+        )
+        .route(
+            "/rule-libraries/{name}/subscribe",
+            post(rule_library_handler::subscribe_rule_library),
+        )
         // v0.105.0: Guided rule authoring & LLM rule extraction
         .route(
             "/rules/draft",
@@ -384,6 +401,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/tenants/{name}",
             get(tenant_handlers::get_tenant).delete(tenant_handlers::delete_tenant),
+        )
+        // v0.120.0: Tenant quota endpoints.
+        .route(
+            "/tenants/{name}/quota",
+            get(tenant_handlers::get_tenant_quota).post(tenant_handlers::update_tenant_quota),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)

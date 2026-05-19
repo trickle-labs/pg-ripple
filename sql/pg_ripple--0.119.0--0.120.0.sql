@@ -1,0 +1,14 @@
+-- Migration 0.119.0 → 0.120.0
+-- ============================================================
+-- v0.120.0: PageRank explain improvements, admin diagnostic snapshot,
+-- tenant quota HTTP endpoints, Rule-Library Federation SQL functions,
+-- read-replica routing, Helm PodDisruptionBudget, per-tenant Helm values.
+--
+-- Schema changes: adds publish_rule_library() and subscribe_rule_library()
+-- SQL functions (implemented in Rust via pg_extern).  No new tables, columns,
+-- or indices are added by this migration; all runtime state required by
+-- Rule-Library Federation is created on demand by the Rust functions themselves
+-- (IF NOT EXISTS).
+--
+-- No DDL changes are required; the new functions are compiled from Rust and
+-- are installed automatically by CREATE/ALTER EXTENSION.

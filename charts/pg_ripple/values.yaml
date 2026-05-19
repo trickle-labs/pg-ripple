@@ -127,3 +127,15 @@ metrics:
     enabled: false
     namespace: ""
     interval: "30s"
+
+# ── PodDisruptionBudget (Feature 9, v0.120.0) ────────────────────────────────
+# Ensures at least `minAvailable` pg_ripple pods remain available during
+# voluntary disruptions (node drains, Kubernetes upgrades, etc.).
+# Set enabled: true and minAvailable: 1 for single-replica deployments,
+# or minAvailable: 2 for HA deployments with 3+ replicas.
+podDisruptionBudget:
+  enabled: true
+  # -- Minimum number of available pods during disruptions.
+  minAvailable: 1
+  # -- Alternative: maximum unavailable pods. Leave empty to use minAvailable.
+  maxUnavailable: ""

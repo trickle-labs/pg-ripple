@@ -757,3 +757,26 @@ COMMENT ON TABLE _pg_ripple.federation_circuit_state IS
     name = "v0119_federation_circuit_state",
     requires = ["v0118_privacy_bench_tables"]
 );
+
+// v0.120.0: Rule-Library Federation catalog table.
+pgrx::extension_sql!(
+    r#"
+-- Rule-Library Federation table (v0.120.0 Feature 11)
+-- Tracks published and subscribed rule libraries for federation.
+-- published=true:  this instance exposes the library via HTTP streaming.
+-- subscribed=true: this instance pulls rules from source_uri.
+CREATE TABLE IF NOT EXISTS _pg_ripple.rule_library_federation (
+    name            TEXT        PRIMARY KEY,
+    endpoint_uri    TEXT        NOT NULL,
+    published       BOOLEAN     NOT NULL DEFAULT FALSE,
+    subscribed      BOOLEAN     NOT NULL DEFAULT FALSE,
+    source_uri      TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE _pg_ripple.rule_library_federation IS
+    'Rule-Library Federation registry (v0.120.0 Feature 11). '
+    'Tracks which rule libraries are published or subscribed on this instance.';
+"#,
+    name = "v0120_rule_library_federation",
+    requires = ["v0119_federation_circuit_state"]
+);

@@ -272,3 +272,165 @@ pub(crate) async fn delete_tenant(
         }
     }
 }
+
+// ── GET /tenants/:name/quota (Feature v0.120.0) ───────────────────────────────
+
+/// Get quota settings and current usage for a tenant.
+pub(crate) async fn get_tenant_quota(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+) -> Response {
+    if let Err(r) = check_auth(&state, &headers) {
+        return r;
+    }
+    if !is_valid_tenant_name(&name) {
+        return json_response(
+            StatusCode::BAD_REQUEST,
+            serde_json::json!({"error": "invalid_tenant_name"}),
+        );
+    }
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+    let row = match client
+        .query_opt(
+            "SELECT t.tenant_name, t.quota_triples, \
+                    COALESCE(ts.triple_count, 0) AS triple_count \
+             FROM _pg_ripple.tenants t \
+             LEFT JOIN LATERAL ( \
+               SELECT triple_count \
+               FROM pg_ripple.tenant_stats() \
+               WHERE tenant_name = $1 \
+             ) ts ON TRUE \
+             WHERE t.tenant_name = $1",
+            &[&name],
+        )
+        .await
+    {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return json_response(
+                StatusCode::NOT_FOUND,
+                serde_json::json!({"error": "not_found", "detail": format!("tenant '{name}' not found")}),
+            );
+        }
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "quota_query_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+    let quota_triples: i64 = row.get(1);
+    let triple_count: i64 = row.get(2);
+    let remaining = if quota_triples > 0 {
+        serde_json::json!(quota_triples - triple_count)
+    } else {
+        serde_json::json!(null)
+    };
+    json_response(
+        StatusCode::OK,
+        serde_json::json!({
+            "tenant":         name,
+            "quota_triples":  quota_triples,
+            "triple_count":   triple_count,
+            "remaining":      remaining,
+            "quota_enforced": quota_triples > 0,
+        }),
+    )
+}
+
+// ── POST /tenants/:name/quota (Feature v0.120.0) ──────────────────────────────
+
+/// Request body for updating a tenant's quota.
+#[derive(Debug, Deserialize)]
+pub struct UpdateQuotaBody {
+    pub quota_triples: i64,
+}
+
+/// Create or update the triple quota for a tenant.
+pub(crate) async fn update_tenant_quota(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+    body: Body,
+) -> Response {
+    if let Err(r) = check_auth_write(&state, &headers) {
+        return r;
+    }
+    if !is_valid_tenant_name(&name) {
+        return json_response(
+            StatusCode::BAD_REQUEST,
+            serde_json::json!({"error": "invalid_tenant_name"}),
+        );
+    }
+    let bytes = match axum::body::to_bytes(body, 64 * 1024).await {
+        Ok(b) => b,
+        Err(_) => {
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "read_error"}),
+            );
+        }
+    };
+    let req: UpdateQuotaBody = match serde_json::from_slice(&bytes) {
+        Ok(r) => r,
+        Err(e) => {
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({"error": "invalid_json", "detail": format!("{e}")}),
+            );
+        }
+    };
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+    // Update quota in the tenants catalog.
+    match client
+        .execute(
+            "UPDATE _pg_ripple.tenants SET quota_triples = $2 WHERE tenant_name = $1",
+            &[&name, &req.quota_triples],
+        )
+        .await
+    {
+        Ok(0) => json_response(
+            StatusCode::NOT_FOUND,
+            serde_json::json!({"error": "not_found", "detail": format!("tenant '{name}' not found")}),
+        ),
+        Ok(_) => json_response(
+            StatusCode::OK,
+            serde_json::json!({
+                "status":        "updated",
+                "tenant":        name,
+                "quota_triples": req.quota_triples,
+            }),
+        ),
+        Err(e) => {
+            state.metrics.record_error();
+            redacted_error(
+                "quota_update_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+        }
+    }
+}

@@ -36,7 +36,7 @@ use common::{AppState, env_or};
 /// Connections to older extension versions log a prominent warning. The extension
 /// is still served (degraded mode) so that rolling upgrades do not hard-fail.
 /// Set `PG_RIPPLE_HTTP_STRICT_COMPAT=1` to convert the warning to a fatal startup error.
-const COMPATIBLE_EXTENSION_MIN: &str = "0.118.0";
+const COMPATIBLE_EXTENSION_MIN: &str = "0.119.0";
 
 /// Check that the installed pg_ripple extension version is within the known-compatible
 /// range for this pg_ripple_http build.  Logs a warning if it is not.
@@ -347,6 +347,32 @@ async fn main() {
     let auth_realm =
         std::env::var("PG_RIPPLE_HTTP_AUTH_REALM").unwrap_or_else(|_| "pg_ripple".to_owned());
     tracing::debug!("auth realm: {auth_realm}");
+
+    // Feature 12 (v0.120.0): optional read-replica pool.
+    let replica_pool = if let Ok(replica_dsn) = std::env::var("PG_RIPPLE_HTTP_REPLICA_DSN") {
+        if replica_dsn.trim().is_empty() {
+            None
+        } else {
+            let mut replica_cfg = Config::new();
+            replica_cfg.url = Some(replica_dsn.clone());
+            replica_cfg.pool = Some(deadpool_postgres::PoolConfig::new(pool_size));
+            match replica_cfg.create_pool(Some(Runtime::Tokio1), NoTls) {
+                Ok(p) => {
+                    tracing::info!(
+                        "PG_RIPPLE_HTTP_REPLICA_DSN set: read-only SPARQL requests with ?replica=ok will be routed to the replica"
+                    );
+                    Some(p)
+                }
+                Err(e) => {
+                    tracing::warn!("PG_RIPPLE_HTTP_REPLICA_DSN set but pool creation failed: {e} — replica routing disabled");
+                    None
+                }
+            }
+        }
+    } else {
+        None
+    };
+
     let state = Arc::new(AppState {
         pool,
         auth_token,
@@ -371,6 +397,8 @@ async fn main() {
         metrics_token,
         // L16-06 (v0.117.0): configurable WWW-Authenticate realm.
         auth_realm,
+        // Feature 12 (v0.120.0): optional read-replica pool.
+        replica_pool,
     });
 
     // CORS layer — wildcard "*" requires explicit opt-in; empty means deny all cross-origin.

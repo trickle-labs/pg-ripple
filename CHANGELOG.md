@@ -13,6 +13,53 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.120.0] — 2026-06-18 — PageRank Explain, Admin Diagnostic Snapshot, Tenant Quota API, Rule-Library Federation, Read-Replica Routing, Helm PodDisruptionBudget
+
+**Nine features across the HTTP companion and Helm chart: improved PageRank explain
+with URL-decoding and score lookup; admin diagnostic snapshot; tenant quota HTTP
+endpoints; Rule-Library Federation (publish/subscribe); read-replica routing via
+`?replica=ok`; per-tenant Helm values recipe; Helm PodDisruptionBudget; and
+compatibility minimum bump to v0.119.0.**
+
+### Added
+
+- **Feature 7** `GET /pagerank/explain/{node_iri}`: URL-decodes the node IRI,
+  looks up the current PageRank score from `_pg_ripple.pagerank_scores`, and
+  returns a richer JSON response `{"node": "...", "score": 0.xx,
+  "top_contributors": [...], "method": "datalog_pagerank"}` with `depth`,
+  `contributor`, `contribution`, and `path` fields per contributor.
+
+- **Feature 8** `GET /admin/diagnostic-snapshot` (requires write auth): collects
+  all `_pg_ripple.*` table row counts, non-sensitive GUC values, extension and
+  HTTP companion versions, and a Prometheus metrics snapshot into a single JSON.
+
+- **Tenant Quota HTTP Endpoints**: `GET /tenants/{name}/quota` returns current
+  usage and remaining capacity; `POST /tenants/{name}/quota` updates
+  `quota_triples`.
+
+- **Feature 11 — Rule-Library Federation**: SQL functions
+  `pg_ripple.publish_rule_library(name, endpoint_uri)` and
+  `pg_ripple.subscribe_rule_library(source_uri, name)`. HTTP:
+  `GET /rule-libraries/{name}/stream` and `POST /rule-libraries/{name}/subscribe`.
+
+- **Feature 12 — Read-Replica Routing**: `?replica=ok` on SPARQL GET/POST routes
+  read-only queries to a standby pool (`PG_RIPPLE_HTTP_REPLICA_DSN`).
+
+- **`just generate-helm-values TENANT=<name>`** recipe for per-tenant Helm fragments.
+
+- **Helm PodDisruptionBudget** (`charts/pg_ripple/templates/pdb.yaml`): enabled
+  by default with `minAvailable: 1`.
+
+### Changed
+
+- `COMPATIBLE_EXTENSION_MIN` bumped to `"0.119.0"` in `pg_ripple_http`.
+
+### Fixed
+
+- `sparql_post` handler: `?replica=ok` now honoured on POST requests.
+
+---
+
 ## [0.119.0] — 2026-06-17 — OWL propertyChainAxiom, SERVICE Circuit Breaker, Schema-Aware NL→SPARQL
 
 **Three new features: `owl:propertyChainAxiom` support in OWL-RL built-ins (Feature 5);

@@ -88,6 +88,11 @@ pub struct AppState {
     /// L16-06 (v0.117.0): `Bearer realm=` value used in `WWW-Authenticate` response header.
     /// Read from `PG_RIPPLE_HTTP_AUTH_REALM` at startup; defaults to `"pg_ripple"`.
     pub auth_realm: String,
+    /// Feature 12 (v0.120.0): Optional read-replica connection pool.
+    /// When `Some`, read-only SPARQL SELECT/CONSTRUCT/ASK requests with
+    /// `?replica=ok` are routed to this pool instead of the primary.
+    /// Configured via `PG_RIPPLE_HTTP_REPLICA_DSN` environment variable.
+    pub replica_pool: Option<Pool>,
 }
 
 // ─── Configuration ────────────────────────────────────────────────────────────
