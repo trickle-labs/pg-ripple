@@ -267,6 +267,34 @@ fn is_blocked_host(host: &str) -> bool {
     if host.starts_with("192.168.") {
         return true;
     }
+    // CGNAT: 100.64.0.0/10 (RFC 6598, v0.121.0 SEC-M-03)
+    if host
+        .strip_prefix("100.")
+        .and_then(|rest| rest.split('.').next())
+        .and_then(|s| s.parse::<u8>().ok())
+        .is_some_and(|second| (64..=127).contains(&second))
+    {
+        return true;
+    }
+    // Multicast: 224.0.0.0/4 (v0.121.0 SEC-M-03)
+    if host
+        .split('.')
+        .next()
+        .and_then(|s| s.parse::<u8>().ok())
+        .is_some_and(|first| (224..=239).contains(&first))
+    {
+        return true;
+    }
+    // This-network: 0.0.0.0/8 (v0.121.0 SEC-M-03)
+    if host.starts_with("0.") {
+        return true;
+    }
+    // IPv4-mapped IPv6: ::ffff: prefix (v0.121.0 SEC-M-03)
+    let h_lower_copy = h_lower.as_str();
+    if let Some(ipv4_part) = h_lower_copy.strip_prefix("::ffff:") {
+        // Extract IPv4 suffix and re-check as a plain host.
+        return is_blocked_host(ipv4_part);
+    }
     false
 }
 

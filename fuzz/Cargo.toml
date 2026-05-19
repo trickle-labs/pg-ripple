@@ -171,3 +171,10 @@ name = "skos_bundle"
 path = "fuzz_targets/skos_bundle.rs"
 test = false
 doc = false
+
+# H17-01 / SEC-H-01 (v0.121.0): SSRF URL validation path + rule-library NDJSON stream parser fuzz target.
+[[bin]]
+name = "rule_library_ssrf"
+path = "fuzz_targets/rule_library_ssrf.rs"
+test = false
+doc = false

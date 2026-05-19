@@ -1,0 +1,42 @@
+-- Migration: pg_ripple 0.120.0 → 0.121.0
+-- Theme: A17 security hardening & bug remediation
+--
+-- No schema changes required for this release.
+-- All changes are pure Rust/SQL function improvements:
+--
+-- Security fixes:
+--   H17-01 / SEC-H-01: subscribe_rule_library() SSRF guard replaced with
+--     resolve_and_check_endpoint() (proper DNS-resolution + IP-range validation).
+--   SEC-M-03: CGNAT (100.64.0.0/10, RFC 6598), IPv4 multicast (224.0.0.0/4),
+--     this-network (0.0.0.0/8), and IPv4-mapped IPv6 (::ffff:0:0/96) added to
+--     the SSRF blocklist in is_private_ip() and is_blocked_host().
+--   SEC-M-04: SAFETY-SQL comments added to format!-based DDL in datalog/magic.rs;
+--     let _ = Spi::run_with_args(...) silencing replaced with warning surfacing.
+--   SEC-L-01: Content-Type enforced as text/event-stream; charset=utf-8 on
+--     the /rule-libraries/{name}/stream SSE endpoint.
+--
+-- Bug fixes:
+--   BUG-M-01: Six let _ = pgrx::Spi::run(...) calls in maintenance_api.rs
+--     replaced with unwrap_or_else warning surfacing to eliminate silent degradation.
+--   BUG-M-02: let _ = Spi::run_with_args in kge.rs and llm/mod.rs replaced
+--     with unwrap_or_else warning surfacing.
+--   BUG-M-03: CLIPPY-OK comment added to datalog/conflict.rs:457 documenting
+--     the intentional side-effect-only parse_head_object call.
+--   BUG-L-01: Null-pointer guard already present in observability.rs (pre-existing).
+--
+-- Observability:
+--   OBS-L-01: mutation_journal::record_schema_op() added; called at end of
+--     publish_rule_library() and subscribe_rule_library() so schema-mutating
+--     rule-library operations appear in the PostgreSQL server log audit trail.
+--
+-- New fuzz target:
+--   rule_library_ssrf.rs covers the subscribe_rule_library() SSRF validation
+--   path and the rule-library NDJSON stream parser.
+--
+-- New pg_regress tests (v0121_ssrf_hardening.sql):
+--   SSRF-01: IPv6-mapped private address (::ffff:192.168.x.x) blocked
+--   SSRF-02: CGNAT range (100.64.x.x) blocked
+--   SSRF-03: IPv4 multicast (224.x.x.x) blocked
+--   SSRF-04: this-network (0.0.0.0) blocked
+--   SSRF-05: loopback regression guard
+--   SSRF-06: legitimate public URI passes SSRF check

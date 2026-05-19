@@ -407,7 +407,9 @@ fn run_magic_seminaive(
                 }
             })
             .collect();
-        let _ = pgrx::Spi::run_with_args(&format!("DROP TABLE IF EXISTS {tbl}"), &[]);
+        // SAFETY-SQL: tbl contains only alphanumeric chars and underscores (sanitised above); no injection possible.
+        pgrx::Spi::run_with_args(&format!("DROP TABLE IF EXISTS {tbl}"), &[])
+            .unwrap_or_else(|e| pgrx::warning!("magic sets: drop magic table warning: {e}"));
         pgrx::Spi::run_with_args(
             &format!(
                 "CREATE TEMP TABLE {tbl} \
@@ -453,7 +455,9 @@ fn run_magic_seminaive(
 
     // Create delta temp tables.
     for &pred_id in &derived_pred_ids {
-        let _ = pgrx::Spi::run_with_args(&format!("DROP TABLE IF EXISTS _dl_delta_{pred_id}"), &[]);
+        // SAFETY-SQL: pred_id is i64, no injection possible.
+        pgrx::Spi::run_with_args(&format!("DROP TABLE IF EXISTS _dl_delta_{pred_id}"), &[])
+            .unwrap_or_else(|e| pgrx::warning!("magic sets: drop delta table warning: {e}"));
         pgrx::Spi::run_with_args(
             &format!(
                 "CREATE TEMP TABLE _dl_delta_{pred_id} \

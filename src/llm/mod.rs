@@ -727,7 +727,7 @@ pub fn rag_context(question: &str, k: default!(i32, "10")) -> String {
 
     // ── Step 7: cache store ─────────────────────────────────────────────────
     // Best-effort: ignore errors so caching never breaks the main result.
-    let _ = pgrx::Spi::run_with_args(
+    pgrx::Spi::run_with_args(
         "INSERT INTO _pg_ripple.rag_cache \
              (question_hash, k, schema_digest, result, cached_at) \
          VALUES ($1, $2, $3, $4, now()) \
@@ -739,7 +739,8 @@ pub fn rag_context(question: &str, k: default!(i32, "10")) -> String {
             pgrx::datum::DatumWithOid::from(""),
             pgrx::datum::DatumWithOid::from(context.as_str()),
         ],
-    );
+    )
+    .unwrap_or_else(|e| pgrx::warning!("llm cache write: {e}"));
 
     context
 }

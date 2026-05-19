@@ -763,6 +763,9 @@ pub fn publish_rule_library(name: &str, endpoint_uri: &str) {
     .unwrap_or_else(|e| {
         pgrx::error!("PT0463: publish_rule_library: catalog write failed: {e}");
     });
+
+    // OBS-L-01 (v0.121.0): record schema-mutating operation in the audit trail.
+    crate::storage::mutation_journal::record_schema_op("publish_rule_library", name);
 }
 
 /// `pg_ripple.subscribe_rule_library(source_uri TEXT, name TEXT)`
@@ -784,28 +787,14 @@ pub fn subscribe_rule_library(source_uri: &str, name: &str) {
         pgrx::error!("PT0465: subscribe_rule_library: name must be 1-64 characters, got '{name}'");
     }
 
-    // SSRF guard: block loopback / private-network URIs.
-    let lower = source_uri.to_ascii_lowercase();
-    let is_ssrf_loopback = lower.contains("://localhost")
-        || lower.contains("://127.")
-        || lower.contains("://0.0.0.0")
-        || lower.contains("://::1")
-        || lower.contains("://[::1]");
-    let is_ssrf_private = lower.contains("://10.")
-        || lower.contains("://192.168.")
-        || (lower.contains("://172.") && {
-            lower
-                .split("://172.")
-                .nth(1)
-                .and_then(|s| s.split('.').next())
-                .and_then(|n| n.parse::<u8>().ok())
-                .map(|n| (16u8..=31u8).contains(&n))
-                .unwrap_or(false)
-        });
-    if is_ssrf_loopback || is_ssrf_private {
+    // SSRF guard (H17-01 / SEC-H-01, v0.121.0): use the battle-tested
+    // resolve_and_check_endpoint() path which does DNS resolution + IP-range
+    // validation (RFC 1918, CGNAT, loopback, multicast, etc.) instead of
+    // naive string-contains matching that can be bypassed by hostname embedding.
+    if let Err(e) = crate::sparql::federation::policy::resolve_and_check_endpoint(source_uri) {
         pgrx::error!(
             "PT0466: subscribe_rule_library: SSRF blocked — \
-             loopback and private-network URIs are not permitted: '{source_uri}'"
+             URI rejected by federation endpoint policy: {e}"
         );
     }
 
@@ -835,4 +824,7 @@ pub fn subscribe_rule_library(source_uri: &str, name: &str) {
     .unwrap_or_else(|e| {
         pgrx::error!("PT0467: subscribe_rule_library: catalog write failed: {e}");
     });
+
+    // OBS-L-01 (v0.121.0): record schema-mutating operation in the audit trail.
+    crate::storage::mutation_journal::record_schema_op("subscribe_rule_library", name);
 }

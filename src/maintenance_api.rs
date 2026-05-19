@@ -32,16 +32,18 @@ mod pg_ripple {
             // VACUUM cannot run inside a transaction block, so we use
             // ANALYZE instead, which has the same effect on planner statistics
             // and can run inside a transaction.
-            let _ = pgrx::Spi::run(&format!(
+            pgrx::Spi::run(&format!(
                 "ANALYZE _pg_ripple.vp_{p_id}_delta; \
                  ANALYZE _pg_ripple.vp_{p_id}_main; \
                  ANALYZE _pg_ripple.vp_{p_id}_tombstones"
-            ));
+            ))
+            .unwrap_or_else(|e| pgrx::warning!("vacuum: ANALYZE VP table error: {e}"));
             vacuumed += 1;
         }
 
         // Analyze vp_rare as well.
-        let _ = pgrx::Spi::run("ANALYZE _pg_ripple.vp_rare");
+        pgrx::Spi::run("ANALYZE _pg_ripple.vp_rare")
+            .unwrap_or_else(|e| pgrx::warning!("vacuum: ANALYZE vp_rare error: {e}"));
 
         pgrx::log!("pg_ripple.vacuum: analyzed {} VP table groups", vacuumed);
         vacuumed
@@ -68,13 +70,15 @@ mod pg_ripple {
         for p_id in &pred_ids {
             // REINDEX CONCURRENTLY cannot run inside a transaction block;
             // use plain REINDEX instead (safe for maintenance windows).
-            let _ = pgrx::Spi::run(&format!(
+            pgrx::Spi::run(&format!(
                 "REINDEX TABLE _pg_ripple.vp_{p_id}_delta; \
                  REINDEX TABLE _pg_ripple.vp_{p_id}_main"
-            ));
+            ))
+            .unwrap_or_else(|e| pgrx::warning!("reindex: REINDEX VP table error: {e}"));
             reindexed += 1;
         }
-        let _ = pgrx::Spi::run("REINDEX TABLE _pg_ripple.vp_rare");
+        pgrx::Spi::run("REINDEX TABLE _pg_ripple.vp_rare")
+            .unwrap_or_else(|e| pgrx::warning!("reindex: REINDEX vp_rare error: {e}"));
 
         pgrx::log!("pg_ripple.reindex: reindexed {} VP table groups", reindexed);
         reindexed
@@ -162,7 +166,8 @@ mod pg_ripple {
                 "INSERT INTO _pg_ripple_live_ids {}",
                 union_parts.join(" UNION ALL ")
             );
-            let _ = pgrx::Spi::run(&sql);
+            pgrx::Spi::run(&sql)
+                .unwrap_or_else(|e| pgrx::warning!("vacuum_dictionary: insert batch error: {e}"));
         }
 
         // Delete dictionary entries not referenced by any live ID.
@@ -269,11 +274,12 @@ mod pg_ripple {
         .unwrap_or_else(|e| pgrx::error!("enable_graph_rls: error creating policy: {e}"));
 
         // Record that RLS is enabled in the predicates catalog metadata.
-        let _ = pgrx::Spi::run(
+        pgrx::Spi::run(
             "INSERT INTO _pg_ripple.graph_access (role_name, graph_id, permission) \
              VALUES ('__rls_enabled__', -1, 'admin') \
              ON CONFLICT DO NOTHING",
-        );
+        )
+        .unwrap_or_else(|e| pgrx::warning!("enable_graph_rls: catalog write warning: {e}"));
 
         true
     }

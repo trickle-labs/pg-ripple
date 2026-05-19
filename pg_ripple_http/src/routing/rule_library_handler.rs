@@ -194,9 +194,10 @@ pub async fn stream_rule_library(
         ndjson.push('\n');
     }
 
+    // SEC-L-01 (v0.121.0): enforce explicit Content-Type with charset on the stream response.
     Response::builder()
         .status(StatusCode::OK)
-        .header("content-type", "application/x-ndjson")
+        .header("content-type", "text/event-stream; charset=utf-8")
         .header("x-rule-library-name", name)
         .body(Body::from(ndjson))
         .unwrap_or_else(|_| {

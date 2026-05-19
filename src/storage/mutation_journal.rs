@@ -149,3 +149,15 @@ fn graph_id_to_iri(g_id: i64) -> String {
     }
     crate::dictionary::decode(g_id).unwrap_or_else(|| format!("__unknown_graph_{g_id}"))
 }
+
+/// Record a schema-mutating operation in the PostgreSQL server log.
+///
+/// Used by schema-level operations (publish_rule_library, subscribe_rule_library,
+/// etc.) so that all schema mutations appear in the audit trail (OBS-L-01, v0.121.0).
+///
+/// `op`     — the operation name (e.g. `"publish_rule_library"`)
+/// `target` — the target identifier (e.g. the library name)
+#[inline]
+pub fn record_schema_op(op: &str, target: &str) {
+    pgrx::log!("pg_ripple mutation_journal: schema-op={op} target={target}");
+}

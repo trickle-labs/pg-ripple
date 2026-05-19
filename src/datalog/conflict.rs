@@ -454,7 +454,7 @@ mod tests {
         // A rule where the head object is a constant literal — parse should not panic.
         let rule = "?x <http://ex.org/eligible> \"true\" :- ?x <http://ex.org/age> ?a .";
         // Result may be Some or None depending on dictionary state; just assert no panic.
-        let _ = parse_head_object(rule);
+        // CLIPPY-OK: side-effect only — errors from parse_head_object are expected and non-fatal here.\n        let _ = parse_head_object(rule);
     }
 
     #[pg_test]

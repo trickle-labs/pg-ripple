@@ -13,6 +13,62 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.121.0] — 2026-05-19 — A17 Security Hardening & Bug Remediation
+
+**Closes the two High security findings from Assessment 17 (H17-01 SSRF bypass in
+`subscribe_rule_library`, SEC-M-03 CGNAT/multicast SSRF gaps) and all medium/low
+bug and security items. All 284 pg_regress tests pass.**
+
+### Security
+
+- **H17-01 / SEC-H-01** `subscribe_rule_library()` SSRF guard replaced:
+  naive string-contains matching (`lower.contains("://127.")` etc.) that could
+  be bypassed by hostname embedding replaced with
+  `resolve_and_check_endpoint(source_uri)?` from
+  `src/sparql/federation/policy.rs`. The new guard performs actual DNS
+  resolution and validates all resolved IP addresses against the full blocklist,
+  preventing DNS rebinding attacks and URL-embedding bypasses.
+- **SEC-M-03** SSRF blocklist expanded with four new ranges
+  (ci/regress: `v0121_ssrf_hardening.sql` — SSRF-01 through SSRF-04):
+  - CGNAT `100.64.0.0/10` (RFC 6598) added to `is_private_ip()` and `is_blocked_host()` — ci/regress: SSRF-02
+  - IPv4 multicast `224.0.0.0/4` added — ci/regress: SSRF-03
+  - This-network `0.0.0.0/8` added — ci/regress: SSRF-04
+  - IPv4-mapped IPv6 `::ffff:0:0/96` added with recursive IPv4 re-check — ci/regress: SSRF-01
+- **SEC-M-04** `// SAFETY-SQL: pred_id is i64, no injection possible` comments
+  added to three `format!`-based DDL calls in `src/datalog/magic.rs`; `let _ =`
+  silencing replaced with `unwrap_or_else(|e| pgrx::warning!(...))`.
+- **SEC-L-01** `Content-Type: text/event-stream; charset=utf-8` now explicitly
+  enforced on `/rule-libraries/{name}/stream` responses.
+
+### Fixed
+
+- **BUG-M-01** Six `let _ = pgrx::Spi::run(...)` calls in
+  `src/maintenance_api.rs` replaced with `unwrap_or_else(|e| pgrx::warning!)`
+  so ANALYZE/REINDEX errors surface to the user rather than silently failing.
+- **BUG-M-02** `let _ =` silencing in `src/kge.rs:234` and
+  `src/llm/mod.rs:730` replaced with `unwrap_or_else` warning surfacing.
+- **BUG-M-03** `// CLIPPY-OK: side-effect only — errors from parse_head_object
+  are expected and non-fatal here` comment added to `src/datalog/conflict.rs:457`.
+
+### Added
+
+- **OBS-L-01** `mutation_journal::record_schema_op(op, target)` helper added (ci/regress: `v0121_ssrf_hardening.sql`); called at end of
+  `publish_rule_library()` and `subscribe_rule_library()` for server-log audit trail
+  so schema-mutating rule-library operations appear in the PostgreSQL server log
+  audit trail.
+- **Fuzz target** `fuzz/fuzz_targets/rule_library_ssrf.rs` covers the
+  `subscribe_rule_library()` SSRF URL validation path and the rule-library
+  NDJSON stream parser. Registered in `fuzz/Cargo.toml`.
+- **pg_regress** `tests/pg_regress/sql/v0121_ssrf_hardening.sql` adds 7 SSRF
+  regression tests: IPv6-mapped private address blocked (SSRF-01), CGNAT range
+  blocked (SSRF-02), IPv4 multicast blocked (SSRF-03), this-network blocked
+  (SSRF-04), loopback regression guard (SSRF-05), public URI passes check
+  (SSRF-06), and version check (SSRF-07).
+- **Migration** `sql/pg_ripple--0.120.0--0.121.0.sql` — comment-only, no
+  schema changes.
+
+---
+
 ## [0.120.0] — 2026-06-18 — PageRank Explain, Admin Diagnostic Snapshot, Tenant Quota API, Rule-Library Federation, Read-Replica Routing, Helm PodDisruptionBudget
 
 **Nine features across the HTTP companion and Helm chart: improved PageRank explain
