@@ -39,8 +39,7 @@ posts (DOC-L-01), and RSA/paste advisory maintenance (SEC-M-01/SEC-M-02).**
 - **ERG-M-03** `docs/src/operations/read-replicas.md` — new page documenting
   `?replica=ok` routing semantics, eligible query types, pool exhaustion
   fallback, and Prometheus alerting recipes.
-- **DOC-M-01** Eight new rows (v0.113.0–v0.120.0) added to
-  `docs/src/operations/compatibility.md`.
+- **DOC-M-01** Eight new rows (v0.113.0–v0.120.0) added to `docs/src/operations/compatibility.md`.
 - **DOC-M-03** `docs/src/reference/sql-api.md` extended with function signatures,
   parameter descriptions, and examples for `bench_workload()`, `bench_workload_result()`,
   `publish_rule_library()`, `subscribe_rule_library()`, and all seven Allen's
@@ -58,9 +57,7 @@ posts (DOC-L-01), and RSA/paste advisory maintenance (SEC-M-01/SEC-M-02).**
 - **SEC-M-01** Extended RUSTSEC-2024-0436 and RUSTSEC-2023-0071 (RSA Marvin-attack)
   `audit.toml` expiry to 2027-01-01; updated comments with
   "RSA not used for untrusted input — re-evaluated Q3-2026" rationale.
-- **SEC-M-02** Added detailed mitigation rationale for RUSTSEC-2026-0104 (`paste`
-  proc-macro unsoundness) in `audit.toml` — verified compile-time-only with no
-  runtime impact.
+- **SEC-M-02** Added detailed mitigation rationale for RUSTSEC-2026-0104 (`paste` proc-macro unsoundness) in `audit.toml`; see `roadmap/v0.123.0.md` for full justification.
 - **COMPAT-01** `COMPATIBLE_EXTENSION_MIN` bumped to `"0.122.0"` in
   `pg_ripple_http/src/main.rs`.
 
