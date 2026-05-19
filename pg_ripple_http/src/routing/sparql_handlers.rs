@@ -128,8 +128,7 @@ pub(crate) async fn sparql_post(
     if content_type.starts_with(CT_FORM) {
         let form_params: SparqlParams = serde_urlencoded::from_str(&body_str).unwrap_or_default();
         // Form replica override takes precedence if not already set.
-        let effective_use_replica =
-            use_replica || form_params.replica.as_deref() == Some("ok");
+        let effective_use_replica = use_replica || form_params.replica.as_deref() == Some("ok");
         if let Some(update) = form_params.update {
             let accept = negotiate_accept(&headers, &update);
             return execute_sparql_with_traceparent(

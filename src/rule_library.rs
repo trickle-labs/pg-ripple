@@ -719,9 +719,7 @@ fn uninstall_library_inner(name: &str) {
 #[pg_extern(schema = "pg_ripple", name = "publish_rule_library")]
 pub fn publish_rule_library(name: &str, endpoint_uri: &str) {
     if name.is_empty() || name.len() > 64 {
-        pgrx::error!(
-            "PT0460: publish_rule_library: name must be 1-64 characters, got '{name}'"
-        );
+        pgrx::error!("PT0460: publish_rule_library: name must be 1-64 characters, got '{name}'");
     }
     if endpoint_uri.is_empty() {
         pgrx::error!("PT0461: publish_rule_library: endpoint_uri must not be empty");
@@ -760,10 +758,7 @@ pub fn publish_rule_library(name: &str, endpoint_uri: &str) {
          ON CONFLICT (name) DO UPDATE SET \
            endpoint_uri = EXCLUDED.endpoint_uri, \
            published    = TRUE",
-        &[
-            DatumWithOid::from(name),
-            DatumWithOid::from(endpoint_uri),
-        ],
+        &[DatumWithOid::from(name), DatumWithOid::from(endpoint_uri)],
     )
     .unwrap_or_else(|e| {
         pgrx::error!("PT0463: publish_rule_library: catalog write failed: {e}");
@@ -786,9 +781,7 @@ pub fn subscribe_rule_library(source_uri: &str, name: &str) {
         pgrx::error!("PT0464: subscribe_rule_library: source_uri must not be empty");
     }
     if name.is_empty() || name.len() > 64 {
-        pgrx::error!(
-            "PT0465: subscribe_rule_library: name must be 1-64 characters, got '{name}'"
-        );
+        pgrx::error!("PT0465: subscribe_rule_library: name must be 1-64 characters, got '{name}'");
     }
 
     // SSRF guard: block loopback / private-network URIs.
@@ -837,10 +830,7 @@ pub fn subscribe_rule_library(source_uri: &str, name: &str) {
            endpoint_uri = EXCLUDED.endpoint_uri, \
            subscribed   = TRUE, \
            source_uri   = EXCLUDED.source_uri",
-        &[
-            DatumWithOid::from(name),
-            DatumWithOid::from(source_uri),
-        ],
+        &[DatumWithOid::from(name), DatumWithOid::from(source_uri)],
     )
     .unwrap_or_else(|e| {
         pgrx::error!("PT0467: subscribe_rule_library: catalog write failed: {e}");

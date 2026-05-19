@@ -1045,7 +1045,10 @@ pub(crate) async fn diagnostic_snapshot(
                 .map(|r| {
                     let name: String = r.get(0);
                     let count: i64 = r.get(1);
-                    (name, serde_json::Value::Number(serde_json::Number::from(count)))
+                    (
+                        name,
+                        serde_json::Value::Number(serde_json::Number::from(count)),
+                    )
                 })
                 .collect();
             serde_json::Value::Object(map)

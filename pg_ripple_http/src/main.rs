@@ -364,7 +364,9 @@ async fn main() {
                     Some(p)
                 }
                 Err(e) => {
-                    tracing::warn!("PG_RIPPLE_HTTP_REPLICA_DSN set but pool creation failed: {e} — replica routing disabled");
+                    tracing::warn!(
+                        "PG_RIPPLE_HTTP_REPLICA_DSN set but pool creation failed: {e} — replica routing disabled"
+                    );
                     None
                 }
             }

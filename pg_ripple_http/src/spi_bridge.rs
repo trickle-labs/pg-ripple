@@ -43,7 +43,8 @@ pub(crate) async fn execute_sparql_with_traceparent(
     accept: &str,
     traceparent: Option<&str>,
 ) -> Response {
-    execute_sparql_with_traceparent_routed(state, query_text, is_update, accept, traceparent, false).await
+    execute_sparql_with_traceparent_routed(state, query_text, is_update, accept, traceparent, false)
+        .await
 }
 
 /// Internal version with explicit replica-routing flag.

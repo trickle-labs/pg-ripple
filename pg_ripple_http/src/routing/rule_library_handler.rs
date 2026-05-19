@@ -111,7 +111,9 @@ pub async fn stream_rule_library(
     // Validate library name.
     if name.is_empty()
         || name.len() > 64
-        || !name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        || !name
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     {
         return json_response(
             StatusCode::BAD_REQUEST,
@@ -222,7 +224,9 @@ pub async fn subscribe_rule_library(
 
     if name.is_empty()
         || name.len() > 64
-        || !name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        || !name
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     {
         return json_response(
             StatusCode::BAD_REQUEST,
@@ -284,7 +288,11 @@ pub async fn subscribe_rule_library(
             );
         }
         Err(e) => {
-            return redacted_error("remote_fetch_error", &e.to_string(), StatusCode::BAD_GATEWAY);
+            return redacted_error(
+                "remote_fetch_error",
+                &e.to_string(),
+                StatusCode::BAD_GATEWAY,
+            );
         }
     };
 
