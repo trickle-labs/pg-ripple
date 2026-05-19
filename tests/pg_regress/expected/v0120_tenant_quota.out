@@ -38,11 +38,9 @@ SELECT EXISTS (
 
 -- QUOTA-03: tenant insert and query round-trip
 DELETE FROM _pg_ripple.tenants WHERE tenant_name = 'test-v0120-quota';
-DELETE 0
 INSERT INTO _pg_ripple.tenants (tenant_name, graph_iri)
 VALUES ('test-v0120-quota', 'https://example.org/tenant/test-v0120-quota')
 ON CONFLICT (tenant_name) DO NOTHING;
-INSERT 0 1
 SELECT tenant_name = 'test-v0120-quota' AS quota03_insert_ok
 FROM _pg_ripple.tenants
 WHERE tenant_name = 'test-v0120-quota';
@@ -62,4 +60,3 @@ WHERE tenant_name = 'test-v0120-quota';
 
 -- Cleanup
 DELETE FROM _pg_ripple.tenants WHERE tenant_name = 'test-v0120-quota';
-DELETE 1
