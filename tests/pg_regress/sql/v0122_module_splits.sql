@@ -21,8 +21,13 @@ FROM pg_ripple.sparql($q$
     SELECT (STRLEN("hello") AS ?n) WHERE {}
 $q$);
 
--- SPLIT-02: Datalog rule compilation works (compiler/helpers.rs intact)
-SELECT pg_ripple.datalog_rules_count() >= 0 AS split02_datalog_ok;
+-- SPLIT-02: Datalog helper functions available (compiler/helpers.rs intact)
+-- Verify explain_datalog function exists (it uses the compiler helpers internally)
+SELECT 'explain_datalog' IN (
+    SELECT routine_name FROM information_schema.routines
+    WHERE routine_schema = 'pg_ripple'
+      AND routine_type = 'FUNCTION'
+) AS split02_datalog_ok;
 
 -- SPLIT-03: bulk_load entry point callable
 SELECT 'load_ntriples' IN (

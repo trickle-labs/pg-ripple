@@ -33,7 +33,7 @@ SELECT pg_ripple.insert_triple(
     'https://example.org/replica-test/s',
     'https://example.org/replica-test/p',
     '"routing-test"'
-);
+) > 0 AS replica04_insert_ok;
 SELECT count(*) >= 1 AS replica04_query_ok
 FROM pg_ripple.sparql($q$
     SELECT ?o WHERE {

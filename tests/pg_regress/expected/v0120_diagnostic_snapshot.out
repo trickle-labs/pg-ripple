@@ -23,7 +23,7 @@ WHERE key IN (
     'dictionary_size'
 );
  diag01_required_keys_present 
--------------------------------
+------------------------------
  t
 (1 row)
 

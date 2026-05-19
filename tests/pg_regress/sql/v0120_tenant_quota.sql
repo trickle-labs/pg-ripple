@@ -32,8 +32,8 @@ SELECT EXISTS (
 
 -- QUOTA-03: tenant insert and query round-trip
 DELETE FROM _pg_ripple.tenants WHERE tenant_name = 'test-v0120-quota';
-INSERT INTO _pg_ripple.tenants (tenant_name)
-VALUES ('test-v0120-quota')
+INSERT INTO _pg_ripple.tenants (tenant_name, graph_iri)
+VALUES ('test-v0120-quota', 'https://example.org/tenant/test-v0120-quota')
 ON CONFLICT (tenant_name) DO NOTHING;
 SELECT tenant_name = 'test-v0120-quota' AS quota03_insert_ok
 FROM _pg_ripple.tenants

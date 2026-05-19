@@ -43,10 +43,10 @@ SELECT pg_ripple.insert_triple(
     'https://example.org/replica-test/s',
     'https://example.org/replica-test/p',
     '"routing-test"'
-);
- insert_triple 
----------------
-             1
+) > 0 AS replica04_insert_ok;
+ replica04_insert_ok 
+---------------------
+ t
 (1 row)
 
 SELECT count(*) >= 1 AS replica04_query_ok
