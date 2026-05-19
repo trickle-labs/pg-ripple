@@ -28,12 +28,12 @@ bug and security items. All 284 pg_regress tests pass.**
   `src/sparql/federation/policy.rs`. The new guard performs actual DNS
   resolution and validates all resolved IP addresses against the full blocklist,
   preventing DNS rebinding attacks and URL-embedding bypasses.
-- **SEC-M-03** SSRF blocklist expanded with four new ranges:
-  - CGNAT `100.64.0.0/10` (RFC 6598) added to `is_private_ip()` and
-    `is_blocked_host()`
-  - IPv4 multicast `224.0.0.0/4` added
-  - This-network `0.0.0.0/8` added
-  - IPv4-mapped IPv6 `::ffff:0:0/96` added with recursive IPv4 re-check
+- **SEC-M-03** SSRF blocklist expanded with four new ranges
+  (ci/regress: `v0121_ssrf_hardening.sql` — SSRF-01 through SSRF-04):
+  - CGNAT `100.64.0.0/10` (RFC 6598) added to `is_private_ip()` and `is_blocked_host()` — ci/regress: SSRF-02
+  - IPv4 multicast `224.0.0.0/4` added — ci/regress: SSRF-03
+  - This-network `0.0.0.0/8` added — ci/regress: SSRF-04
+  - IPv4-mapped IPv6 `::ffff:0:0/96` added with recursive IPv4 re-check — ci/regress: SSRF-01
 - **SEC-M-04** `// SAFETY-SQL: pred_id is i64, no injection possible` comments
   added to three `format!`-based DDL calls in `src/datalog/magic.rs`; `let _ =`
   silencing replaced with `unwrap_or_else(|e| pgrx::warning!(...))`.
@@ -52,8 +52,8 @@ bug and security items. All 284 pg_regress tests pass.**
 
 ### Added
 
-- **OBS-L-01** `mutation_journal::record_schema_op(op, target)` helper added;
-  called at the end of `publish_rule_library()` and `subscribe_rule_library()`
+- **OBS-L-01** `mutation_journal::record_schema_op(op, target)` helper added (ci/regress: `v0121_ssrf_hardening.sql`); called at end of
+  `publish_rule_library()` and `subscribe_rule_library()` for server-log audit trail
   so schema-mutating rule-library operations appear in the PostgreSQL server log
   audit trail.
 - **Fuzz target** `fuzz/fuzz_targets/rule_library_ssrf.rs` covers the
