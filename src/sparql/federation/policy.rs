@@ -291,9 +291,8 @@ fn is_blocked_host(host: &str) -> bool {
     }
     // IPv4-mapped IPv6: ::ffff: prefix (v0.121.0 SEC-M-03)
     let h_lower_copy = h_lower.as_str();
-    if h_lower_copy.starts_with("::ffff:") {
+    if let Some(ipv4_part) = h_lower_copy.strip_prefix("::ffff:") {
         // Extract IPv4 suffix and re-check as a plain host.
-        let ipv4_part = &h_lower_copy[7..];
         return is_blocked_host(ipv4_part);
     }
     false
