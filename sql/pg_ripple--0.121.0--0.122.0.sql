@@ -1,0 +1,20 @@
+-- Migration 0.121.0 → 0.122.0: A17 god-module decomposition & test coverage closure
+--
+-- Schema changes: None (pure module restructuring and test additions).
+--
+-- Rust module changes (H17-02):
+--   • src/sparql/expr/functions.rs rewritten as thin dispatch table; logic
+--     extracted to sub-modules: string, iri, aggregate, geo, temporal, datetime, numeric
+--   • src/storage/ops/scan.rs: deduplication helpers extracted to dedup.rs
+--   • src/bulk_load.rs → src/bulk_load/ directory module;
+--     JSON ingest extracted to json_ingest.rs, confidence helpers to confidence.rs
+--   • pg_ripple_http/src/routing/admin_handlers/ → directory module;
+--     explorer page extracted to explorer.rs, diagnostic snapshot to diagnostic.rs
+--   • src/llm/mod.rs: Automated Ontology Mapping extracted to mapping.rs
+--   • src/datalog/compiler/mod.rs: SQL helper functions extracted to helpers.rs
+--   • src/gucs/registration/storage.rs: v0.81.0+ GUC registrations extracted to storage_late.rs
+--   • src/datalog/parser.rs: test module extracted to parser_tests.rs
+--   Result: 0 source files exceed 1,000 LOC (CI gate fully satisfied)
+--
+-- New SQL functions: None
+-- Deprecated functions: None

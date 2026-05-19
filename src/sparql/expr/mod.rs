@@ -27,10 +27,18 @@
 //!   variable as `raw_numeric`.
 
 // v0.90.0 CQ-02: pre-emptive split sub-modules
+// v0.122.0 H17-02: god-module decomposition — functions.rs split into 8 sub-modules
+pub(super) mod aggregate;
 pub mod aggregates;
 pub(super) mod cast;
+pub(super) mod datetime;
 pub mod filters;
 pub(super) mod functions;
+pub(super) mod geo;
+pub(super) mod iri;
+pub(super) mod numeric;
+pub(super) mod string;
+pub(super) mod temporal;
 
 pub(crate) use functions::{is_numeric_function, translate_function_value};
 

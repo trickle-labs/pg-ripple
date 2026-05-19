@@ -39,7 +39,7 @@ pub mod sql;
 pub use shacl_rules::compile_constraint_check;
 pub use sql::{compile_aggregate_rule, compile_on_demand_cte, compile_rule_delta_variants_to};
 
-use crate::datalog::{ArithOp, Atom, BodyLiteral, CompareOp, Rule, StringBuiltin, Term};
+use crate::datalog::{ArithOp, Atom, BodyLiteral, Rule, StringBuiltin, Term};
 use pgrx::datum::DatumWithOid;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -355,7 +355,7 @@ pub(super) fn compile_guard_sql(guard: &BodyLiteral, var_map: &VarMap) -> Option
 
 /// Variable→(alias, column) mapping built while iterating body atoms.
 #[derive(Default)]
-pub(super) struct VarMap {
+pub(crate) struct VarMap {
     bindings: Vec<(String, String, String)>, // (var_name, alias, col)
 }
 
@@ -976,93 +976,8 @@ fn compile_nonrecursive_rule(
 // ─── Compile recursive rule ────────────────────────────────────────────────
 // (See sql.rs for compile_recursive_rule implementation)
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-pub(super) fn build_join_cond(alias: &str, atom: &Atom, var_map: &VarMap) -> String {
-    let mut conds = Vec::new();
-
-    if let Term::Var(v) = &atom.s {
-        if let Some(ref_col) = var_map.col_ref(v) {
-            conds.push(format!("{alias}.s = {ref_col}"));
-        }
-    } else if let Term::Const(c) = &atom.s {
-        conds.push(format!("{alias}.s = {}", const_sql(*c)));
-    }
-    if let Term::Var(v) = &atom.o {
-        if let Some(ref_col) = var_map.col_ref(v) {
-            conds.push(format!("{alias}.o = {ref_col}"));
-        }
-    } else if let Term::Const(c) = &atom.o {
-        conds.push(format!("{alias}.o = {}", const_sql(*c)));
-    }
-    if let Term::Var(v) = &atom.g {
-        if let Some(ref_col) = var_map.col_ref(v) {
-            conds.push(format!("{alias}.g = {ref_col}"));
-        }
-    } else if let Term::Const(c) = &atom.g {
-        conds.push(format!("{alias}.g = {}", const_sql(*c)));
-    } else {
-        let scope = crate::RULE_GRAPH_SCOPE
-            .get()
-            .as_ref()
-            .and_then(|c| c.to_str().ok())
-            .unwrap_or("all")
-            .to_owned();
-        if scope == "default" {
-            conds.push(format!("{alias}.g = 0"));
-        }
-    }
-    conds.join(" AND ")
-}
-
-pub(super) fn build_not_exists_conds(atom: &Atom, var_map: &VarMap) -> Vec<String> {
-    let mut conds = Vec::new();
-    if let Term::Var(v) = &atom.s {
-        if let Some(ref_col) = var_map.col_ref(v) {
-            conds.push(format!("s = {ref_col}"));
-        }
-    } else if let Term::Const(c) = &atom.s {
-        conds.push(format!("s = {}", const_sql(*c)));
-    }
-    if let Term::Var(v) = &atom.o {
-        if let Some(ref_col) = var_map.col_ref(v) {
-            conds.push(format!("o = {ref_col}"));
-        }
-    } else if let Term::Const(c) = &atom.o {
-        conds.push(format!("o = {}", const_sql(*c)));
-    }
-    conds
-}
-
-pub(super) fn render_comparison_term(term: &Term, var_map: &VarMap) -> String {
-    match term {
-        Term::Var(v) => var_map
-            .col_ref(v)
-            .unwrap_or_else(|| format!("NULL /* unbound ?{v} */")),
-        Term::Const(id) => const_sql(*id),
-        Term::Wildcard => "NULL".to_owned(),
-        Term::DefaultGraph => "0".to_owned(),
-    }
-}
-
-pub(super) fn compare_op_sql(op: &CompareOp) -> &'static str {
-    match op {
-        CompareOp::Gt => ">",
-        CompareOp::Gte => ">=",
-        CompareOp::Lt => "<",
-        CompareOp::Lte => "<=",
-        CompareOp::Eq => "=",
-        CompareOp::Neq => "<>",
-    }
-}
-
-pub(super) fn arith_op_sql(op: &ArithOp) -> &'static str {
-    match op {
-        ArithOp::Add => "+",
-        ArithOp::Sub => "-",
-        ArithOp::Mul => "*",
-        // Division uses NULLIF to prevent division-by-zero errors (M-1).
-        // The caller is responsible for wrapping the RHS with NULLIF.
-        ArithOp::Div => "/",
-    }
-}
+// v0.122.0 H17-02: helpers extracted to helpers.rs
+pub(super) mod helpers;
+pub(crate) use helpers::{
+    arith_op_sql, build_join_cond, build_not_exists_conds, compare_op_sql, render_comparison_term,
+};
