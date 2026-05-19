@@ -501,14 +501,22 @@ pub(crate) async fn pagerank_export(
 /// GET /pagerank/explain/:node_iri
 ///
 /// Returns the score explanation tree for a node.
+/// Feature 7 (v0.120.0): URL-decode the IRI from the path; return structured
+/// JSON with `score`, `top_contributors`, and `method` fields.
 pub(crate) async fn pagerank_explain(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    Path(node_iri): Path<String>,
+    Path(node_iri_encoded): Path<String>,
 ) -> Response {
     if let Err(r) = check_auth(&state, &headers) {
         return r;
     }
+    // Feature 7 (v0.120.0): URL-decode the IRI from the path parameter.
+    let node_iri = percent_encoding::percent_decode_str(&node_iri_encoded)
+        .decode_utf8()
+        .map(|s| s.into_owned())
+        .unwrap_or_else(|_| node_iri_encoded.clone());
+
     let client = match state.pool.get().await {
         Ok(c) => c,
         Err(e) => {
@@ -520,6 +528,32 @@ pub(crate) async fn pagerank_explain(
             );
         }
     };
+
+    // Fetch the node's current score.
+    let score_sql = "SELECT ps.score \
+                     FROM _pg_ripple.pagerank_scores ps \
+                     JOIN _pg_ripple.dictionary d ON d.id = ps.node \
+                     WHERE d.value = $1 AND ps.topic = '' \
+                     LIMIT 1";
+    let score: f64 = match client.query_opt(score_sql, &[&node_iri]).await {
+        Ok(Some(row)) => row.get::<_, f64>(0),
+        Ok(None) => {
+            // Also try with angle-bracket IRI form.
+            let bracketed = format!("<{node_iri}>");
+            match client.query_opt(score_sql, &[&bracketed]).await {
+                Ok(Some(row)) => row.get::<_, f64>(0),
+                _ => 0.0,
+            }
+        }
+        Err(e) => {
+            return redacted_error(
+                "score_query_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+
     // M16-04 (v0.115.0): parameterised $1 for node_iri.
     let sql = "SELECT * FROM pg_ripple.explain_pagerank($1, 5)";
     let rows = match client.query(sql, &[&node_iri]).await {
@@ -532,20 +566,27 @@ pub(crate) async fn pagerank_explain(
             );
         }
     };
-    let results: Vec<serde_json::Value> = rows
+    // Feature 7 (v0.120.0): return `top_contributors` (renamed from `contributors`)
+    // and include `score` + `method` fields to match the documented contract.
+    let top_contributors: Vec<serde_json::Value> = rows
         .iter()
         .map(|row| {
             serde_json::json!({
-                "depth": row.get::<_, i32>(0),
-                "contributor": row.get::<_, String>(1),
+                "depth":        row.get::<_, i32>(0),
+                "contributor":  row.get::<_, String>(1),
                 "contribution": row.get::<_, f64>(2),
-                "path": row.get::<_, String>(3),
+                "path":         row.get::<_, String>(3),
             })
         })
         .collect();
     json_response(
         StatusCode::OK,
-        serde_json::json!({"node": node_iri, "contributors": results}),
+        serde_json::json!({
+            "node":             node_iri,
+            "score":            score,
+            "top_contributors": top_contributors,
+            "method":           "datalog_pagerank",
+        }),
     )
 }
 

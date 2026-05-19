@@ -43,17 +43,78 @@ pub(crate) async fn execute_sparql_with_traceparent(
     accept: &str,
     traceparent: Option<&str>,
 ) -> Response {
+    execute_sparql_with_traceparent_routed(state, query_text, is_update, accept, traceparent, false)
+        .await
+}
+
+/// Internal version with explicit replica-routing flag.
+///
+/// Feature 12 (v0.120.0): when `use_replica` is `true` AND `state.replica_pool`
+/// is configured AND `is_update` is `false`, the query is sent to the replica
+/// pool instead of the primary.  Falls back to the primary when the replica is
+/// unavailable.
+pub(crate) async fn execute_sparql_with_traceparent_routed(
+    state: &AppState,
+    query_text: &str,
+    is_update: bool,
+    accept: &str,
+    traceparent: Option<&str>,
+    use_replica: bool,
+) -> Response {
     let start = Instant::now();
 
-    let client = match state.pool.get().await {
-        Ok(c) => c,
-        Err(e) => {
-            state.metrics.record_error();
-            return redacted_error(
-                "service_unavailable",
-                &format!("pool error: {e}"),
-                StatusCode::SERVICE_UNAVAILABLE,
-            );
+    // Feature 12 (v0.120.0): replica routing.
+    // Only read-only queries can be sent to the replica; updates always go primary.
+    let client = if use_replica && !is_update {
+        if let Some(replica_pool) = &state.replica_pool {
+            match replica_pool.get().await {
+                Ok(c) => {
+                    tracing::debug!("?replica=ok: routing read-only SPARQL query to replica");
+                    c
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "?replica=ok: replica pool unavailable ({}), falling back to primary",
+                        e
+                    );
+                    match state.pool.get().await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            state.metrics.record_error();
+                            return redacted_error(
+                                "service_unavailable",
+                                &format!("pool error: {e}"),
+                                StatusCode::SERVICE_UNAVAILABLE,
+                            );
+                        }
+                    }
+                }
+            }
+        } else {
+            // No replica pool configured — use primary silently.
+            match state.pool.get().await {
+                Ok(c) => c,
+                Err(e) => {
+                    state.metrics.record_error();
+                    return redacted_error(
+                        "service_unavailable",
+                        &format!("pool error: {e}"),
+                        StatusCode::SERVICE_UNAVAILABLE,
+                    );
+                }
+            }
+        }
+    } else {
+        match state.pool.get().await {
+            Ok(c) => c,
+            Err(e) => {
+                state.metrics.record_error();
+                return redacted_error(
+                    "service_unavailable",
+                    &format!("pool error: {e}"),
+                    StatusCode::SERVICE_UNAVAILABLE,
+                );
+            }
         }
     };
 

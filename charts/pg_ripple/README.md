@@ -1,0 +1,87 @@
+# pg_ripple Helm Chart
+
+This Helm chart deploys a PostgreSQL 18 instance with the `pg_ripple` extension (RDF triple store, SPARQL 1.1, Datalog, SHACL, HTAP) and optionally the `pg_ripple_http` sidecar.
+
+## Prerequisites
+
+- Kubernetes 1.24+
+- Helm 3.10+
+
+## Installation
+
+```bash
+helm install my-ripple ./charts/pg_ripple
+```
+
+With custom values:
+
+```bash
+helm install my-ripple ./charts/pg_ripple --values my-values.yaml
+```
+
+## Configuration
+
+See `values.yaml` for all available configuration options.
+
+### Key options
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `replicaCount` | Number of PostgreSQL pods | `1` |
+| `image.tag` | pg_ripple image tag | `"0.73.0"` |
+| `postgres.password` | PostgreSQL superuser password | `"ripple"` |
+| `podDisruptionBudget.enabled` | Enable PodDisruptionBudget | `true` |
+| `podDisruptionBudget.minAvailable` | Minimum available pods during disruptions | `1` |
+
+## PodDisruptionBudget (v0.120.0)
+
+The chart ships a `PodDisruptionBudget` (PDB) resource enabled by default:
+
+```yaml
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+```
+
+This ensures at least one pg_ripple pod remains available during voluntary
+disruptions (node drains, Kubernetes upgrades, etc.).
+
+For high-availability deployments (3+ replicas), consider:
+
+```yaml
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+```
+
+Or using `maxUnavailable`:
+
+```yaml
+podDisruptionBudget:
+  enabled: true
+  minAvailable: ""
+  maxUnavailable: 1
+```
+
+Disable by setting `podDisruptionBudget.enabled: false`.
+
+## Per-Tenant Helm Values (Feature 9, v0.120.0)
+
+Generate a per-tenant `values-<name>.yaml` fragment suitable for `helm install --values`:
+
+```bash
+just generate-helm-values TENANT=acme
+# Creates values-acme.yaml in the current directory
+```
+
+This queries `_pg_ripple.tenants` and emits Helm-compatible YAML with the
+tenant's graph IRI and quota configuration.
+
+## Liveness & Readiness Probes
+
+The chart configures HTTP probes against the `pg_ripple_http` sidecar:
+
+- **Liveness** (`/health`): Is the process alive and can it reach PostgreSQL?
+- **Readiness** (`/ready`): Has the process ever successfully connected (safe to route traffic)?
+
+See `values.yaml` for probe tuning parameters.

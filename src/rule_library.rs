@@ -702,3 +702,137 @@ fn uninstall_library_inner(name: &str) {
         &[DatumWithOid::from(name)],
     );
 }
+
+// ─── Feature 11 (v0.120.0): Rule-Library Federation ─────────────────────────
+
+/// `pg_ripple.publish_rule_library(name TEXT, endpoint_uri TEXT)`
+///
+/// Register a rule library as a published Arrow Flight endpoint.
+/// Records the `(name, endpoint_uri)` pair in `_pg_ripple.rule_library_federation`
+/// so the HTTP companion's `GET /rule-libraries/{name}/stream` handler can
+/// serve the library's rules as an Arrow Flight record-batch stream.
+///
+/// The `endpoint_uri` is the canonical URI at which this library will be
+/// addressable by subscribers (e.g. `https://host/rule-libraries/mylib/stream`).
+///
+/// Requires superuser or `pg_ripple` role.
+#[pg_extern(schema = "pg_ripple", name = "publish_rule_library")]
+pub fn publish_rule_library(name: &str, endpoint_uri: &str) {
+    if name.is_empty() || name.len() > 64 {
+        pgrx::error!("PT0460: publish_rule_library: name must be 1-64 characters, got '{name}'");
+    }
+    if endpoint_uri.is_empty() {
+        pgrx::error!("PT0461: publish_rule_library: endpoint_uri must not be empty");
+    }
+
+    // Ensure the library actually exists in the catalog.
+    let exists = Spi::get_one_with_args::<bool>(
+        "SELECT EXISTS(SELECT 1 FROM _pg_ripple.rule_libraries WHERE name = $1)",
+        &[DatumWithOid::from(name)],
+    )
+    .unwrap_or(None)
+    .unwrap_or(false);
+    if !exists {
+        pgrx::error!(
+            "PT0462: publish_rule_library: library '{name}' is not installed — \
+             install it with pg_ripple.install_rule_library() first"
+        );
+    }
+
+    // Ensure the federation catalog table exists.
+    let _ = Spi::run(
+        "CREATE TABLE IF NOT EXISTS _pg_ripple.rule_library_federation ( \
+           name         TEXT PRIMARY KEY, \
+           endpoint_uri TEXT NOT NULL, \
+           published    BOOLEAN NOT NULL DEFAULT FALSE, \
+           subscribed   BOOLEAN NOT NULL DEFAULT FALSE, \
+           source_uri   TEXT, \
+           created_at   TIMESTAMPTZ NOT NULL DEFAULT now() \
+         )",
+    );
+
+    Spi::run_with_args(
+        "INSERT INTO _pg_ripple.rule_library_federation \
+           (name, endpoint_uri, published) \
+         VALUES ($1, $2, TRUE) \
+         ON CONFLICT (name) DO UPDATE SET \
+           endpoint_uri = EXCLUDED.endpoint_uri, \
+           published    = TRUE",
+        &[DatumWithOid::from(name), DatumWithOid::from(endpoint_uri)],
+    )
+    .unwrap_or_else(|e| {
+        pgrx::error!("PT0463: publish_rule_library: catalog write failed: {e}");
+    });
+}
+
+/// `pg_ripple.subscribe_rule_library(source_uri TEXT, name TEXT)`
+///
+/// Subscribe to a remote rule library published via Arrow Flight.
+/// Records the remote endpoint in `_pg_ripple.rule_library_federation` so the
+/// HTTP companion's `POST /rule-libraries/{name}/subscribe` handler can
+/// fetch and install the library.
+///
+/// The actual fetching and installation is performed by the HTTP companion
+/// (which can make outbound network requests), not by this extension function.
+/// This function only records the intent and validates the inputs.
+#[pg_extern(schema = "pg_ripple", name = "subscribe_rule_library")]
+pub fn subscribe_rule_library(source_uri: &str, name: &str) {
+    if source_uri.is_empty() {
+        pgrx::error!("PT0464: subscribe_rule_library: source_uri must not be empty");
+    }
+    if name.is_empty() || name.len() > 64 {
+        pgrx::error!("PT0465: subscribe_rule_library: name must be 1-64 characters, got '{name}'");
+    }
+
+    // SSRF guard: block loopback / private-network URIs.
+    let lower = source_uri.to_ascii_lowercase();
+    let is_ssrf_loopback = lower.contains("://localhost")
+        || lower.contains("://127.")
+        || lower.contains("://0.0.0.0")
+        || lower.contains("://::1")
+        || lower.contains("://[::1]");
+    let is_ssrf_private = lower.contains("://10.")
+        || lower.contains("://192.168.")
+        || (lower.contains("://172.") && {
+            lower
+                .split("://172.")
+                .nth(1)
+                .and_then(|s| s.split('.').next())
+                .and_then(|n| n.parse::<u8>().ok())
+                .map(|n| (16u8..=31u8).contains(&n))
+                .unwrap_or(false)
+        });
+    if is_ssrf_loopback || is_ssrf_private {
+        pgrx::error!(
+            "PT0466: subscribe_rule_library: SSRF blocked — \
+             loopback and private-network URIs are not permitted: '{source_uri}'"
+        );
+    }
+
+    // Ensure the federation catalog table exists.
+    let _ = Spi::run(
+        "CREATE TABLE IF NOT EXISTS _pg_ripple.rule_library_federation ( \
+           name         TEXT PRIMARY KEY, \
+           endpoint_uri TEXT NOT NULL, \
+           published    BOOLEAN NOT NULL DEFAULT FALSE, \
+           subscribed   BOOLEAN NOT NULL DEFAULT FALSE, \
+           source_uri   TEXT, \
+           created_at   TIMESTAMPTZ NOT NULL DEFAULT now() \
+         )",
+    );
+
+    // Record subscription intent (endpoint_uri = the remote source).
+    Spi::run_with_args(
+        "INSERT INTO _pg_ripple.rule_library_federation \
+           (name, endpoint_uri, subscribed, source_uri) \
+         VALUES ($1, $2, TRUE, $2) \
+         ON CONFLICT (name) DO UPDATE SET \
+           endpoint_uri = EXCLUDED.endpoint_uri, \
+           subscribed   = TRUE, \
+           source_uri   = EXCLUDED.source_uri",
+        &[DatumWithOid::from(name), DatumWithOid::from(source_uri)],
+    )
+    .unwrap_or_else(|e| {
+        pgrx::error!("PT0467: subscribe_rule_library: catalog write failed: {e}");
+    });
+}

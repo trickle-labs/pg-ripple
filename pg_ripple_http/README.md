@@ -435,3 +435,39 @@ curl -X DELETE http://localhost:7878/datalog/views/ancestor_view
 
 All error responses include a `trace_id` field for log correlation.
 
+
+## Read-Replica Routing (v0.120.0)
+
+`pg_ripple_http` can route read-only SPARQL queries to a PostgreSQL standby
+replica, reducing load on the primary.
+
+### Configuration
+
+Set the `PG_RIPPLE_HTTP_REPLICA_DSN` environment variable to a PostgreSQL DSN
+pointing to a read-replica:
+
+```bash
+export PG_RIPPLE_HTTP_REPLICA_DSN="host=replica.db.example.com dbname=ripple user=app password=..."
+```
+
+When this variable is set, a separate connection pool is created for the replica.
+
+### Usage
+
+Add `?replica=ok` to any SPARQL SELECT, CONSTRUCT, or ASK request to route it
+to the replica:
+
+```bash
+# GET
+curl "http://localhost:7878/sparql?query=SELECT+%2A+WHERE+%7B+%3Fs+%3Fp+%3Fo+%7D+LIMIT+10&replica=ok"
+
+# POST (application/sparql-query)
+curl -X POST "http://localhost:7878/sparql?replica=ok" \
+  -H "Content-Type: application/sparql-query" \
+  -d "SELECT * WHERE { ?s ?p ?o } LIMIT 10"
+
+# POST (form-encoded)
+curl -X POST "http://localhost:7878/spacurl -X POST "http://localhost:7878/spacurl -X POST "http://localhost:7878/spacECTcurl -X POST "http://localhost:78+LIcurl -X POST "http://localhost:7878/spacurl -X POST "http://localhost:7878tocurl -X POST "http://localhost:7878/sliccurl -X POST "e replica is unavailable, the request falls back to the primary and a
+  `WARN`-leve  `WARN`-leve  `WARN`-lev Routing decisions are logged at `DEBUG` level.
+- The `?replica=ok` parameter is silently ignored if `PG_RIPPLE_HTTP_REPLICA_DSN`
+  is not configured.
