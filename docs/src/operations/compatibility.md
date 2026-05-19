@@ -19,6 +19,17 @@ extension version is outside its known-compatible range.
 
 | pg_ripple_http version | pg_ripple extension range | Notes |
 |------------------------|---------------------------|-------|
+| 0.123.x | ≥ 0.122.0 | A17 observability & docs: replica pool Prometheus gauges (OBS-M-01), rule-library stream latency/error counters (OBS-M-02), `bench_workload_result()` SQL wrapper (ERG-L-01) |
+| 0.122.x | ≥ 0.121.0 | A17 god-module decomposition & test coverage closure (H17-02); WatDiv correctness gating; pg_regress coverage for v0.119.0–v0.120.0 features |
+| 0.121.x | ≥ 0.120.0 | A17 security hardening (H17-01 SSRF, SEC-M-03 CGNAT/multicast, BUG-M-01 silent degradation, OBS-L-01 mutation journal); mutation journal for rule-library ops |
+| 0.120.x | ≥ 0.119.0 | Feature 11: rule-library federation (publish/subscribe over Arrow Flight); Feature 12: read-replica routing (`?replica=ok`); `compat_check()` JSON schema |
+| 0.119.x | ≥ 0.118.0 | Feature 6: federation circuit breaker Prometheus gauges; Feature 7: `bench_workload()` BSBM/WatDiv/PageRank/PPRL profiles; Allen's interval relations |
+| 0.118.x | ≥ 0.117.0 | Feature 4: diagnostic snapshot bundle (`/admin/diagnostic-snapshot`); Feature 5: tenant quota enforcement; multi-tenant knowledge graphs |
+| 0.117.x | ≥ 0.116.0 | Feature 3: PPRL Bloom-filter encodes; neuro-symbolic entity resolution; LLM explanation cache; proof-tree generation |
+| 0.116.x | ≥ 0.115.0 | A16 remediation arc: ER stage latency (M16-03), owl:sameAs assertion counter, Bayesian propagation latency, conflict detection counter; advisory lifecycle policy (M16-21) |
+| 0.115.x | ≥ 0.114.0 | A15 remediation: `er_stage_duration_seconds` histogram labels (M16-03); PPRL/LLM/proof-tree observability; GNN link-prediction integration |
+| 0.114.x | ≥ 0.113.0 | A15 High/Medium: `bidi_relay_dropped_total` counter (H15-03); merge/stratum/SHACL/CDC Prometheus metrics (M15-19); WatDiv 100-template suite |
+| 0.113.x | ≥ 0.112.0 | UNNEST-array bulk load path; Citus object shard pruning; direct `COPY` bulk load; per-graph RLS; `explain_inference()` |
 | 0.93.x | ≥ 0.92.0 | pg_tide integration: `pg_tide_available()` SQL function; BIDI relay comments updated to pg_tide API |
 | 0.92.x | ≥ 0.88.0 | A14 Low polish: PageRank bounds, damping guide, SERVICE SILENT TLS, SOURCE_DATE_EPOCH, conformance badge CI |
 | 0.91.x | ≥ 0.88.0 | OBS-01 PageRank IVM Prometheus gauges; HTTP-03 middleware extraction; HTTP-04 EXPLAIN row estimation; API-05 `explain_pagerank_json()`; CDC watermark batching GUCs |

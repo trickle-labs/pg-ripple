@@ -402,7 +402,19 @@ pub(crate) async fn metrics_endpoint(
          pg_ripple_proof_tree_duration_seconds {:.6}\n\
          # HELP pg_ripple_conflict_detections_total Total rule conflict detections (M16-03)\n\
          # TYPE pg_ripple_conflict_detections_total counter\n\
-         pg_ripple_conflict_detections_total {}\n",
+         pg_ripple_conflict_detections_total {}\n\
+         # HELP pg_ripple_http_replica_pool_size Current read-replica connection pool size (OBS-M-01)\n\
+         # TYPE pg_ripple_http_replica_pool_size gauge\n\
+         pg_ripple_http_replica_pool_size{{pool=\"replica\"}} {}\n\
+         # HELP pg_ripple_http_replica_pool_available Available idle connections in the read-replica pool (OBS-M-01)\n\
+         # TYPE pg_ripple_http_replica_pool_available gauge\n\
+         pg_ripple_http_replica_pool_available{{pool=\"replica\"}} {}\n\
+         # HELP pg_ripple_rule_library_stream_duration_seconds Cumulative latency of rule-library stream responses in seconds (OBS-M-02)\n\
+         # TYPE pg_ripple_rule_library_stream_duration_seconds counter\n\
+         pg_ripple_rule_library_stream_duration_seconds {:.6}\n\
+         # HELP pg_ripple_rule_library_subscribe_errors_total Total errors from rule-library subscribe calls (OBS-M-02)\n\
+         # TYPE pg_ripple_rule_library_subscribe_errors_total counter\n\
+         pg_ripple_rule_library_subscribe_errors_total {}\n",
         m.sparql_query_count(),
         m.datalog_query_count(),
         m.error_count(),
@@ -452,6 +464,20 @@ pub(crate) async fn metrics_endpoint(
         m.llm_cache_misses_total(),
         m.proof_tree_duration_secs(),
         m.conflict_detections_total(),
+        // OBS-M-01 (v0.123.0): replica pool gauges — read directly from the live pool object.
+        state
+            .replica_pool
+            .as_ref()
+            .map(|p| p.status().size as u64)
+            .unwrap_or(0),
+        state
+            .replica_pool
+            .as_ref()
+            .map(|p| p.status().available as u64)
+            .unwrap_or(0),
+        // OBS-M-02 (v0.123.0): rule-library federation metrics.
+        m.rule_library_stream_duration_secs(),
+        m.rule_library_subscribe_errors_total(),
     );
 
     // Feature 6 (v0.119.0): Append per-endpoint federation circuit breaker

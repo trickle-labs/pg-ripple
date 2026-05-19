@@ -137,6 +137,18 @@ pub struct Metrics {
     proof_tree_duration_us: AtomicU64,
     /// Total conflict detections raised by the rule conflict detector.
     conflict_detections_total: AtomicU64,
+
+    // OBS-M-01 (v0.123.0): read-replica connection pool gauges.
+    /// Snapshot: total size of the read-replica connection pool.
+    replica_pool_size: AtomicU64,
+    /// Snapshot: available (idle) connections in the read-replica pool.
+    replica_pool_available: AtomicU64,
+
+    // OBS-M-02 (v0.123.0): rule-library federation observability.
+    /// Cumulative latency of `GET /rule-libraries/{name}/stream` responses in microseconds.
+    rule_library_stream_duration_us: AtomicU64,
+    /// Total errors returned by `POST /rule-libraries/{name}/subscribe`.
+    rule_library_subscribe_errors_total: AtomicU64,
 }
 
 impl Default for Metrics {
@@ -201,6 +213,12 @@ impl Metrics {
             llm_cache_misses_total: AtomicU64::new(0),
             proof_tree_duration_us: AtomicU64::new(0),
             conflict_detections_total: AtomicU64::new(0),
+            // OBS-M-01 (v0.123.0)
+            replica_pool_size: AtomicU64::new(0),
+            replica_pool_available: AtomicU64::new(0),
+            // OBS-M-02 (v0.123.0)
+            rule_library_stream_duration_us: AtomicU64::new(0),
+            rule_library_subscribe_errors_total: AtomicU64::new(0),
         }
     }
 
@@ -626,5 +644,47 @@ impl Metrics {
 
     pub fn conflict_detections_total(&self) -> u64 {
         self.conflict_detections_total.load(Ordering::Relaxed)
+    }
+
+    // OBS-M-01 (v0.123.0): read-replica pool gauges.
+
+    /// Update the read-replica pool size and available-connection snapshots.
+    ///
+    /// Pass `0, 0` when no replica pool is configured.
+    pub fn update_replica_pool_stats(&self, size: u64, available: u64) {
+        self.replica_pool_size.store(size, Ordering::Relaxed);
+        self.replica_pool_available
+            .store(available, Ordering::Relaxed);
+    }
+
+    pub fn replica_pool_size(&self) -> u64 {
+        self.replica_pool_size.load(Ordering::Relaxed)
+    }
+
+    pub fn replica_pool_available(&self) -> u64 {
+        self.replica_pool_available.load(Ordering::Relaxed)
+    }
+
+    // OBS-M-02 (v0.123.0): rule-library federation metrics.
+
+    /// Record a completed `GET /rule-libraries/{name}/stream` response.
+    pub fn record_rule_library_stream_duration(&self, duration: std::time::Duration) {
+        self.rule_library_stream_duration_us
+            .fetch_add(duration.as_micros() as u64, Ordering::Relaxed);
+    }
+
+    pub fn rule_library_stream_duration_secs(&self) -> f64 {
+        self.rule_library_stream_duration_us.load(Ordering::Relaxed) as f64 / 1_000_000.0
+    }
+
+    /// Increment the subscribe-error counter for `POST /rule-libraries/{name}/subscribe`.
+    pub fn record_rule_library_subscribe_error(&self) {
+        self.rule_library_subscribe_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn rule_library_subscribe_errors_total(&self) -> u64 {
+        self.rule_library_subscribe_errors_total
+            .load(Ordering::Relaxed)
     }
 }

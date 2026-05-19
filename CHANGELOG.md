@@ -13,6 +13,59 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.123.0] — 2026-05-19 — A17 Observability, Documentation & Advisory Management
+
+**Completes the Assessment 17 remediation arc. Adds replica-pool Prometheus
+gauges (OBS-M-01), rule-library stream observability (OBS-M-02),
+`bench_workload_result()` convenience wrapper (ERG-L-01), eight new compatibility
+matrix rows (DOC-M-01), comprehensive SQL API reference (DOC-M-03), four new blog
+posts (DOC-L-01), and RSA/paste advisory maintenance (SEC-M-01/SEC-M-02).**
+
+### Added
+
+- **OBS-M-01** `pg_ripple_http_replica_pool_size{pool="replica"}` and
+  `pg_ripple_http_replica_pool_available{pool="replica"}` Prometheus gauges
+  in `pg_ripple_http/src/metrics.rs`; scraped live at every `/metrics` call.
+- **OBS-M-02** `pg_ripple_rule_library_stream_duration_seconds` cumulative
+  latency counter and `pg_ripple_rule_library_subscribe_errors_total` error
+  counter; wired into `routing/rule_library_handler.rs`.
+- **ERG-L-01** `pg_ripple.bench_workload_result(profile TEXT DEFAULT 'bsbm')`
+  SQL convenience wrapper returning the most recent benchmark run from
+  `_pg_ripple.bench_history` (defined in migration script).
+- **ERG-M-01** `docs/src/reference/sql-api.md` — new reference page documenting
+  `compat_check()` JSON schema with copy-pasteable example.
+- **ERG-M-02 / DOC-M-02** `docs/src/guides/rule-library-federation.md` — complete
+  publish → subscribe → verify inference → monitor worked example.
+- **ERG-M-03** `docs/src/operations/read-replicas.md` — new page documenting
+  `?replica=ok` routing semantics, eligible query types, pool exhaustion
+  fallback, and Prometheus alerting recipes.
+- **DOC-M-01** Eight new rows (v0.113.0–v0.120.0) added to
+  `docs/src/operations/compatibility.md`.
+- **DOC-M-03** `docs/src/reference/sql-api.md` extended with function signatures,
+  parameter descriptions, and examples for `bench_workload()`, `bench_workload_result()`,
+  `publish_rule_library()`, `subscribe_rule_library()`, and all seven Allen's
+  interval relation functions.
+- **DOC-L-01** Four new blog posts:
+  - `blog/owl-property-chain-axiom.md`
+  - `blog/federation-circuit-breaker.md`
+  - `blog/allen-interval-relations.md`
+  - `blog/rule-library-federation.md`
+- Migration script `sql/pg_ripple--0.122.0--0.123.0.sql`.
+- Roadmap file `roadmap/v0.123.0.md`.
+
+### Changed
+
+- **SEC-M-01** Extended RUSTSEC-2024-0436 and RUSTSEC-2023-0071 (RSA Marvin-attack)
+  `audit.toml` expiry to 2027-01-01; updated comments with
+  "RSA not used for untrusted input — re-evaluated Q3-2026" rationale.
+- **SEC-M-02** Added detailed mitigation rationale for RUSTSEC-2026-0104 (`paste`
+  proc-macro unsoundness) in `audit.toml` — verified compile-time-only with no
+  runtime impact.
+- **COMPAT-01** `COMPATIBLE_EXTENSION_MIN` bumped to `"0.122.0"` in
+  `pg_ripple_http/src/main.rs`.
+
+---
+
 ## [0.122.0] — 2026-05-26 — A17 God-Module Decomposition & Test Coverage Closure
 
 **Decomposes all eight remaining god-modules (H17-02): 0 source files exceed 1,000 LOC.

@@ -143,6 +143,81 @@ pub fn bench_history_recent(
     TableIterator::new(rows)
 }
 
+/// Convenience wrapper returning the most recent benchmark run for the given
+/// profile from `_pg_ripple.bench_history`.
+///
+/// Added in v0.123.0 (ERG-L-01) as a user-friendly alternative to writing raw
+/// SQL against `_pg_ripple.bench_history`.
+///
+/// ```sql
+/// SELECT pg_ripple.bench_workload('bsbm');
+/// SELECT * FROM pg_ripple.bench_workload_result('bsbm');
+/// ```
+#[pg_extern(schema = "pg_ripple")]
+// A16-CQ: pgrx-generated TableIterator signature is inherently complex.
+#[allow(clippy::type_complexity)]
+pub fn bench_workload_result(
+    profile: default!(String, "'bsbm'"),
+) -> TableIterator<
+    'static,
+    (
+        name!(run_id, i64),
+        name!(profile, String),
+        name!(started_at, pgrx::datum::TimestampWithTimeZone),
+        name!(duration_ms, Option<i64>),
+        name!(queries_per_second, Option<f64>),
+        name!(triples_processed, Option<i64>),
+    ),
+> {
+    let rows = Spi::connect(|client| {
+        let tup_table = client
+            .select(
+                "SELECT run_id, profile, started_at, duration_ms, \
+                        queries_per_second, triples_processed \
+                 FROM _pg_ripple.bench_history \
+                 WHERE profile = $1 \
+                 ORDER BY started_at DESC \
+                 LIMIT 1",
+                None,
+                &[pgrx::datum::DatumWithOid::from(profile.as_str())],
+            )
+            .unwrap_or_else(|e| pgrx::error!("bench_workload_result: query failed: {e}"));
+
+        let mut result = Vec::new();
+        for row in tup_table {
+            let run_id: i64 = row.get_by_name("run_id").unwrap_or(None).unwrap_or(0);
+            let profile_val: String = row
+                .get_by_name("profile")
+                .unwrap_or(None)
+                .unwrap_or_default();
+            let started_at: pgrx::datum::TimestampWithTimeZone = row
+                .get_by_name("started_at")
+                .unwrap_or(None)
+                .unwrap_or_else(|| {
+                    pgrx::datum::TimestampWithTimeZone::from(
+                        pgrx::datum::Timestamp::saturating_from_raw(0),
+                    )
+                });
+            let duration_ms: Option<i64> = row.get_by_name("duration_ms").unwrap_or(None);
+            let queries_per_second: Option<f64> =
+                row.get_by_name("queries_per_second").unwrap_or(None);
+            let triples_processed: Option<i64> =
+                row.get_by_name("triples_processed").unwrap_or(None);
+            result.push((
+                run_id,
+                profile_val,
+                started_at,
+                duration_ms,
+                queries_per_second,
+                triples_processed,
+            ));
+        }
+        result
+    });
+
+    TableIterator::new(rows)
+}
+
 // ─── Benchmark profile implementations ───────────────────────────────────────
 
 /// BSBM profile: count triples in the triple store as a lightweight proxy.

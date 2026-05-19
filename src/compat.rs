@@ -12,7 +12,7 @@ use pgrx::prelude::*;
 /// Minimum pg_ripple_http companion version required to fully support this
 /// extension release.  Updated each release alongside `COMPATIBLE_EXTENSION_MIN`
 /// in pg_ripple_http/src/main.rs.
-const HTTP_COMPANION_MIN_VERSION: &str = "0.118.0";
+const HTTP_COMPANION_MIN_VERSION: &str = "0.122.0";
 
 /// Return a JSON compatibility descriptor for the HTTP companion.
 ///

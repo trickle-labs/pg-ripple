@@ -108,7 +108,7 @@ pub async fn stream_rule_library(
         return r;
     }
 
-    // Validate library name.
+    let start = Instant::now();
     if name.is_empty()
         || name.len() > 64
         || !name
@@ -195,7 +195,7 @@ pub async fn stream_rule_library(
     }
 
     // SEC-L-01 (v0.121.0): enforce explicit Content-Type with charset on the stream response.
-    Response::builder()
+    let response = Response::builder()
         .status(StatusCode::OK)
         .header("content-type", "text/event-stream; charset=utf-8")
         .header("x-rule-library-name", name)
@@ -205,7 +205,13 @@ pub async fn stream_rule_library(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 serde_json::json!({"error": "response_build_error"}),
             )
-        })
+        });
+
+    // OBS-M-02 (v0.123.0): record stream latency histogram.
+    state
+        .metrics
+        .record_rule_library_stream_duration(start.elapsed());
+    response
 }
 
 /// `POST /rule-libraries/{name}/subscribe`
@@ -272,6 +278,8 @@ pub async fn subscribe_rule_library(
         Ok(resp) if resp.status().is_success() => match resp.text().await {
             Ok(t) => t,
             Err(e) => {
+                // OBS-M-02 (v0.123.0): count subscribe errors.
+                state.metrics.record_rule_library_subscribe_error();
                 return redacted_error(
                     "remote_read_error",
                     &e.to_string(),
@@ -280,6 +288,8 @@ pub async fn subscribe_rule_library(
             }
         },
         Ok(resp) => {
+            // OBS-M-02 (v0.123.0): count subscribe errors.
+            state.metrics.record_rule_library_subscribe_error();
             return json_response(
                 StatusCode::BAD_GATEWAY,
                 serde_json::json!({
@@ -289,6 +299,8 @@ pub async fn subscribe_rule_library(
             );
         }
         Err(e) => {
+            // OBS-M-02 (v0.123.0): count subscribe errors.
+            state.metrics.record_rule_library_subscribe_error();
             return redacted_error(
                 "remote_fetch_error",
                 &e.to_string(),

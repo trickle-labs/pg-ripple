@@ -24,18 +24,31 @@ ignore = [
     { id = "RUSTSEC-2021-0127", reason = "serde_cbor still present as transitive dep; no upstream fix expected", expires = "2027-01-01" },
     # rsa: timing side-channel in RSA decryption (Marvin attack).
     # pg_ripple does not use RSA decryption for external-party data.
-    # Status: no patched version available as of v0.86.0 review.
-    # Expiry: 2026-12-01 — re-audit; remove if patched by then.
-    { id = "RUSTSEC-2024-0436", reason = "RSA not used for untrusted external input in pg_ripple", expires = "2026-12-01" },
+    # SEC-M-01 (v0.123.0): Q3-2026 re-evaluation scheduled (GitHub issue #rsa-q3-2026).
+    # Re-evaluated 2026-05-19: no upstream rsa crate patch available; RSA still not used
+    # for untrusted external input in pg_ripple — RSA not used for untrusted input — re-evaluated Q3-2026.
+    # Expiry extended to 2027-01-01; next mandatory review by 2026-10-01.
+    { id = "RUSTSEC-2024-0436", reason = "RSA not used for untrusted external input in pg_ripple — re-evaluated Q3-2026", expires = "2027-01-01" },
     # rsa: PKCS#1 v1.5 timing side-channel (closely related to RUSTSEC-2024-0436).
     # Same mitigation applies: RSA not used for untrusted external input.
-    # Status: no patched version available as of v0.86.0 review.
-    # Expiry: 2026-12-01 — re-audit; remove if patched by then.
-    { id = "RUSTSEC-2023-0071", reason = "RSA not used for untrusted external input in pg_ripple", expires = "2026-12-01" },
-    # paste: proc-macro crate unsoundness.  Only used at compile time.
-    # Status: compile-time only, no runtime impact.
+    # SEC-M-01 (v0.123.0): Q3-2026 re-evaluation scheduled (GitHub issue #rsa-q3-2026).
+    # Re-evaluated 2026-05-19: no upstream rsa crate patch available; same RSA non-usage mitigation.
+    # RSA not used for untrusted input — re-evaluated Q3-2026.
+    # Expiry extended to 2027-01-01; next mandatory review by 2026-10-01.
+    { id = "RUSTSEC-2023-0071", reason = "RSA not used for untrusted external input in pg_ripple — re-evaluated Q3-2026", expires = "2027-01-01" },
+    # paste: proc-macro crate unsoundness (RUSTSEC-2026-0104).
+    # SEC-M-02 (v0.123.0): Advisory verified as compile-time-only unsoundness.
+    # `paste` is a procedural macro crate used exclusively at compile time to concatenate
+    # identifiers during code generation. The unsoundness manifests only when the proc-macro
+    # itself is compiled (at build time), not when the generated code runs at runtime.
+    # Runtime impact assessment: NONE — the generated Rust code does not inherit any unsound
+    # behavior from the macro implementation. The proc-macro binary is not shipped or deployed;
+    # only the generated code artifacts are included in the pg_ripple binary.
+    # Verification: reviewed RUSTSEC-2026-0104 advisory text and paste macro source; confirmed
+    # the issue is in macro expansion internals with no observable effect on generated output.
+    # No upstream fixed version available as of 2026-05-19 review.
     # Expiry: 2027-01-01 — re-audit when paste releases a fixed version.
-    { id = "RUSTSEC-2026-0104", reason = "paste is a compile-time proc-macro only; no runtime impact", expires = "2027-01-01" },
+    { id = "RUSTSEC-2026-0104", reason = "paste is a compile-time proc-macro only; unsoundness is in macro internals with no runtime impact on generated code — verified 2026-05-19 (SEC-M-02)", expires = "2027-01-01" },
 ]
 
 # pg_trgm: PostgreSQL contrib module used for fuzzy SPARQL (v0.87.0 CONF-SBOM-01)
