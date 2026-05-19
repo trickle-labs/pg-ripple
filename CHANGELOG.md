@@ -66,6 +66,8 @@ bug and security items. All 284 pg_regress tests pass.**
   (SSRF-06), and version check (SSRF-07).
 - **Migration** `sql/pg_ripple--0.120.0--0.121.0.sql` — comment-only, no
   schema changes.
+- `COMPATIBLE_EXTENSION_MIN` bumped to `"0.120.0"` in `pg_ripple_http/src/main.rs`
+  (release.yml compat-check gate requires ≤1 minor version lag).
 
 ---
 
