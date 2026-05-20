@@ -303,7 +303,7 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
                 });
                 // FEAT-02 (v0.125.0): prune expired temporal graph snapshots.
                 BackgroundWorker::transaction(|| {
-                    crate::temporal::prune_expired_snapshots();
+                    crate::temporal_snapshots::prune_expired_snapshots();
                 });
             }
         }));

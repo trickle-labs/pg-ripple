@@ -61,6 +61,7 @@ mod worker;
 mod citus;
 mod prov;
 mod temporal;
+mod temporal_snapshots;
 // v0.62.0 modules
 mod flight;
 // v0.63.0 modules
