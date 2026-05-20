@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
-  "specVersion": "1.4",
+  "specVersion": "1.3",
   "version": 1,
-  "serialNumber": "urn:uuid:aed92acd-d981-42ba-b680-45bf900902e2",
+  "serialNumber": "urn:uuid:b65179c9-92fd-4436-85e9-38b66164ea65",
   "metadata": {
-    "timestamp": "2026-05-19T12:55:25.125108000Z",
+    "timestamp": "2026-05-20T12:08:35.358276000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "application",
-      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.122.0",
+      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.125.0",
       "name": "pg_ripple_http",
-      "version": "0.122.0",
+      "version": "0.125.0",
       "description": "SPARQL 1.1 Protocol HTTP endpoint for pg_ripple — connects PostgreSQL 18 RDF triple store to the web",
       "scope": "required",
       "licenses": [
@@ -24,7 +24,7 @@
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/pg_ripple_http@0.122.0?download_url=file://.",
+      "purl": "pkg:cargo/pg_ripple_http@0.125.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -34,10 +34,10 @@
       "components": [
         {
           "type": "application",
-          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.122.0 bin-target-0",
+          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.125.0 bin-target-0",
           "name": "pg_ripple_http",
-          "version": "0.122.0",
-          "purl": "pkg:cargo/pg_ripple_http@0.122.0?download_url=file://.#src/main.rs"
+          "version": "0.125.0",
+          "purl": "pkg:cargo/pg_ripple_http@0.125.0?download_url=file://.#src/main.rs"
         }
       ]
     },
@@ -1392,16 +1392,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.1.0",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.2.1",
       "author": "Acrimon <joel.wejdenstal@gmail.com>",
       "name": "dashmap",
-      "version": "6.1.0",
+      "version": "6.2.1",
       "description": "Blazing fast concurrent HashMap for Rust.",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+          "content": "e6361d5c062261c78a176addb82d4c821ae42bed6089de0e12603cd25de2059c"
         }
       ],
       "licenses": [
@@ -1409,7 +1409,7 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:cargo/dashmap@6.1.0",
+      "purl": "pkg:cargo/dashmap@6.2.1",
       "externalReferences": [
         {
           "type": "documentation",
@@ -6324,16 +6324,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.10",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11",
       "author": "Tower Maintainers <team@tower-rs.com>",
       "name": "tower-http",
-      "version": "0.6.10",
+      "version": "0.6.11",
       "description": "Tower middleware and utilities for HTTP clients and servers",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "68d6fdd9f81c2819c9a8b0e0cd91660e7746a8e6ea2ba7c6b2b057985f6bcb51"
+          "content": "4cfcf7e2740e6fc6d4d688b4ef00650406bb94adf4731e43c096c3a19fe40840"
         }
       ],
       "licenses": [
@@ -6341,7 +6341,7 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:cargo/tower-http@0.6.10",
+      "purl": "pkg:cargo/tower-http@0.6.11",
       "externalReferences": [
         {
           "type": "website",
@@ -7570,12 +7570,12 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.122.0",
+      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2/pg_ripple_http#0.125.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#arrow@58.3.0",
         "registry+https://github.com/rust-lang/crates.io-index#axum@0.8.9",
         "registry+https://github.com/rust-lang/crates.io-index#constant_time_eq@0.4.2",
-        "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.1.0",
+        "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.2.1",
         "registry+https://github.com/rust-lang/crates.io-index#deadpool-postgres@0.14.1",
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#hmac@0.13.0",
@@ -7588,7 +7588,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
         "registry+https://github.com/rust-lang/crates.io-index#tokio-postgres@0.7.17",
         "registry+https://github.com/rust-lang/crates.io-index#tokio-stream@0.1.18",
-        "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.10",
+        "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11",
         "registry+https://github.com/rust-lang/crates.io-index#tower_governor@0.8.0",
         "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44",
         "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.3.23",
@@ -7924,7 +7924,7 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.1.0",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.2.1",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4",
         "registry+https://github.com/rust-lang/crates.io-index#crossbeam-utils@0.8.21",
@@ -8072,7 +8072,7 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#governor@0.10.4",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4",
-        "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.1.0",
+        "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.2.1",
         "registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32",
         "registry+https://github.com/rust-lang/crates.io-index#futures-timer@3.0.3",
         "registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32",
@@ -8704,7 +8704,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
         "registry+https://github.com/rust-lang/crates.io-index#tokio-rustls@0.26.4",
         "registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3",
-        "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.10",
+        "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11",
         "registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3",
         "registry+https://github.com/rust-lang/crates.io-index#url@2.5.8"
       ]
@@ -9076,7 +9076,7 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.10",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#bitflags@2.11.0",
         "registry+https://github.com/rust-lang/crates.io-index#bytes@1.11.1",
