@@ -27,8 +27,18 @@ SELECT pg_ripple.publish_rule_library('test-v0120-fed-lib', 'https://hub.example
 SELECT published = TRUE AND endpoint_uri = 'https://hub.example.com' AS publish_recorded
 FROM _pg_ripple.rule_library_federation WHERE name = 'test-v0120-fed-lib';
 
--- FED-03: subscribe_rule_library (returns void)
-SELECT pg_ripple.subscribe_rule_library('https://hub.example.com/stream', 'test-v0120-sub-lib');
+-- FED-03: subscribe_rule_library — PT0466 SSRF/DNS blocked
+DO $do$
+BEGIN
+  PERFORM pg_ripple.subscribe_rule_library('https://hub.example.com/stream', 'test-v0120-sub-lib');
+  RAISE EXCEPTION 'expected error not raised';
+EXCEPTION WHEN others THEN
+  IF sqlerrm LIKE '%PT0466%' OR sqlerrm LIKE '%DNS%' OR sqlerrm LIKE '%SSRF%' OR sqlerrm LIKE '%blocked%' THEN NULL;
+  ELSE RAISE;
+  END IF;
+END;
+$do$ LANGUAGE plpgsql;
+SELECT 'PT0466 ok' AS fed03_raised;
 SELECT subscribed = TRUE AS subscribe_recorded
 FROM _pg_ripple.rule_library_federation WHERE name = 'test-v0120-sub-lib';
 
