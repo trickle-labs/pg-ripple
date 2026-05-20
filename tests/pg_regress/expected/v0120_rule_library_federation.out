@@ -54,7 +54,6 @@ EXCEPTION WHEN others THEN
   END IF;
 END;
 $do$ LANGUAGE plpgsql;
-DO
 SELECT 'PT0466 ok' AS fed03_raised;
  fed03_raised 
 --------------
