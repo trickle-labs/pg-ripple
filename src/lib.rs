@@ -107,6 +107,9 @@ mod pprl;
 mod bench;
 mod compat;
 
+// v0.126.0 modules — per-endpoint federation credentials (FEAT-03)
+mod federation_credentials;
+
 // v0.119.0: Feature 5 (owl:propertyChainAxiom), Feature 6 (SERVICE circuit
 // breaker persistent table), Feature 10 (schema-aware NL→SPARQL). No new
 // top-level modules — functionality added to existing modules:

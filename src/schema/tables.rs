@@ -823,3 +823,43 @@ COMMENT ON TABLE _pg_ripple.graph_snapshots IS
     name = "v0125_graph_snapshots",
     requires = ["v0120_rule_library_federation"]
 );
+
+// v0.126.0: Per-endpoint federation credentials (FEAT-03).
+pgrx::extension_sql!(
+    r#"
+-- Per-endpoint federation credentials catalog (v0.126.0 FEAT-03)
+-- Stores OAuth2 Bearer and API-key tokens encrypted at rest via
+-- pgcrypto pgp_sym_encrypt using a server-managed symmetric key
+-- (pg_ripple.federation_credential_key GUC, never visible via SHOW).
+--
+-- endpoint_iri: REFERENCES _pg_ripple.federation_endpoints(url) ON DELETE CASCADE
+-- auth_type:    'bearer' | 'apikey' | 'none'
+-- encrypted_token: pgp_sym_encrypt output; never returned in queries
+-- header_name:  HTTP header to inject (default 'Authorization')
+-- created_at:   timestamp of initial creation
+-- rotated_at:   timestamp of last token rotation (NULL until first rotation)
+-- last_used_at: timestamp of last SERVICE call that used this credential
+CREATE TABLE IF NOT EXISTS _pg_ripple.federation_credentials (
+    endpoint_iri    TEXT        NOT NULL PRIMARY KEY
+                    REFERENCES _pg_ripple.federation_endpoints(url)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+    auth_type       TEXT        NOT NULL
+                    CHECK (auth_type IN ('bearer', 'apikey', 'none')),
+    encrypted_token BYTEA       NOT NULL DEFAULT ''::bytea,
+    header_name     TEXT        NOT NULL DEFAULT 'Authorization',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    rotated_at      TIMESTAMPTZ,
+    last_used_at    TIMESTAMPTZ
+);
+
+COMMENT ON TABLE _pg_ripple.federation_credentials IS
+    'Per-endpoint federation credentials (v0.126.0 FEAT-03). '
+    'Tokens encrypted with pgp_sym_encrypt; decrypted in-process at query time. '
+    'Use pg_ripple.set_federation_credential() and '
+    'pg_ripple.rotate_federation_credential() to manage credentials. '
+    'Never query encrypted_token directly — use federation_credential_audit() '
+    'for operational metadata.';
+"#,
+    name = "v0126_federation_credentials",
+    requires = ["v0125_graph_snapshots"]
+);

@@ -131,6 +131,8 @@ pub(crate) mod pprl_handlers;
 pub(crate) mod proof_tree_handler;
 pub(crate) mod temporal_handlers;
 pub(crate) mod tenant_handlers;
+// v0.126.0 FEAT-03: Per-endpoint federation credential status.
+pub(crate) mod federation_credential_handlers;
 
 // Re-export public helpers that arrow_encode.rs and spi_bridge.rs import via
 // `crate::routing::...`.  These functions live in sparql_handlers but are
@@ -415,6 +417,11 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/tenants/{name}/quota",
             get(tenant_handlers::get_tenant_quota).post(tenant_handlers::update_tenant_quota),
+        )
+        // v0.126.0 FEAT-03: Per-endpoint federation credential status (write-auth required).
+        .route(
+            "/federation/{endpoint}/auth-status",
+            get(federation_credential_handlers::federation_auth_status),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)

@@ -258,4 +258,16 @@ pub fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
+
+    // ── v0.126.0 GUCs — per-endpoint credentials (FEAT-03) ───────────────────
+    pgrx::GucRegistry::define_string_guc(
+        c"pg_ripple.federation_credential_key",
+        c"Symmetric key for pgp_sym_encrypt/pgp_sym_decrypt of federation \
+          endpoint tokens. Never logged; never visible via SHOW. \
+          Must be set before calling set_federation_credential(). (v0.126.0)",
+        c"",
+        &crate::gucs::federation::FEDERATION_CREDENTIAL_KEY,
+        GucContext::Suset,
+        GucFlags::NO_SHOW_ALL | GucFlags::SUPERUSER_ONLY,
+    );
 }

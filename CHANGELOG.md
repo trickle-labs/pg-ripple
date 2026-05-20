@@ -13,6 +13,50 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.126.0] — 2026-05-21 — Per-Endpoint Federation Credentials (FEAT-03)
+
+**Adds encrypted per-endpoint OAuth2 Bearer / API-key credential storage with
+pgcrypto-backed pgp_sym_encrypt, a credential audit view, atomic rotation,
+automatic header injection in the federation executor, and 10 new regression
+tests.**
+
+### Added
+
+- **FEAT-03** `pg_ripple.set_federation_credential(endpoint_iri TEXT, auth_type TEXT, token TEXT)`
+  — registers or replaces an encrypted credential for a federation endpoint.
+  Tokens encrypted at-rest via `pgcrypto.pgp_sym_encrypt` using the
+  `pg_ripple.federation_credential_key` GUC (superuser-only, never visible via
+  `SHOW`).  Errors: PT0510 (no key), PT0511 (no pgcrypto), PT0512 (unknown
+  endpoint), PT0513 (invalid auth_type), PT0514 (encrypt fail), PT0515 (upsert fail).
+- **FEAT-03** `pg_ripple.rotate_federation_credential(endpoint_iri TEXT, new_token TEXT)`
+  — atomically replaces the token and records `rotated_at = now()`. Error:
+  PT0516 (no credential for that endpoint).
+- **FEAT-03** `pg_ripple.federation_credential_audit() → TABLE(endpoint_iri TEXT, auth_type TEXT, token_age_days DOUBLE PRECISION, last_used_at TIMESTAMPTZ)`
+  — operational metadata only; never returns plaintext tokens.
+- **FEAT-03** `_pg_ripple.federation_credentials` table — stores encrypted tokens
+  with `auth_type CHECK ('bearer','apikey','none')`, `header_name`, `created_at`,
+  `rotated_at`, and `last_used_at`. FK to `_pg_ripple.federation_endpoints(url)`.
+- **FEAT-03** GUC `pg_ripple.federation_credential_key` — symmetric key for
+  pgp_sym_encrypt/pgp_sym_decrypt.  `NO_SHOW_ALL | SUPERUSER_ONLY`.
+- **FEAT-03** Federation executor (`src/sparql/federation/http.rs`) automatically
+  injects the appropriate HTTP header (Bearer / API-key) after SSRF validation.
+  Credential lookup happens post-SSRF to prevent credential-oracle attacks.
+- **FEAT-03** HTTP endpoint `GET /federation/{endpoint}/auth-status` — returns
+  JSON with `endpoint_iri`, `auth_type`, `token_age_days`, and `last_used_at`.
+  Requires write-level authentication.
+- **CRED-01–10** `tests/pg_regress/sql/v0126_federation_credentials.sql` — 10
+  regression tests covering table existence, GUC registration, function presence,
+  column schema, constraint enforcement, and audit function.
+- Migration script `sql/pg_ripple--0.125.0--0.126.0.sql`.
+- Roadmap file `roadmap/v0.126.0.md`.
+
+### Changed
+
+- `pg_ripple_http`: `COMPATIBLE_EXTENSION_MIN` remains `"0.125.0"` (one-version
+  trailing window; v0.126.0 introduces backward-compatible additions only).
+
+---
+
 ## [0.125.0] — 2026-05-20 — Temporal Graph Snapshots (FEAT-02)
 
 **Adds point-in-time named-graph snapshots via `pg_ripple.graph_at()`,

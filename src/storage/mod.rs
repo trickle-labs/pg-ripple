@@ -241,6 +241,9 @@ pub fn initialize_schema() {
     // v0.125.0: Temporal graph snapshots catalog (graph_snapshots + snapshot_id_seq).
     crate::temporal_snapshots::initialize_graph_snapshots_schema();
 
+    // v0.126.0: Per-endpoint federation credentials catalog.
+    crate::federation_credentials::initialize_federation_credentials_schema();
+
     // v0.58.0: PROV-O provenance catalog.
     crate::prov::initialize_prov_schema();
 

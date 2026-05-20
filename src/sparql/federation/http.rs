@@ -80,20 +80,38 @@ pub(crate) fn execute_remote(
 
     // M15-02 (v0.95.0): Use the IP-based connect URL and pin the Host header so
     // that TLS SNI and virtual-host routing still work with the correct hostname.
-    let response = agent
+    //
+    // v0.126.0 FEAT-03: Credential lookup happens AFTER SSRF check so that
+    // attackers cannot use a malicious endpoint URL to oracle credential store.
+    // The plaintext token is never cached — decrypted on each call.
+    let credential = crate::federation_credentials::get_credential_for_endpoint(url);
+
+    let mut req = agent
         .get(&resolved.connect_url)
         .query("query", sparql_text)
         .set("Accept", "application/sparql-results+json")
-        .set("Host", &resolved.host_header)
-        .call()
-        .map_err(|e| {
-            let msg = format!(
-                "federation HTTP error calling {url}: {}",
-                normalize_http_err(e)
-            );
-            circuit_record_failure(url);
-            msg
-        })?;
+        .set("Host", &resolved.host_header);
+
+    if let Some((auth_type, header_name, token)) = credential {
+        match auth_type.as_str() {
+            "bearer" => {
+                req = req.set(&header_name, &format!("Bearer {token}"));
+            }
+            "apikey" => {
+                req = req.set(&header_name, &token);
+            }
+            _ => {} // "none" — no header injected
+        }
+    }
+
+    let response = req.call().map_err(|e| {
+        let msg = format!(
+            "federation HTTP error calling {url}: {}",
+            normalize_http_err(e)
+        );
+        circuit_record_failure(url);
+        msg
+    })?;
 
     // FED-BODY-STREAM-01 (v0.82.0): pre-check Content-Length before buffering body.
     // Reject immediately if Content-Length exceeds federation_max_response_bytes

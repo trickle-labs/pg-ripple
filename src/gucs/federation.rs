@@ -101,3 +101,14 @@ pub static FEDERATION_CONNECT_TIMEOUT_SECS: pgrx::GucSetting<i32> =
 /// Set to `on` to allow ad-hoc federation (not recommended in production).
 pub static FEDERATION_ALLOW_UNREGISTERED_SERVICE_ENDPOINTS: pgrx::GucSetting<bool> =
     pgrx::GucSetting::<bool>::new(false);
+
+// ─── v0.126.0 federation GUCs — per-endpoint credentials (FEAT-03) ──────────
+
+/// GUC: symmetric key for `pgp_sym_encrypt` / `pgp_sym_decrypt` of federation
+/// endpoint tokens (v0.126.0 FEAT-03).
+///
+/// Never logged, never visible via `SHOW` (set `GucFlags::NO_SHOW_ALL |
+/// GucFlags::SUPERUSER_ONLY`).  Must be set before calling
+/// `pg_ripple.set_federation_credential()`.
+pub static FEDERATION_CREDENTIAL_KEY: pgrx::GucSetting<Option<std::ffi::CString>> =
+    pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
