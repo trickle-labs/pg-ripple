@@ -246,7 +246,15 @@ pub fn federation_credential_audit() -> TableIterator<
                 used,
             ));
         }
-        Ok::<Vec<(String, String, f64, Option<pgrx::datum::TimestampWithTimeZone>)>, pgrx::spi::Error>(out)
+        Ok::<
+            Vec<(
+                String,
+                String,
+                f64,
+                Option<pgrx::datum::TimestampWithTimeZone>,
+            )>,
+            pgrx::spi::Error,
+        >(out)
     })
     .unwrap_or_default();
 

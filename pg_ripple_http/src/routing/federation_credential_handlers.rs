@@ -93,4 +93,3 @@ pub(crate) async fn federation_auth_status(
         ),
     }
 }
-
