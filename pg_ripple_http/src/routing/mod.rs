@@ -357,6 +357,15 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
             post(temporal_handlers::set_point_in_time),
         )
         .route("/temporal/facts", get(temporal_handlers::temporal_facts))
+        // v0.125.0 FEAT-02: Temporal graph snapshot and diff endpoints.
+        .route(
+            "/temporal/graphs/:iri/snapshot",
+            get(temporal_handlers::graph_snapshot),
+        )
+        .route(
+            "/temporal/graphs/:iri/diff",
+            get(temporal_handlers::graph_diff),
+        )
         // v0.115.0 M16-02: PPRL REST API.
         .route("/pprl/bloom_encode", post(pprl_handlers::pprl_bloom_encode))
         .route(

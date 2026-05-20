@@ -317,3 +317,234 @@ pub(crate) async fn temporal_facts(
         serde_json::json!({ "facts": facts, "count": facts.len() }),
     )
 }
+
+// ── GET /temporal/graphs/{iri}/snapshot?at=<iso8601> ─────────────────────────
+
+/// Query parameters for the snapshot endpoint.
+#[derive(Debug, Deserialize)]
+pub struct GraphSnapshotParams {
+    /// ISO 8601 / RFC 3339 timestamp string.
+    pub at: String,
+}
+
+/// `GET /temporal/graphs/{iri}/snapshot?at=<iso8601>`
+///
+/// Calls `pg_ripple.graph_at(graph_iri, at)` and returns the registered
+/// snapshot IRI together with the snapshot content encoded as Turtle
+/// (all temporal facts valid at `at` for the requested named graph).
+pub(crate) async fn graph_snapshot(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    axum::extract::Path(iri): axum::extract::Path<String>,
+    Query(params): Query<GraphSnapshotParams>,
+) -> Response {
+    if let Err(r) = check_auth(&state, &headers) {
+        return r;
+    }
+
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+
+    // 1. Register (or return cached) snapshot IRI.
+    let snapshot_iri_row = match client
+        .query_one(
+            "SELECT pg_ripple.graph_at($1, $2::TIMESTAMPTZ)",
+            &[&iri, &params.at],
+        )
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "graph_at_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+    let snapshot_iri: String = snapshot_iri_row.get(0);
+
+    // 2. Fetch the temporal facts valid at `at` and serialise as Turtle.
+    let rows = match client
+        .query(
+            "SELECT \
+               pg_ripple.decode(s) AS s_val, \
+               pg_ripple.decode(p) AS p_val, \
+               pg_ripple.decode(o) AS o_val \
+             FROM _pg_ripple.temporal_facts tf \
+             JOIN _pg_ripple.dictionary dg ON dg.id = tf.g \
+             WHERE dg.value = $1 \
+               AND tf.valid_from <= $2::TIMESTAMPTZ \
+               AND (tf.valid_to IS NULL OR tf.valid_to > $2::TIMESTAMPTZ) \
+             ORDER BY tf.s, tf.p, tf.o",
+            &[&iri, &params.at],
+        )
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "snapshot_facts_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+
+    // Serialise as minimal Turtle (one triple per line, no prefix shortening).
+    let mut turtle = format!(
+        "# Snapshot: {snapshot_iri}\n# Graph: {iri}\n# At: {}\n\n",
+        params.at
+    );
+    for row in &rows {
+        let s: String = row.get(0);
+        let p: String = row.get(1);
+        let o: String = row.get(2);
+        // Determine if subject/object are IRIs or literals.
+        let s_term = if s.starts_with("http") || s.starts_with("urn") || s.starts_with("_:") {
+            format!("<{s}>")
+        } else {
+            format!("\"{s}\"")
+        };
+        let p_term = format!("<{p}>");
+        let o_term = if o.starts_with("http") || o.starts_with("urn") || o.starts_with("_:") {
+            format!("<{o}>")
+        } else {
+            format!("\"{o}\"")
+        };
+        turtle.push_str(&format!("{s_term} {p_term} {o_term} .\n"));
+    }
+
+    // Update the snapshot gauge.
+    if let Ok(count_row) = client
+        .query_one("SELECT pg_ripple.graph_snapshots_count()", &[])
+        .await
+    {
+        let count: i64 = count_row.get(0);
+        state.metrics.update_graph_snapshots_total(count as u64);
+    }
+
+    axum::response::Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/turtle; charset=utf-8")
+        .header("X-Snapshot-IRI", snapshot_iri)
+        .body(axum::body::Body::from(turtle))
+        .unwrap_or_else(|_| {
+            json_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                serde_json::json!({"error": "response_build_error"}),
+            )
+        })
+}
+
+// ── GET /temporal/graphs/{iri}/diff?from=<iso8601>&to=<iso8601> ──────────────
+
+/// Query parameters for the diff endpoint.
+#[derive(Debug, Deserialize)]
+pub struct GraphDiffParams {
+    /// ISO 8601 start timestamp (inclusive).
+    pub from: String,
+    /// ISO 8601 end timestamp (exclusive).
+    pub to: String,
+}
+
+/// `GET /temporal/graphs/{iri}/diff?from=<iso8601>&to=<iso8601>`
+///
+/// Returns the N-Quads delta between two temporal snapshots of a named graph.
+/// Each line is a quad in N-Quads syntax preceded by a `# added` / `# removed`
+/// comment to support streaming audit-compliance consumers.
+pub(crate) async fn graph_diff(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    axum::extract::Path(iri): axum::extract::Path<String>,
+    Query(params): Query<GraphDiffParams>,
+) -> Response {
+    if let Err(r) = check_auth(&state, &headers) {
+        return r;
+    }
+
+    let client = match state.pool.get().await {
+        Ok(c) => c,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "db_pool_error",
+                &e.to_string(),
+                StatusCode::SERVICE_UNAVAILABLE,
+            );
+        }
+    };
+
+    let rows = match client
+        .query(
+            "SELECT \
+               pg_ripple.decode(d.s) AS s_val, \
+               pg_ripple.decode(d.p) AS p_val, \
+               pg_ripple.decode(d.o) AS o_val, \
+               d.change \
+             FROM pg_ripple.graph_diff($1, $2::TIMESTAMPTZ, $3::TIMESTAMPTZ) d \
+             ORDER BY d.change, d.s, d.p, d.o",
+            &[&iri, &params.from, &params.to],
+        )
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            state.metrics.record_error();
+            return redacted_error(
+                "graph_diff_error",
+                &e.to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+
+    let graph_term = format!("<{iri}>");
+    let mut nquads = format!(
+        "# Graph: {iri}\n# From: {}\n# To: {}\n\n",
+        params.from, params.to
+    );
+    for row in &rows {
+        let s: String = row.get(0);
+        let p: String = row.get(1);
+        let o: String = row.get(2);
+        let change: String = row.get(3);
+
+        let s_term = if s.starts_with("http") || s.starts_with("urn") || s.starts_with("_:") {
+            format!("<{s}>")
+        } else {
+            format!("\"{s}\"")
+        };
+        let p_term = format!("<{p}>");
+        let o_term = if o.starts_with("http") || o.starts_with("urn") || o.starts_with("_:") {
+            format!("<{o}>")
+        } else {
+            format!("\"{o}\"")
+        };
+        nquads.push_str(&format!(
+            "# {change}\n{s_term} {p_term} {o_term} {graph_term} .\n"
+        ));
+    }
+
+    axum::response::Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/n-quads; charset=utf-8")
+        .body(axum::body::Body::from(nquads))
+        .unwrap_or_else(|_| {
+            json_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                serde_json::json!({"error": "response_build_error"}),
+            )
+        })
+}

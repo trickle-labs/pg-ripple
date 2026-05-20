@@ -402,4 +402,20 @@ pub(super) fn register_late() {
         GucContext::Suset,
         GucFlags::default(),
     );
+
+    // ── v0.125.0 GUCs — temporal graph snapshots (FEAT-02) ───────────────────
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.snapshot_retention_days",
+        c"Retention period in days for _pg_ripple.graph_snapshots rows. \
+          Snapshots whose expires_at <= now() are purged by the background merge \
+          worker on each tick. Set to 0 to disable automatic GC. \
+          Default: 30. Range: 0-3650. (FEAT-02 v0.125.0)",
+        c"",
+        &crate::gucs::storage::SNAPSHOT_RETENTION_DAYS,
+        0,
+        3650,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
 }

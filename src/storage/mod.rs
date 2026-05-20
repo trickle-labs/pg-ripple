@@ -238,6 +238,9 @@ pub fn initialize_schema() {
     // v0.106.0: Temporal fact store (temporal_facts + temporal_predicates tables).
     crate::temporal::initialize_temporal_store_schema();
 
+    // v0.125.0: Temporal graph snapshots catalog (graph_snapshots + snapshot_id_seq).
+    crate::temporal::initialize_graph_snapshots_schema();
+
     // v0.58.0: PROV-O provenance catalog.
     crate::prov::initialize_prov_schema();
 

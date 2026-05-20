@@ -414,7 +414,10 @@ pub(crate) async fn metrics_endpoint(
          pg_ripple_rule_library_stream_duration_seconds {:.6}\n\
          # HELP pg_ripple_rule_library_subscribe_errors_total Total errors from rule-library subscribe calls (OBS-M-02)\n\
          # TYPE pg_ripple_rule_library_subscribe_errors_total counter\n\
-         pg_ripple_rule_library_subscribe_errors_total {}\n",
+         pg_ripple_rule_library_subscribe_errors_total {}\n\
+         # HELP pg_ripple_graph_snapshots_total Current number of registered temporal graph snapshots (FEAT-02)\n\
+         # TYPE pg_ripple_graph_snapshots_total gauge\n\
+         pg_ripple_graph_snapshots_total {}\n",
         m.sparql_query_count(),
         m.datalog_query_count(),
         m.error_count(),
@@ -478,6 +481,8 @@ pub(crate) async fn metrics_endpoint(
         // OBS-M-02 (v0.123.0): rule-library federation metrics.
         m.rule_library_stream_duration_secs(),
         m.rule_library_subscribe_errors_total(),
+        // FEAT-02 (v0.125.0): graph snapshot gauge.
+        m.graph_snapshots_total(),
     );
 
     // Feature 6 (v0.119.0): Append per-endpoint federation circuit breaker

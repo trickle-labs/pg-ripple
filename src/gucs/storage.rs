@@ -369,3 +369,11 @@ pub static REPLICATION_BATCH_INTERVAL_MS: pgrx::GucSetting<i32> = pgrx::GucSetti
 /// Default: `'1 day'`. (Feature 2 v0.118.0)
 pub static PRIVACY_BUDGET_RESET_INTERVAL: pgrx::GucSetting<Option<std::ffi::CString>> =
     pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
+
+// ─── v0.125.0 GUCs — temporal graph snapshots (FEAT-02) ──────────────────────
+
+/// GUC: retention period in days for `_pg_ripple.graph_snapshots` rows.
+/// Snapshots whose `expires_at <= now()` are purged by the background merge
+/// worker on each tick.  Set to 0 to disable automatic GC.
+/// Default: 30. Range: 0–3650. (FEAT-02 v0.125.0)
+pub static SNAPSHOT_RETENTION_DAYS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(30);

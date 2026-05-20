@@ -149,6 +149,10 @@ pub struct Metrics {
     rule_library_stream_duration_us: AtomicU64,
     /// Total errors returned by `POST /rule-libraries/{name}/subscribe`.
     rule_library_subscribe_errors_total: AtomicU64,
+
+    // FEAT-02 (v0.125.0): temporal graph snapshot gauge.
+    /// Snapshot: current number of registered graph snapshots.
+    graph_snapshots_total: AtomicU64,
 }
 
 impl Default for Metrics {
@@ -219,6 +223,8 @@ impl Metrics {
             // OBS-M-02 (v0.123.0)
             rule_library_stream_duration_us: AtomicU64::new(0),
             rule_library_subscribe_errors_total: AtomicU64::new(0),
+            // FEAT-02 (v0.125.0)
+            graph_snapshots_total: AtomicU64::new(0),
         }
     }
 
@@ -686,5 +692,16 @@ impl Metrics {
     pub fn rule_library_subscribe_errors_total(&self) -> u64 {
         self.rule_library_subscribe_errors_total
             .load(Ordering::Relaxed)
+    }
+
+    // FEAT-02 (v0.125.0): temporal graph snapshot gauge.
+
+    /// Update the live graph-snapshot count.
+    pub fn update_graph_snapshots_total(&self, count: u64) {
+        self.graph_snapshots_total.store(count, Ordering::Relaxed);
+    }
+
+    pub fn graph_snapshots_total(&self) -> u64 {
+        self.graph_snapshots_total.load(Ordering::Relaxed)
     }
 }

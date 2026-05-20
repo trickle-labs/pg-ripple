@@ -13,6 +13,48 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.125.0] — 2026-05-20 — Temporal Graph Snapshots (FEAT-02)
+
+**Adds point-in-time named-graph snapshots via `pg_ripple.graph_at()`,
+a diff API via `pg_ripple.graph_diff()`, two HTTP endpoints, a Prometheus
+gauge, automatic GC, and 15 new regression tests.**
+
+### Added
+
+- **FEAT-02** `pg_ripple.graph_at(graph_iri TEXT, snapshot_time TIMESTAMPTZ) → TEXT`
+  — materialises a named-graph snapshot from `_pg_ripple.temporal_facts` at the
+  given timestamp.  Registers the snapshot in `_pg_ripple.graph_snapshots` and
+  returns a deterministic `urn:snapshot:…` IRI for use in `GRAPH <iri> { … }`
+  SPARQL queries.
+- **FEAT-02** `pg_ripple.graph_diff(graph_iri TEXT, from_ts TIMESTAMPTZ, to_ts TIMESTAMPTZ) → TABLE(s BIGINT, p BIGINT, o BIGINT, change TEXT)`
+  — returns `'added'`/`'removed'` delta rows between two temporal snapshots,
+  enabling audit-compliance workflows and incremental Turtle/N-Quads exports.
+- **FEAT-02** `pg_ripple.graph_snapshots_count() → BIGINT`
+  — returns the current live snapshot count.
+- **FEAT-02** `_pg_ripple.graph_snapshots` table and `_pg_ripple.snapshot_id_seq`
+  sequence — catalog of registered snapshots with `expires_at` for GC.
+- **FEAT-02** GUC `pg_ripple.snapshot_retention_days` (default 30) — automatic
+  GC of expired snapshots by the merge background worker tick.
+- **FEAT-02** `GET /temporal/graphs/{iri}/snapshot?at=<iso8601>` HTTP endpoint
+  — returns snapshot content as Turtle with `X-Snapshot-IRI` response header.
+- **FEAT-02** `GET /temporal/graphs/{iri}/diff?from=<iso8601>&to=<iso8601>` HTTP
+  endpoint — returns N-Quads delta between two timestamps.
+- **FEAT-02** Prometheus gauge `pg_ripple_graph_snapshots_total` — tracks live
+  snapshot count; updated on each `/temporal/graphs/{iri}/snapshot` call.
+- **SNAP-01–15** `tests/pg_regress/sql/v0125_temporal_graph_snapshots.sql` — 15
+  regression tests covering snapshot creation, idempotency, count tracking,
+  diff correctness, retention GUC, and table schema.
+- Migration script `sql/pg_ripple--0.124.0--0.125.0.sql` — adds `graph_snapshots`
+  table and `snapshot_id_seq` sequence.
+- Roadmap file `roadmap/v0.125.0.md`.
+- Blog post `blog/temporal-graph-snapshots.md`.
+
+### Changed
+
+- `pg_ripple_http`: `COMPATIBLE_EXTENSION_MIN` bumped from `"0.123.0"` to `"0.125.0"`.
+
+---
+
 ## [0.124.0] — 2026-05-20 — SPARQL 1.2 Property Path Algebra Execution
 
 **Fixes a Cartesian-product bug (PATH-BNODE-01) in the SPARQL property path

@@ -780,3 +780,46 @@ COMMENT ON TABLE _pg_ripple.rule_library_federation IS
     name = "v0120_rule_library_federation",
     requires = ["v0119_federation_circuit_state"]
 );
+
+// v0.125.0: Temporal graph snapshots catalog (FEAT-02).
+pgrx::extension_sql!(
+    r#"
+-- Snapshot ID sequence (v0.125.0 FEAT-02)
+CREATE SEQUENCE IF NOT EXISTS _pg_ripple.snapshot_id_seq
+    START 1 INCREMENT 1 NO CYCLE;
+
+-- Temporal graph snapshots catalog (v0.125.0 FEAT-02)
+-- One row per (graph_iri, snapshot_time) materialised snapshot.
+-- snapshot_iri: deterministic URN: urn:snapshot:{iri_slug}:{iso_ts}
+-- captured_at:  timestamp of the snapshot request (same as snapshot_time)
+-- triple_count: number of temporal facts valid at captured_at
+-- expires_at:   NULL = keep forever; otherwise pruned by background worker
+--               when expires_at <= now() (retention controlled by
+--               pg_ripple.snapshot_retention_days GUC, default 30).
+CREATE TABLE IF NOT EXISTS _pg_ripple.graph_snapshots (
+    snapshot_id  BIGINT      NOT NULL DEFAULT nextval('_pg_ripple.snapshot_id_seq') PRIMARY KEY,
+    graph_iri    TEXT        NOT NULL,
+    snapshot_iri TEXT        NOT NULL UNIQUE,
+    captured_at  TIMESTAMPTZ NOT NULL,
+    triple_count BIGINT      NOT NULL DEFAULT 0,
+    expires_at   TIMESTAMPTZ
+);
+
+-- B-tree on graph_iri for per-graph snapshot listing.
+CREATE INDEX IF NOT EXISTS idx_graph_snapshots_graph_iri
+    ON _pg_ripple.graph_snapshots (graph_iri);
+
+-- Partial B-tree for expiry pruning (only rows with an expires_at set).
+CREATE INDEX IF NOT EXISTS idx_graph_snapshots_expires_at
+    ON _pg_ripple.graph_snapshots (expires_at)
+    WHERE expires_at IS NOT NULL;
+
+COMMENT ON TABLE _pg_ripple.graph_snapshots IS
+    'Temporal graph snapshot registry (v0.125.0 FEAT-02). '
+    'Populated by pg_ripple.graph_at(); pruned by background worker when '
+    'expires_at <= now(). Retention controlled by '
+    'pg_ripple.snapshot_retention_days (default 30 days, 0 = keep forever).';
+"#,
+    name = "v0125_graph_snapshots",
+    requires = ["v0120_rule_library_federation"]
+);
