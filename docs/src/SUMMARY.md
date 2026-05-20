@@ -189,6 +189,7 @@
 - [Vector Search Reference](reference/vector-search.md)
 - [Development Reference](reference/development.md)
 - [SPARQL Compliance Matrix](reference/sparql-compliance.md)
+- [SPARQL 1.2 Property Path Status](reference/sparql12-status.md)
 - [W3C Conformance](reference/w3c-conformance.md)
 - [Conformance Trends](reference/conformance-trends.md)
 - [Jena Results](reference/jena-results.md)

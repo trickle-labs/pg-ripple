@@ -38,8 +38,8 @@ FROM pg_ripple.bench_workload_result('bsbm');
  t
 (1 row)
 
--- OBS23-04: compat_check version is 0.123.0
-SELECT (pg_ripple.compat_check())::jsonb ->> 'extension_version' = '0.123.0'
+-- OBS23-04: compat_check version is 0.123.0 or later
+SELECT (pg_ripple.compat_check())::jsonb ->> 'extension_version' >= '0.123.0'
     AS obs2304_version_is_0_123_0;
  obs2304_version_is_0_123_0 
 ----------------------------

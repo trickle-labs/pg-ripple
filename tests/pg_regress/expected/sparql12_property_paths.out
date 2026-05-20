@@ -1,0 +1,308 @@
+-- pg_regress test: SPARQL 1.2 property path algebra execution (v0.124.0)
+-- Covers all 8 PropertyPathExpression variants and 5 key operator combinations:
+--   inverse-sequence, alternation with quantifier, negated-with-inverse,
+--   nested inverse, and cycle detection.
+--
+-- Uses unique namespace https://sp12.test/ to avoid interference.
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SELECT pg_ripple.triple_count() >= 0 AS extension_loaded;
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ extension_loaded 
+------------------
+ t
+(1 row)
+
+SET search_path TO pg_ripple, public;
+-- ─── Data setup ────────────────────────────────────────────────────────────
+-- Chain: a→b→c→d→e→f via sp12:hop (5 hops)
+-- Alt:   a→x via sp12:link1, b→y via sp12:link1
+-- Meta:  a→red via sp12:hasColor, a→big via sp12:hasSize
+-- Cycle: m→n, n→m via sp12:cycle
+SELECT pg_ripple.load_ntriples(
+    '<https://sp12.test/a> <https://sp12.test/hop> <https://sp12.test/b> .' || E'\n' ||
+    '<https://sp12.test/b> <https://sp12.test/hop> <https://sp12.test/c> .' || E'\n' ||
+    '<https://sp12.test/c> <https://sp12.test/hop> <https://sp12.test/d> .' || E'\n' ||
+    '<https://sp12.test/d> <https://sp12.test/hop> <https://sp12.test/e> .' || E'\n' ||
+    '<https://sp12.test/e> <https://sp12.test/hop> <https://sp12.test/f> .' || E'\n' ||
+    '<https://sp12.test/a> <https://sp12.test/link1> <https://sp12.test/x> .' || E'\n' ||
+    '<https://sp12.test/b> <https://sp12.test/link1> <https://sp12.test/y> .' || E'\n' ||
+    '<https://sp12.test/a> <https://sp12.test/hasColor> <https://sp12.test/red> .' || E'\n' ||
+    '<https://sp12.test/a> <https://sp12.test/hasSize> <https://sp12.test/big> .' || E'\n' ||
+    '<https://sp12.test/m> <https://sp12.test/cycle> <https://sp12.test/n> .' || E'\n' ||
+    '<https://sp12.test/n> <https://sp12.test/cycle> <https://sp12.test/m> .'
+) = 11 AS setup_ok;
+ setup_ok 
+----------
+ t
+(1 row)
+
+-- ─── Test 1: Inverse path (^p) — single step ───────────────────────────────
+-- ^hop from b finds a (a hop b → reversed: b ^hop a)
+SELECT COUNT(*) = 1 AS t01_inverse_single
+FROM pg_ripple.sparql($$
+    SELECT ?who WHERE {
+        ?who ^<https://sp12.test/hop> <https://sp12.test/b> .
+    }
+$$);
+ t01_inverse_single 
+--------------------
+ t
+(1 row)
+
+-- ─── Test 2: Inverse transitive (^hop+) from f — finds all ancestors ───────
+-- f ^hop+ gives: e, d, c, b, a (walking backwards along hop)
+SELECT COUNT(*) = 5 AS t02_inverse_transitive
+FROM pg_ripple.sparql($$
+    SELECT ?anc WHERE {
+        <https://sp12.test/f> ^<https://sp12.test/hop>+ ?anc .
+    }
+$$);
+ t02_inverse_transitive 
+------------------------
+ t
+(1 row)
+
+-- ─── Test 3: Alternative path (hop|link1) from a ───────────────────────────
+-- a hop→b, a link1→x → 2 results
+SELECT COUNT(*) = 2 AS t03_alternative_simple
+FROM pg_ripple.sparql($$
+    SELECT ?next WHERE {
+        <https://sp12.test/a>
+            (<https://sp12.test/hop>|<https://sp12.test/link1>) ?next .
+    }
+$$);
+ t03_alternative_simple 
+------------------------
+ t
+(1 row)
+
+-- ─── Test 4: Alternative with quantifier (hop|link1)+ from a ───────────────
+-- Reachable via one or more (hop or link1): b,c,d,e,f,x,y = 7
+SELECT COUNT(*) = 7 AS t04_alternative_quantifier
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a>
+            (<https://sp12.test/hop>|<https://sp12.test/link1>)+ ?x .
+    }
+$$);
+ t04_alternative_quantifier 
+----------------------------
+ t
+(1 row)
+
+-- ─── Test 5: ZeroOrOne (hop?) — present case ───────────────────────────────
+-- hop? from a: {a (0-hop), b (1-hop)} = 2
+SELECT COUNT(*) = 2 AS t05_zero_or_one_present
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a> <https://sp12.test/hop>? ?x .
+    }
+$$);
+ t05_zero_or_one_present 
+-------------------------
+ t
+(1 row)
+
+-- ─── Test 6: ZeroOrOne (hop?) — identity (zero-hop matches self) ───────────
+SELECT pg_ripple.sparql_ask($$
+    ASK { <https://sp12.test/a> <https://sp12.test/hop>? <https://sp12.test/a> }
+$$) AS t06_zero_or_one_identity;
+ t06_zero_or_one_identity 
+--------------------------
+ t
+(1 row)
+
+-- ─── Test 7: Negated property set — one predicate excluded ─────────────────
+-- From a: link1→x, hasColor→red, hasSize→big (hop excluded) = 3
+SELECT COUNT(*) = 3 AS t07_negated_one_pred
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a> !<https://sp12.test/hop> ?x .
+    }
+$$);
+ t07_negated_one_pred 
+----------------------
+ t
+(1 row)
+
+-- ─── Test 8: Negated property set — two predicates excluded ────────────────
+-- From a excluding hop and link1: hasColor→red, hasSize→big = 2
+SELECT COUNT(*) = 2 AS t08_negated_two_preds
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a>
+            !(<https://sp12.test/hop>|<https://sp12.test/link1>) ?x .
+    }
+$$);
+ t08_negated_two_preds 
+-----------------------
+ t
+(1 row)
+
+-- ─── Test 9: Nested inverse sequence (^hop/hop) from c ─────────────────────
+-- ^hop from c → b; hop from b → c: result = {c}
+SELECT COUNT(*) = 1 AS t09_inverse_sequence
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/c>
+            ^<https://sp12.test/hop>/<https://sp12.test/hop> ?x .
+    }
+$$);
+ t09_inverse_sequence 
+----------------------
+ t
+(1 row)
+
+-- ─── Test 10: Nested sequence with inverse (hop/^hop) from b ───────────────
+-- hop from b → c; ^hop from c → b: result = {b}
+SELECT COUNT(*) = 1 AS t10_sequence_inverse
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/b>
+            <https://sp12.test/hop>/^<https://sp12.test/hop> ?x .
+    }
+$$);
+ t10_sequence_inverse 
+----------------------
+ t
+(1 row)
+
+-- ─── Test 11: Inverse of two-hop sequence ^(hop/hop) ───────────────────────
+-- Nodes that reach d in exactly 2 hops: b→c→d, so b
+SELECT COUNT(*) = 1 AS t11_inverse_of_sequence
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/d>
+            ^(<https://sp12.test/hop>/<https://sp12.test/hop>) ?x .
+    }
+$$);
+ t11_inverse_of_sequence 
+-------------------------
+ t
+(1 row)
+
+-- ─── Test 12: Alternative with ZeroOrMore (hop|link1)* from a ──────────────
+-- Includes a itself: {a,b,c,d,e,f,x,y} = 8
+SELECT COUNT(*) = 8 AS t12_alternative_zero_or_more
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a>
+            (<https://sp12.test/hop>|<https://sp12.test/link1>)* ?x .
+    }
+$$);
+ t12_alternative_zero_or_more 
+------------------------------
+ t
+(1 row)
+
+-- ─── Test 13: Double inverse ^(^hop) equals hop ────────────────────────────
+-- ^(^hop) from a should give same result as hop from a = {b}
+SELECT COUNT(*) = 1 AS t13_double_inverse
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a> ^(^<https://sp12.test/hop>) ?x .
+    }
+$$);
+ t13_double_inverse 
+--------------------
+ t
+(1 row)
+
+-- ─── Test 14: Sequence with ZeroOrMore (hop*/hop) from a ───────────────────
+-- hop* from a: {a,b,c,d,e,f}; then one more hop: {b,c,d,e,f} = 5
+SELECT COUNT(*) = 5 AS t14_star_then_one
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a>
+            <https://sp12.test/hop>*/<https://sp12.test/hop> ?x .
+    }
+$$);
+ t14_star_then_one 
+-------------------
+ t
+(1 row)
+
+-- ─── Test 15: Sequence with ZeroOrOne (hop?/hop) from a ────────────────────
+-- hop? from a: {a,b}; then hop: {a→b, b→c} = {b,c} = 2
+SELECT COUNT(*) = 2 AS t15_zero_or_one_then_hop
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a>
+            (<https://sp12.test/hop>?/<https://sp12.test/hop>) ?x .
+    }
+$$);
+ t15_zero_or_one_then_hop 
+--------------------------
+ t
+(1 row)
+
+-- ─── Test 16: Cycle detection via cycle+ — no infinite loop ────────────────
+-- m cycle n, n cycle m: cycle+ from m → {n, m} = 2 (cycle detected, terminates)
+SELECT COUNT(*) = 2 AS t16_cycle_detection
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/m> <https://sp12.test/cycle>+ ?x .
+    }
+$$);
+ t16_cycle_detection 
+---------------------
+ t
+(1 row)
+
+-- ─── Test 17: Deep chain — 5-hop OneOrMore ─────────────────────────────────
+-- a hop+ → {b,c,d,e,f} = 5
+SELECT COUNT(*) = 5 AS t17_deep_chain
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/a> <https://sp12.test/hop>+ ?x .
+    }
+$$);
+ t17_deep_chain 
+----------------
+ t
+(1 row)
+
+-- ─── Test 18: Reverse transitive (^hop+) from f ────────────────────────────
+-- f ^hop+ → {e,d,c,b,a} = 5
+SELECT COUNT(*) = 5 AS t18_reverse_transitive
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/f> ^<https://sp12.test/hop>+ ?x .
+    }
+$$);
+ t18_reverse_transitive 
+------------------------
+ t
+(1 row)
+
+-- ─── Test 19: Negated-with-inverse: inverse path then negated set ──────────
+-- From b via ^hop: {a}; from a via !(hop): {x,red,big} = 3
+SELECT COUNT(*) = 3 AS t19_inverse_then_negated
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/b> ^<https://sp12.test/hop>/!<https://sp12.test/hop> ?x .
+    }
+$$);
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+WARNING:  pg_ripple: loaded without shared_preload_libraries; HTAP merge worker, CONSTRUCT writeback, and dictionary cache are disabled. Add pg_ripple to shared_preload_libraries in postgresql.conf.
+ t19_inverse_then_negated 
+--------------------------
+ t
+(1 row)
+
+-- ─── Test 20: Bidirectional (hop|^hop)+ from c — all connected nodes ────────
+-- Chain a-b-c-d-e-f fully bidirectional; from c via one or more steps:
+-- {b, d} (1 hop), {a, c, e} (2 hops), {f} (3 hops) = 6 unique nodes.
+-- Note: c itself is reachable in 2 steps (c→d→c via reverse), so count = 6.
+SELECT COUNT(*) = 6 AS t20_bidirectional
+FROM pg_ripple.sparql($$
+    SELECT ?x WHERE {
+        <https://sp12.test/c>
+            (<https://sp12.test/hop>|^<https://sp12.test/hop>)+ ?x .
+    }
+$$);
+ t20_bidirectional 
+-------------------
+ t
+(1 row)
+

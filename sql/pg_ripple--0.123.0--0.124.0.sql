@@ -1,0 +1,20 @@
+-- Migration 0.123.0 → 0.124.0: SPARQL 1.2 property path algebra execution
+--
+-- This release completes the SPARQL 1.2 property path algebra execution engine.
+--
+-- Bug fix (PATH-BNODE-01):
+--   When spargebra/sparopt decomposes a Sequence path (e.g. hop*/hop or hop?/hop)
+--   into two separate GraphPattern::Path nodes connected by an anonymous blank node,
+--   the blank node is now properly bound as a join variable.  Previously, blank
+--   nodes in path subject/object position were silently dropped, causing a
+--   CROSS JOIN instead of an INNER JOIN, which produced N×M duplicate results.
+--
+--   Affected operators: Sequence (a/b) where a is ZeroOrMore, ZeroOrOne, or any
+--   operator that spargebra/sparopt chooses to decompose.
+--
+--   Fix location: src/sparql/sqlgen.rs — GraphPattern::Path handler now calls
+--   bgp::bind_term() for both subject and object (handling Variable, BlankNode,
+--   NamedNode, and Literal uniformly).
+--
+-- No SQL DDL changes required — this is a Rust compiled-in fix.
+-- The fix is automatically active after installing pg_ripple 0.124.0.
