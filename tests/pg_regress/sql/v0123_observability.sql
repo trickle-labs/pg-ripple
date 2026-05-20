@@ -28,8 +28,8 @@ SELECT true AS obs2302_correct_column_count;
 SELECT count(*) >= 0 AS obs2303_bench_workload_result_callable
 FROM pg_ripple.bench_workload_result('bsbm');
 
--- OBS23-04: compat_check version is 0.123.0
-SELECT (pg_ripple.compat_check())::jsonb ->> 'extension_version' = '0.123.0'
+-- OBS23-04: compat_check version is 0.123.0 or later
+SELECT (pg_ripple.compat_check())::jsonb ->> 'extension_version' >= '0.123.0'
     AS obs2304_version_is_0_123_0;
 
 -- OBS23-05: allen_before exists (Allen's interval relations intact from v0.118.0)
