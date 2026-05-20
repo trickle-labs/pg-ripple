@@ -28,7 +28,7 @@ use std::collections::HashMap;
 
 use pgrx::prelude::*;
 use spargebra::algebra::{Expression, GraphPattern, OrderExpression};
-use spargebra::term::{Literal, TermPattern};
+use spargebra::term::Literal;
 
 use super::federation;
 use super::property_path::{PathCtx, compile_path};
@@ -596,25 +596,28 @@ pub(crate) fn translate_pattern(pattern: &GraphPattern, ctx: &mut Ctx) -> Fragme
             let mut frag = Fragment::empty();
             frag.from_items.push((alias.clone(), path_sql));
 
-            if let TermPattern::Variable(v) = subject {
-                let vname = v.as_str().to_owned();
-                let col = format!("{alias}.s");
-                if let Some(existing) = frag.bindings.get(&vname) {
-                    frag.conditions.push(format!("{col} = {existing}"));
-                } else {
-                    frag.bindings.insert(vname, col);
-                }
-            }
-
-            if let TermPattern::Variable(v) = object {
-                let vname = v.as_str().to_owned();
-                let col = format!("{alias}.o");
-                if let Some(existing) = frag.bindings.get(&vname) {
-                    frag.conditions.push(format!("{col} = {existing}"));
-                } else {
-                    frag.bindings.insert(vname, col);
-                }
-            }
+            // PATH-BNODE-01: bind Variable and BlankNode subject/object so that
+            // when spargebra decomposes a sequence path (e.g. hop*/hop) into two
+            // separate Path patterns connected by an anonymous blank node, the blank
+            // node is properly registered in frag.bindings. Fragment::merge then
+            // generates the JOIN condition (e.g. _t0.o = _t1.s) between the two
+            // path subqueries, preventing an unintentional CROSS JOIN.
+            bgp::bind_term(
+                &alias,
+                "s",
+                subject,
+                ctx,
+                &mut frag.bindings,
+                &mut frag.conditions,
+            );
+            bgp::bind_term(
+                &alias,
+                "o",
+                object,
+                ctx,
+                &mut frag.bindings,
+                &mut frag.conditions,
+            );
 
             frag
         }

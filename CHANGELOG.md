@@ -13,6 +13,45 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.124.0] — 2026-05-20 — SPARQL 1.2 Property Path Algebra Execution
+
+**Fixes a Cartesian-product bug (PATH-BNODE-01) in the SPARQL property path
+translator and adds 25 new regression tests covering all eight path algebra
+operators plus OWL 2 RL propertyChainAxiom n-hop chains.**
+
+### Fixed
+
+- **PATH-BNODE-01** `GraphPattern::Path` translator in `src/sparql/sqlgen.rs`
+  now calls `bgp::bind_term()` for both subject and object instead of only
+  handling `TermPattern::Variable`.  When spargebra/sparopt decomposes a
+  Sequence path (e.g. `hop*/hop`, `hop?/hop`, `^hop/!hop`) into two
+  `GraphPattern::Path` nodes connected by an anonymous blank node, the blank
+  node is now registered in `frag.bindings`; `Fragment::merge` then generates
+  the correct `INNER JOIN` condition (`_t0.o = _t1.s`) instead of a Cartesian
+  product.  This eliminated ×N duplicate rows (e.g. 30 rows → 5 for a
+  5-hop chain with `hop*/hop`).
+
+### Added
+
+- **TEST-01** `tests/pg_regress/sql/sparql12_property_paths.sql` — 20 regression
+  tests covering all 8 `PropertyPathExpression` variants (`NamedNode`, `Reverse`,
+  `Sequence`, `Alternative`, `OneOrMore`, `ZeroOrMore`, `ZeroOrOne`,
+  `NegatedPropertySet`) and 5 compound operator combinations.
+- **TEST-02** `tests/pg_regress/sql/sparql12_owl_chain_nhop.sql` — 5 regression
+  tests for OWL 2 RL `owl:propertyChainAxiom` n=4 and n=5 hop chains with
+  SPARQL path cross-validation.
+- **DOC-01** `docs/src/reference/sparql12-status.md` — new reference page with
+  operator coverage table, PATH-BNODE-01 root-cause analysis, and known limitations.
+- `docs/src/SUMMARY.md` updated to link the new reference page.
+- Migration script `sql/pg_ripple--0.123.0--0.124.0.sql` (comment-only; no DDL changes).
+- Roadmap file `roadmap/v0.124.0.md`.
+
+### Changed
+
+- `pg_ripple_http`: `COMPATIBLE_EXTENSION_MIN` bumped from `"0.122.0"` to `"0.123.0"`.
+
+---
+
 ## [0.123.0] — 2026-05-19 — A17 Observability, Documentation & Advisory Management
 
 **Completes the Assessment 17 remediation arc. Adds replica-pool Prometheus
