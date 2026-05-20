@@ -20,6 +20,10 @@ pgcrypto-backed pgp_sym_encrypt, a credential audit view, atomic rotation,
 automatic header injection in the federation executor, and 10 new regression
 tests.**
 
+Federated SPARQL queries that span multiple organizations or external data services almost always require authentication, and managing those credentials securely across a distributed knowledge graph deployment has been a notable gap in pg_ripple's federation story. This release closes that gap with a dedicated per-endpoint credential management system: Bearer tokens and API keys can be registered for any federation endpoint and are stored encrypted at rest using pgcrypto's OpenPGP symmetric encryption, protected by a superuser-only key that is never visible through `SHOW` or any administrative view. The plaintext of a stored credential is never returned by any query, function, or diagnostic endpoint — only the holder of the encryption key can decrypt it, and the key itself is never stored in the database. A credential audit view exposes operational metadata such as token age and last-used timestamp without ever exposing the underlying secret.
+
+The operational workflow is designed for production credential management at scale. `set_federation_credential()` registers or atomically replaces credentials for any endpoint, while `rotate_federation_credential()` replaces a token and records the rotation timestamp in a single atomic operation, enabling automated rotation pipelines without authentication gaps. The federation query executor automatically retrieves and injects the correct HTTP header for each endpoint after SSRF validation, so existing SPARQL queries and application code require no changes when credentials are added, rotated, or removed. A matching HTTP endpoint exposes auth status for external monitoring and compliance dashboards, and ten regression tests validate the full lifecycle from initial storage through rotation through audit reporting, ensuring the feature behaves correctly across upgrade paths.
+
 ### Added
 
 - **FEAT-03** `pg_ripple.set_federation_credential(endpoint_iri TEXT, auth_type TEXT, token TEXT)`
@@ -63,6 +67,10 @@ tests.**
 a diff API via `pg_ripple.graph_diff()`, two HTTP endpoints, a Prometheus
 gauge, automatic GC, and 15 new regression tests.**
 
+One of the most valuable capabilities in an enterprise knowledge graph is the ability to ask "what did the graph look like at a specific point in time?" — a question that arises constantly in regulatory audits, compliance reviews, incident investigations, and data reconciliation workflows. Version 0.125.0 delivers this capability through a complete temporal snapshot API: the `graph_at()` function materializes the state of any named graph at any past timestamp, registering the result with a deterministic URN identifier that can immediately be used as a named graph reference in SPARQL queries. This means that queries against historical snapshots are written exactly like queries against current data, with no special syntax or separate query path to learn. Snapshots are automatically garbage collected after a configurable retention period, preventing unbounded storage growth in long-running deployments.
+
+The `graph_diff()` function complements snapshots by computing the exact set of triples that were added to or removed from a named graph between any two points in time, labeling each change as `'added'` or `'removed'`. This makes it straightforward to produce audit-compliant change logs, feed incremental updates to downstream data pipelines, investigate when a specific fact entered or left the knowledge graph, or verify that a migration ran correctly by comparing before and after states. Two HTTP endpoints expose both capabilities to external applications, and a Prometheus gauge tracks the current live snapshot count to inform capacity planning. Fifteen regression tests cover snapshot creation, idempotency guarantees, diff correctness, retention enforcement, and the table schema, ensuring the feature works reliably across upgrade paths.
+
 ### Added
 
 - **FEAT-02** `pg_ripple.graph_at(graph_iri TEXT, snapshot_time TIMESTAMPTZ) → TEXT`
@@ -105,6 +113,10 @@ gauge, automatic GC, and 15 new regression tests.**
 translator and adds 25 new regression tests covering all eight path algebra
 operators plus OWL 2 RL propertyChainAxiom n-hop chains.**
 
+Property paths in SPARQL are a powerful way to express graph traversal patterns — queries like "find all things reachable from this resource via any combination of these two properties in sequence." However, a subtle bug in pg_ripple's property path translation layer was producing incorrect results for compound path expressions such as `hop*/hop` or `hop?/hop`, causing the query engine to generate a Cartesian product join instead of the correct inner join. In concrete terms, a query that should return five results might instead return thirty, because the anonymous blank nodes that the SPARQL algebra optimizer inserts when decomposing compound paths were not being registered in the query fragment's binding table, so the join condition was never generated. This silent result inflation was hard to detect without the correct expected values to compare against, making it a particularly treacherous correctness bug that could quietly inflate downstream analytics.
+
+The fix is precise and surgical: the translator now correctly registers anonymous blank nodes in the binding table for both subject and object positions of every path expression, ensuring the correct inner join condition is always emitted. Twenty-five new regression tests systematically cover all eight property path algebra operators and their pairwise combinations, providing a permanent guard against regressions in the path translation layer. Five additional tests for OWL 2 RL `owl:propertyChainAxiom` n-hop chains cross-validate inference results against SPARQL path queries, creating a meaningful integration test between the path translator and the OWL-RL engine. A new reference page in the documentation provides a complete operator coverage table, a root-cause analysis of the PATH-BNODE-01 bug, and a description of known limitations, giving users transparent information about the current state of SPARQL 1.2 support.
+
 ### Fixed
 
 - **PATH-BNODE-01** `GraphPattern::Path` translator in `src/sparql/sqlgen.rs`
@@ -145,6 +157,10 @@ gauges (OBS-M-01), rule-library stream observability (OBS-M-02),
 `bench_workload_result()` convenience wrapper (ERG-L-01), eight new compatibility
 matrix rows (DOC-M-01), comprehensive SQL API reference (DOC-M-03), four new blog
 posts (DOC-L-01), and RSA/paste advisory maintenance (SEC-M-01/SEC-M-02).**
+
+The final release in the Assessment 17 remediation arc brings together observability improvements, documentation expansion, and supply chain hygiene into a comprehensive quality closure. Two new Prometheus gauges track read-replica pool health in real time — the total pool size and the number of currently available connections — providing advance warning before pool exhaustion causes queries to fall back to the primary and degrade response times under read-heavy load. Rule-library stream operations gain their own Prometheus latency and error counters, making it possible to set SLO-based alerts on the federation feature and detect abnormal stream behavior before it affects downstream consumers. A new `bench_workload_result()` SQL convenience function lets operators inspect recent benchmark results with a single call rather than manually querying the history table.
+
+Documentation investment in this release is substantial across several dimensions. Eight new rows in the operations compatibility matrix cover releases from v0.113.0 through v0.120.0, closing a gap that would have left operators uncertain about which HTTP companion versions are supported. Three new operations guides walk operators through read-replica routing configuration, rule-library federation publish/subscribe workflows, and the `compat_check()` JSON schema with copy-pasteable examples. Four new blog posts extend the project's public knowledge base with technical deep dives on OWL property chain axioms, federation circuit breakers, Allen's interval relations, and rule-library federation. Security advisories in the audit configuration gain explicit expiry dates and quarterly review obligations, formalizing the process of keeping the advisory audit configuration current and intentional rather than quietly accumulating past their review deadlines.
 
 ### Added
 
@@ -194,6 +210,10 @@ posts (DOC-L-01), and RSA/paste advisory maintenance (SEC-M-01/SEC-M-02).**
 CI file-size gate tightened from 1,800 to 1,000 lines. Five new pg_regress test suites added.
 All 290 pg_regress tests pass.**
 
+A source file that has grown past a thousand lines is almost always handling too many responsibilities at once — making it difficult to review safely, harder to test in isolation, and slower to navigate for engineers unfamiliar with the codebase. Version 0.122.0 addresses eight remaining large files identified in Assessment 17, decomposing each into focused sub-modules with clearly named single responsibilities. The affected files span the SPARQL expression function dispatcher, the storage scan deduplication layer, the bulk loader, the HTTP admin handlers, the LLM integration module, the Datalog SQL compiler, the GUC registration module, and the Datalog parser test suite — collectively over 8,500 lines of code reorganized into smaller, more navigable units. No SQL-visible behavior changes are made; every public function signature, error code, and GUC parameter remains identical.
+
+Simultaneously with the decomposition, the CI file-size gate is tightened from 1,800 lines to 1,000 lines, setting a stricter standard enforced automatically on every pull request going forward. Five new pg_regress test suites close coverage gaps for features introduced in v0.120.0: the diagnostic snapshot endpoint, read-replica routing behavior, the `compat_check()` JSON schema, tenant quota management, and the public API surfaces of the newly split modules. For organizations evaluating whether pg_ripple is ready for long-term production commitment, this systematic combination of architectural discipline — measurable, automated, enforced with CI gates — alongside continuous test coverage closure is exactly the kind of evidence that distinguishes a maturing project from one that is quietly accumulating hidden technical debt.
+
 ### Changed
 
 - **H17-02 / PERF-M-02** `src/sparql/expr/functions.rs` (was 1,252 LOC) rewritten as
@@ -239,6 +259,10 @@ All 290 pg_regress tests pass.**
 **Closes the two High security findings from Assessment 17 (H17-01 SSRF bypass in
 `subscribe_rule_library`, SEC-M-03 CGNAT/multicast SSRF gaps) and all medium/low
 bug and security items. All 284 pg_regress tests pass.**
+
+Security vulnerabilities in server-side request forgery — where an attacker tricks a server into making network requests on their behalf — are particularly dangerous in systems that can be configured to fetch external resources. Version 0.121.0 closes two high-severity SSRF vulnerabilities identified in Assessment 17. The most critical affects `subscribe_rule_library()`, which was using naive string-contains matching to detect and block private IP addresses in URLs — a check that can be bypassed by crafting URLs that contain an internal address as a substring without it being the actual destination, or through DNS rebinding attacks where an attacker controls a DNS record that initially resolves to a public address before switching to a private one. The fix replaces string matching with full DNS resolution followed by IP-level validation against the blocklist, closing both bypass vectors definitively.
+
+The SSRF blocklist is also expanded with four additional IP ranges that previous versions did not cover: CGNAT addresses used by mobile carrier NAT (100.64.0.0/10), IPv4 multicast, the "this network" range, and IPv4-mapped IPv6 addresses that could be used to smuggle a private IPv4 address through an IPv6-only check. Several silent error swallowers — code paths where errors were being discarded rather than reported — are replaced with proper warning surfacing, so that maintenance operations like ANALYZE and REINDEX reliably surface failures to operators instead of silently succeeding. A new fuzz target exercises the SSRF URL validation path with arbitrary inputs, ensuring edge cases in URL parsing cannot introduce new bypass paths. Seven dedicated regression tests lock in all SSRF protections and will fail if any are accidentally removed in future refactoring.
 
 ### Security
 
@@ -300,6 +324,10 @@ endpoints; Rule-Library Federation (publish/subscribe); read-replica routing via
 `?replica=ok`; per-tenant Helm values recipe; Helm PodDisruptionBudget; and
 compatibility minimum bump to v0.119.0.**
 
+Version 0.120.0 is a broad platform maturity release that delivers nine distinct features spanning observability, operations, multi-tenancy, federation, and high availability. The enhanced PageRank explain endpoint returns not just a node's current score but a structured list of its top contributors with individual contribution values, making it possible to understand not only how influential a node is in the graph but specifically which other nodes are driving its rank. The new admin diagnostic snapshot endpoint collects all internal table row counts, non-sensitive GUC values, extension and HTTP companion versions, and a Prometheus metrics snapshot into a single JSON document — providing a complete system-state picture for incident investigations, support escalations, and capacity planning without requiring manual query assembly across a dozen tables.
+
+Four other major features complete this release. Tenant quota management introduces HTTP endpoints for reading and updating per-tenant triple limits, a critical capability for SaaS deployments that must enforce resource fairness across customers. Rule-library federation allows rule sets published by one pg_ripple instance to be subscribed and activated by another, enabling organization-wide knowledge engineering patterns to be distributed and kept in sync across deployments. Read-replica routing makes it straightforward to offload read-only SPARQL queries to standby database servers by appending `?replica=ok` to any request, reducing primary database load without application code changes. A Kubernetes Helm PodDisruptionBudget ensures that cluster maintenance operations never simultaneously take down all pg_ripple replicas, protecting query availability during rolling updates and node drains.
+
 ### Added
 
 - **Feature 7** `GET /pagerank/explain/{node_iri}`: URL-decodes the node IRI,
@@ -346,6 +374,10 @@ persistent federation SERVICE circuit-breaker state with Prometheus gauge (Featu
 schema-aware NL→SPARQL with vocabulary bundle injection (Feature 10). Also fixes
 property-path queries that coexist with RDF-star quoted triple patterns.**
 
+Ontology languages derive much of their power from the ability to express complex inference patterns concisely, and `owl:propertyChainAxiom` is one of the most practically useful of those patterns. It lets ontology designers declare that a chain of two properties implies a third: for example, "if A advises B and B advises C, then A is an indirect advisor of C." Once this axiom is declared in a loaded ontology, pg_ripple's OWL-RL inference engine automatically derives all the implied relationships across the dataset whenever inference is triggered. Cycle safety is guaranteed through PostgreSQL 18's `WITH RECURSIVE … CYCLE` clause, and ten canonical test cases validate the implementation against FOAF, SKOS, PROV-O, family chains, and the LUBM `indirectAdvisor` benchmark query.
+
+Federation — the ability to include external SPARQL endpoints in a single query — is made significantly more resilient with the introduction of a persistent circuit-breaker state. When a federated endpoint repeatedly fails, the circuit breaker opens and stops sending requests to it, preventing a slow or failing remote service from degrading all queries that include it. The circuit state is persisted in a database table rather than held only in memory, so it survives backend restarts and remains consistent across all connection pool members; a Prometheus gauge exposes each endpoint's circuit state in real time. Schema-aware natural language to SPARQL translation rounds out the release: when vocabulary bundle metadata is loaded, the NL→SPARQL function automatically enriches the LLM prompt with predicate labels from the knowledge graph, producing notably more accurate translations for domain-specific ontologies.
+
 ### Added
 
 - **Feature 5** `owl:propertyChainAxiom` rule in OWL-RL Datalog built-ins
@@ -389,6 +421,10 @@ function for belt-and-suspenders version verification (Feature 3); per-dataset
 differential privacy budget registry with automatic reset (Feature 2). Also
 includes AT TIME ZONE support for temporal queries and an integrated benchmark
 runner (Feature 1).**
+
+Temporal reasoning often requires expressing relationships between time intervals that go beyond simple "before" and "after" comparisons. In scheduling, legal contracts, clinical trials, and supply chain logistics, what matters is the precise structural relationship between two periods: does one overlap the other? Does one entirely contain the other? Do they share a start or end boundary? Version 0.118.0 implements all seven of Allen's interval algebra relations — the canonical mathematical framework for classifying temporal interval relationships — as SQL functions, Datalog built-in predicates, and SPARQL FILTER extensions. This enables temporal queries of remarkable precision, such as "find all regulatory notices that were active during but did not fully contain the audit period" or "find maintenance windows that exactly align with the reported outage interval."
+
+Two other significant features complement the temporal improvements. The `pg_ripple.compat_check()` SQL function provides programmatic compatibility verification returning structured JSON that describes the installed extension version, the minimum HTTP companion version it requires, and whether the currently running companion meets that requirement — enabling deployment automation, health checks, and upgrade scripts to verify compatibility programmatically rather than parsing version strings manually. For teams operating under differential privacy regulations, a per-dataset privacy budget registry tracks cumulative epsilon expenditure across all queries by dataset and principal, automatically rejecting queries that would exceed the budget and resetting budgets on a configurable schedule, providing formal mathematical privacy guarantees for sensitive reporting workloads. An integrated benchmark runner lets teams measure query throughput against their own workload profiles and store results historically for trend analysis.
 
 ### Added
 
@@ -438,6 +474,10 @@ guide; Docker image-tag pinning policy; build-artifact gitignore cleanup; SBOM d
 date stamping; cosign SBOM signing in CI; version-bump release workflow; SSE
 concurrency tests; CONTRIBUTING.md AGENTS.md link; entity-resolution and temporal
 write-race concurrency tests; and four new fuzz targets.**
+
+Software quality encompasses more than features and bug fixes — it includes the completeness of documentation, the rigor of the supply chain, the depth of test coverage for edge cases, and the small operational details that make a system pleasant rather than frustrating to run in production. Version 0.117.0 addresses seventeen such low-severity items accumulated over several assessment cycles. Crash recovery test scripts, benchmark SQL files, and the replication worker all gain detailed documentation explaining how they work, how to run them, and what they verify — documentation that is particularly valuable during incident response when time is short and engineers may be unfamiliar with the relevant subsystem. An installation and upgrade guide documents all 119 migration scripts from v0.1.0 to current, with checksum verification steps for each one.
+
+Supply chain security receives notable attention in this release: the CI release workflow is extended to sign the software bill of materials with cosign keyless signing via the Sigstore transparency log, creating a verifiable cryptographic attestation that the SBOM has not been tampered with since it was generated. Four new fuzz targets expand the fuzzing surface to the temporal query parser, PPRL Bloom filter bounds checking, rule authoring validation, and the SKOS bundle loader — each targeting a code path that processes potentially untrusted external input. The number of explicitly suppressed Clippy lint warnings is reduced from 214 to at most 186, with justification comments required for every remaining suppression. Concurrency tests are added for SSE event delivery under load, `owl:sameAs` canonicalization under concurrent writes, and temporal versioned write races, covering the most likely failure modes of highly concurrent deployments.
 
 ### Added
 
@@ -516,6 +556,10 @@ tests; bidi-relay overflow drop-policy GUC; Bayesian propagation depth GUC;
 cargo-audit advisory lifecycle policy; and a categorical GUC reference at
 `docs/gucs.md`.**
 
+As a system's configuration surface grows, small gaps between what the documentation promises and what the code actually does can cause real operational surprises. Version 0.116.0 addresses ten such correctness, security, and configuration issues across the full stack. The most impactful is a rule explanation staleness fix: the explanation cache now tracks a version stamp that increments every time the rule set is updated, so cached explanations are automatically invalidated when the underlying rules change. Without this fix, an explanation generated before a rule edit would remain in the cache even though the rule had changed, silently returning an accurate description of an old rule rather than the current one — a subtle but consequential bug for anyone relying on explanations for compliance documentation or operator guidance. A longstanding FOAF vocabulary bundle parse error that had been silently preventing the `foaf-integrity` shape bundle from loading is also corrected in this release.
+
+Configuration control is a theme throughout this release: six hard-coded constants governing proof tree depth and node count limits, entity resolution monitoring retention, the rule explanation LRU cache size, Bayesian propagation depth, and the bidi relay overflow drop policy are all promoted to GUCs. This gives operators the ability to tune all of these behaviors per workload without rebuilding, and it makes the system's operational parameters visible, auditable, and documented. A formal advisory lifecycle policy is established in the security configuration, requiring explicit quarterly reviews of known security advisories with documented rationale for each entry maintained in the skip list. The entire GUC surface — now 227 parameters — is organized into a new categorical reference document with subsystem groupings, types, defaults, and descriptions, dramatically reducing the configuration learning curve for new operators and integrators.
+
 ### Added
 
 - **M16-01** `pg_ripple.er_monitoring_retention_days` (integer, default 30,
@@ -587,6 +631,10 @@ facts, PPRL, differential privacy, entity resolution, proof trees, and
 multi-tenant management; parameterised query hardening in the PageRank handler;
 expanded Prometheus metrics; and bearer-token protection for `/metrics`.**
 
+A powerful database extension is only as useful as the interfaces through which it can be reached, and version 0.115.0 closes a significant gap between pg_ripple's SQL feature set and the REST interface provided by the `pg_ripple_http` companion service. This release adds HTTP endpoints for temporal fact management, privacy-preserving record linkage, differential privacy aggregates, entity resolution, Datalog proof trees, and multi-tenant administration — features introduced across several prior releases that were previously accessible only through direct SQL calls. External applications, dashboards, microservices, and automation scripts can now reach the full feature set through a standard HTTP interface without requiring a PostgreSQL connection, making pg_ripple a first-class citizen in HTTP-based service architectures.
+
+Observability receives comprehensive attention: Prometheus metrics are added for entity resolution stage latencies at all five pipeline stages, `owl:sameAs` assertion counts, Bayesian propagation duration, temporal fact gauges, PPRL encode counters, LLM cache hit and miss rates, proof tree generation duration, and conflict detection counters. This gives operations teams a complete real-time picture of system activity in their existing metrics infrastructure, enabling SLO-based alerting for every major subsystem without custom instrumentation. A bearer-token authentication option for the `/metrics` endpoint prevents unauthorized scraping of operational data. The PageRank direction parameter is hardened against injection by replacing string concatenation with a typed enum, and the Kubernetes Helm chart health probes are updated from database-level checks to proper HTTP-level health and readiness endpoints.
+
 ### Added
 
 - **M16-02** HTTP REST endpoints for temporal facts (`/temporal/*`), PPRL
@@ -631,6 +679,10 @@ expanded Prometheus metrics; and bearer-token protection for `/metrics`.**
 into focused sub-modules following the patterns in `src/datalog/` and `src/sparql/`.
 No SQL-visible schema changes. CI module-size gate added.**
 
+Large software systems accumulate architectural debt in the form of files that have grown far beyond their original scope, absorbing related functionality until they become difficult to understand, safely modify, and effectively test. Version 0.114.0 is a pure structural maintenance release that systematically decomposes seven such files — each between 1,000 and 1,600 lines — into focused sub-modules with clearly named single responsibilities. The decomposed areas span the full application stack: view management, SKOS vocabulary handling, the Datalog public API, the worst-case optimal join executor, the embedding and hybrid search layer, the SHACL validator, and the Citus distributed sharding integration. No SQL-visible behavior changes are made; every public function signature, error code, and GUC parameter remains identical to the previous release.
+
+The long-term value of this investment is realized through reduced time-to-understand for new contributors, smaller and more targeted code review surface, easier isolated testing of individual subsystems, and clearer boundaries between components that make future refactoring safer and more predictable. A new CI gate enforces a 1,500-line hard limit per source file with a warning at 1,200 lines, ensuring the codebase will not accumulate this kind of debt again. A new architecture document captures the resulting subsystem dependency graph, clearly illustrating which components depend on which others and where future decoupling opportunities exist. For organizations evaluating pg_ripple as a long-term dependency, the presence of enforced architectural discipline — with measurable metrics and automated CI gates — is a meaningful signal of project sustainability and maintainability.
+
 ### Changed
 
 - **H16-06a** `src/views/mod.rs` (1,599 LOC) → `src/views/{mod.rs, construct.rs, materialise.rs, refresh.rs, dependency.rs, sparql.rs, describe.rs}` (each < 400 LOC)
@@ -655,6 +707,10 @@ No SQL-visible schema changes. CI module-size gate added.**
 **Promotes `bulk_load_use_copy` to default-on, replaces the O(n) embedding loop with a batched
 HNSW probe, optimizes Bloom-filter HMAC key expansion, and promotes replication watermark
 constants to GUCs.**
+
+For teams loading large datasets into a knowledge graph — whether migrating from another system, ingesting freshly crawled web data, or bulk-loading a research corpus — the speed of the bulk load operation determines whether a workflow is practical or impractical. Version 0.113.0 switches the default bulk load path for N-Triples and Turtle files from row-by-row insertion to a batch array INSERT strategy that delivers a 5–10× throughput improvement for large files. This change takes effect automatically on upgrade — the `pg_ripple.bulk_load_use_copy` GUC is flipped to default-on, meaning every existing user benefits from the performance gain without any configuration changes, script modifications, or code updates. The documentation is updated to describe the new default and help operators understand the performance characteristics of each path.
+
+Three additional performance improvements address specific bottlenecks in other high-frequency operations. Entity resolution's candidate embedding lookup is restructured from an O(n) loop with one database round-trip per candidate to a single batched CTE probe, reducing database call overhead proportionally to the number of candidates in a blocking block. The PPRL Bloom filter's HMAC key expansion is changed from recomputing the full cryptographic key for every hash function position to performing one expansion and cheaply cloning it, cutting overhead for high-hash-count configurations. Replication batch size and interval parameters that were previously hardcoded constants compiled into the binary are promoted to GUCs, letting operators tune replication watermark behavior without rebuilding, and the SSE channel buffer size in the HTTP companion similarly gains an environment variable override for deployment-time tuning.
 
 ### Changed
 
@@ -694,6 +750,10 @@ No SQL schema changes. Apply via `ALTER EXTENSION pg_ripple UPDATE TO '0.113.0'`
 **Closes the sixth-consecutive COMPATIBLE_EXTENSION_MIN lag (C16-01), annotates all unsafe blocks,
 reduces unwrap/expect surface, wires the SHACL validation gate in entity resolution, and adds the
 v1.0.0 GA Entry Criteria to the roadmap.**
+
+Production software earns trust through consistent and transparent handling of its own security obligations, and version 0.112.0 is a focused release that closes several important gaps in that area. The most critical fix addresses a six-version lag in the HTTP companion service's compatibility floor — the check that warns when the companion is connected to an incompatible extension version had been silently reporting an outdated minimum, meaning users were not getting accurate safety signals about upgrade compatibility. The fix includes an immediate update to the correct floor and, more importantly, a new CI gate that fails the build if the compatibility floor ever lags more than one minor version behind the extension, so this gap cannot silently accumulate again. A new policy document formalizes the compatibility window commitment so users can plan upgrades with confidence.
+
+The release also systematically addresses every unsafe code block in the Rust codebase by adding mandatory `// SAFETY:` justification comments and enforcing this standard via a new Clippy lint that will reject any future unsafe block without an explanation of why it is safe. The SHACL validation gate in the entity resolution pipeline, previously a stub that always returned zero blocked candidates, is now fully implemented to run actual validation checks before committing identity assertions, with sub-transaction wrapping to guarantee atomic rollback if anything goes wrong. The v1.0.0 GA entry criteria are formally documented, establishing clear and measurable thresholds — zero open high findings, all unsafe blocks annotated, a passing regression test suite, a signed SBOM, and an external security audit — that define what production readiness means for this project.
 
 ### Changed
 
@@ -745,6 +805,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 
 **Adds Bloom-filter CLK encoding, Dice coefficient similarity, and differential-privacy aggregates for cross-organization entity resolution without sharing raw PII.**
 
+When two organizations need to find common records — patients in separate hospital systems, customers shared between financial institutions, suspects appearing in multiple law enforcement databases — they face a fundamental privacy dilemma: sharing the raw data exposes sensitive personal information, but without sharing, matching is impossible. Privacy-preserving record linkage solves this with cryptographic representations that preserve enough structure to measure similarity without revealing the underlying values. Version 0.111.0 adds this capability natively to pg_ripple through Bloom filter CLK encoding: the `bloom_encode()` function transforms any text value into a fixed-length bit vector using HMAC-SHA-256, and the `dice_similarity()` function measures the similarity of two encoded values, allowing organizations to compare records without either side ever seeing the other's raw data.
+
+These primitives integrate directly with pg_ripple's SPARQL and Datalog layers as native filter predicates, making privacy-preserving matching a first-class operation in the knowledge graph rather than an external preprocessing step. Differential privacy aggregates round out the privacy toolkit: `dp_noisy_count()` and `dp_noisy_histogram()` add calibrated Laplace noise to query results, providing formal mathematical privacy guarantees for reporting on sensitive datasets. Security parameters below recommended thresholds trigger warnings to guide operators toward configurations that meet production security requirements. A comprehensive cookbook guides teams through the complete workflow from key management to cross-organizational federated matching, and property-based tests verify the mathematical invariants — round-trip identity, Dice symmetry, noise sign, and output length — that underpin the correctness guarantees.
+
 ### Added
 
 - **PPRL-01**: `pg_ripple.bloom_encode(value TEXT, key TEXT, hash_count INT DEFAULT 30, length INT DEFAULT 1024) → TEXT` — CLK Bloom-filter encoding using HMAC-SHA-256. Returns a lowercase hex-encoded bit vector of `length` bits. Raises PT0470 on oversized input; PT0471 on invalid parameters; logs WARNING for below-recommended security parameters.
@@ -772,6 +836,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 ## [0.110.0] — 2026-05-11 — NS-RL Evaluation Harness, Continuous Monitoring & Rule Explainability
 
 **Adds the NS-RL evaluation function, three live ER monitoring stream tables, plain-English rule explanation, owl:sameAs anomaly detection, and the Magellan ER benchmark CI gate.**
+
+Knowing that an entity resolution pipeline ran is not enough — teams need to know whether it ran correctly and by how much its quality is improving or degrading over time. Version 0.110.0 adds a comprehensive evaluation harness that measures resolution quality against a gold-standard graph using three industry-standard metric families: pairwise precision/recall/F1 measures how accurately individual pairs are identified; blocking statistics including reduction ratio and pairs completeness measure how efficiently the blocking stage eliminates non-matching pairs before the expensive comparison stage; and B³ cluster metrics measure the quality of multi-entity identity clusters holistically. A single `evaluate_resolution()` call returns all three metric families, giving data engineers a complete picture of pipeline performance in terms that map directly to academic benchmarks and production SLA targets.
+
+Beyond post-hoc evaluation, this release adds live monitoring infrastructure: three streaming tables capture unresolved entity counts, cluster size distributions, and a resolution quality dashboard that updates in real time as the pipeline runs, enabling early warning of quality degradation before it affects downstream consumers. A Magellan benchmark CI gate ensures that regression in resolution quality triggers a build failure before code merges, locking in the achieved quality level for the Abt-Buy and DBLP-ACM datasets. Rule explainability receives dedicated infrastructure through `explain_rule()`, which generates a plain-English description of what any Datalog rule does — either through an LLM for rich contextual explanations or through a deterministic structural description as a fallback — with results cached to avoid repeated LLM calls. An `owl:sameAs` anomaly log captures every suspicious identity assertion, creating a permanent audit trail of resolution decisions that domain experts and regulators can review.
 
 ### Added
 
@@ -803,6 +871,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 
 **Adds six SPARQL/Datalog string similarity built-ins for neuro-symbolic record linkage, three reusable ER blocking templates, a five-stage `resolve_entities()` orchestration pipeline, and two new GUC parameters.**
 
+Matching records that refer to the same real-world entity — even when names are spelled differently, addresses are formatted differently, or identifiers come from different systems — is a foundational challenge in data integration that every large organization faces. Version 0.109.0 begins addressing this with a suite of six string similarity algorithms exposed directly inside SPARQL queries and Datalog rules: trigram similarity, Levenshtein edit distance, Soundex, Metaphone, Jaro-Winkler, and several variants. These algorithms can be used as native filter predicates in graph patterns, enabling declarative blocking rules like "consider these two records as match candidates if their name strings have a trigram similarity above 0.7" without leaving the SPARQL or Datalog layer to call external functions.
+
+The release also delivers the first version of `resolve_entities()`, a five-stage entity resolution orchestration pipeline that takes two named graphs and produces `owl:sameAs` assertions linking entities it determines are likely to refer to the same real-world object. The stages progress from symbolic blocking using inverse-functional properties or custom Datalog rules, through embedding-based candidate generation, SHACL validation to enforce quality gates, union-find canonicalization to resolve transitive identity clusters, and finally RDF-star provenance annotation that records the evidence behind each match decision. A dry-run mode lets teams inspect what the pipeline would do without writing any data, and three built-in blocking templates for email matching, postal name matching, and name prefix matching make the system immediately usable for common scenarios without writing any custom rules.
+
 ### Added
 
 - **STRSIM-01**: SPARQL custom function `pg:trigram_similarity(?a, ?b)` — emits `similarity(a, b)` SQL via `pg_trgm`. Returns `xsd:double`.
@@ -830,6 +902,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 ## [0.108.0] — 2026-06-07 — Bayesian Confidence Updates
 
 **Adds a Bayesian belief-revision engine for dynamic confidence updates, an append-only evidence log, bulk update ingestion, downstream propagation through the derivation DAG, and six new GUC parameters.**
+
+Real-world knowledge is rarely black and white — sensor readings carry measurement uncertainty, entity matching scores reflect probabilities rather than certainties, and evidence from different sources may conflict or reinforce each other over time. Version 0.108.0 introduces a Bayesian belief-revision engine that treats confidence as a first-class property of every fact in the knowledge graph, allowing it to be updated in a principled, mathematically grounded way as new evidence arrives. The core `update_confidence()` function applies Bayes' theorem in odds form: given a fact's prior confidence and the likelihood ratio of a new piece of evidence, it computes the posterior confidence and persists the updated value. This makes the knowledge graph a living probabilistic model whose certainties evolve continuously as more evidence accumulates rather than remaining static at the time of initial assertion.
+
+Confidence changes automatically cascade through the derivation graph, propagating updated certainties to all facts derived from the updated base fact — up to a configurable depth — so that the confidence of derived conclusions always reflects the current evidence state of their premises. An append-only evidence log provides a complete audit trail of every confidence update, recording the source, prior, posterior, and timestamp of each revision. Bulk update ingestion from CSV or JSON-L streams makes it easy to feed confidence scores from external machine learning models or annotation pipelines directly into the graph in batches. A SHACL integration automatically reduces confidence in facts that violate integrity constraints, and a `vacuum_evidence_log()` function keeps the audit log manageable in long-running deployments by pruning rows that exceed the configured retention window.
 
 ### Added
 
@@ -860,6 +936,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 
 **Adds three sequential temporal operators (`WITHIN`, `SEQUENCE`, `CONSECUTIVE`), CDC auto-recording of temporal facts via `insert_triple()`, snapshot/versioned retraction via `retract_triple_temporal()`, and a new `pg_ripple.temporal_cdc_enabled` GUC.**
 
+Building on the temporal fact store introduced in Phase 1, version 0.107.0 extends temporal reasoning to the level of event sequence detection — a common requirement in fraud detection, process monitoring, and behavioral analytics. Three new operators enable sequential pattern queries directly in Datalog rules: `WITHIN` checks whether a predicate held at least once in a recent time window, `SEQUENCE` detects whether one event reliably precedes another within a given window, and `CONSECUTIVE` identifies runs of N repeated occurrences of the same predicate within a time frame. These operators compile to efficient EXISTS subqueries with window functions over the temporal fact store, making complex temporal patterns expressible without leaving the Datalog rule language or reaching for external stream processing infrastructure.
+
+The most significant operational improvement in this release is the direct integration of temporal recording into the standard write path. When the new `temporal_cdc_enabled` GUC is on — which it is by default — every call to `insert_triple()` for a temporally-registered predicate automatically records the fact in the temporal store with the transaction timestamp, requiring no changes to application code. This means that existing applications gain a complete temporal history automatically on upgrade, capturing the exact transaction times of all temporal assertions going forward without any schema changes or code updates. A new `retract_triple_temporal()` function cleanly closes open intervals, ensuring the temporal history accurately records not just when facts became true but when they ceased to be true — equally important for any audit or compliance use case.
+
 ### Added
 
 - **SEQ-01**: `pg_ripple.temporal_within(subject TEXT, predicate TEXT, duration TEXT) → BOOLEAN` — returns `true` if the predicate holds for the subject at least once within the most recent `duration` (ISO 8601 interval) relative to transaction time.
@@ -882,6 +962,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 ## [0.106.0] — 2026-05-24 — Temporal Reasoning Phase 1: Temporal Fact Store & Basic Operators
 
 **Introduces a first-class temporal fact store backed by `_pg_ripple.temporal_facts`, temporal predicate registration, basic time operators in Datalog rules, a `pg:temporal_window()` SPARQL function, and an `sh:validFor` SHACL constraint.**
+
+Knowledge is inherently temporal — facts change, expire, and take on different values at different points in time. A system that only represents the current state of the world cannot answer questions like "was this entity classified differently last month?" or "how long did this policy remain in effect?" Version 0.106.0 introduces a first-class temporal dimension to pg_ripple's knowledge graph, allowing individual predicates to be marked as temporal and their facts stored with valid-from and valid-to timestamps in a dedicated temporal fact store. Two storage models are supported: snapshot mode, where each new assertion automatically closes the previous interval for the same subject-predicate pair, and versioned mode, which preserves the complete history of all values without closing old intervals, for domains where the full change history matters.
+
+Once predicates are registered as temporal, the full reasoning and querying stack gains time-awareness. Datalog rules can use `AFTER`, `BEFORE`, and `DURING` operators in their bodies to filter which temporal facts trigger the rule, enabling time-bounded reasoning patterns like "apply this rule only to facts that were valid during the current fiscal year." A new `pg:temporal_window()` SPARQL function lets SPARQL queries ask whether any fact for a given subject-predicate pair was true within a specified time range, and a `sh:validFor` SHACL constraint lets shapes enforce freshness requirements — for example, that a compliance certification must have been renewed within the past 12 months. The complete temporal catalog and fact storage are set up by a migration script, making this a zero-friction addition to existing pg_ripple deployments.
 
 ### Added
 
@@ -914,6 +998,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 
 **Translate natural-language descriptions into Datalog rules, validate rules statically, and discover candidate rules from co-occurrence patterns in the graph.**
 
+Writing Datalog rules has traditionally required deep expertise in logic programming syntax and semantics, limiting rule authoring to a small group of specialists even in organizations that have rich domain expertise. Version 0.105.0 dramatically lowers this barrier by allowing domain experts to describe rules in plain English and have those descriptions automatically translated into correct Datalog syntax by a large language model. The `draft_rule_from_nl()` function sends a natural-language description to a configured LLM endpoint and returns up to three ranked candidate rules, each with an explanation of its meaning, giving the domain expert options to choose from and evaluate rather than a single opaque suggestion. A mock mode enables deterministic testing without a live LLM endpoint.
+
+Generated rules — or any hand-written rules — can be immediately validated by the `validate_rule()` function, which performs static analysis checking for syntax errors, unbound head variables, unsafe negation patterns, and stratification cycles before anything is loaded into the database. This combination of LLM-assisted authoring and static validation creates a guided workflow where a domain expert proposes a rule in natural language, the system suggests candidate implementations, and static analysis provides immediate feedback on correctness. A third function, `suggest_rules()`, inverts this flow by scanning the actual knowledge graph for predicate co-occurrence patterns and proposing candidate rules that the data itself suggests — letting the graph guide rule discovery for analysts who know their domain but not formal logic. REST endpoints for both drafting and validation make these capabilities accessible from interactive authoring interfaces and rule governance portals.
+
 ### Added
 
 - **RA-01**: `pg_ripple.validate_rule(rule TEXT) → JSONB` — static analysis of a Datalog rule without loading it. Returns `{"valid": true}` or `{"valid": false, "errors": [...], "warnings": [...]}`. Error codes: `SYNTAX_ERROR`, `UNBOUND_HEAD_VARIABLE`, `UNSAFE_NEGATION`, `STRATIFICATION_CYCLE`. Warning codes: `UNUSED_BODY_VARIABLE`.
@@ -939,6 +1027,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 ## [0.104.0] — 2026-05-10 — Domain Rule Library Infrastructure
 
 **Package, share, and install domain-specific Datalog rule sets as versioned libraries — like npm packages, but for Datalog rules and SHACL shapes.**
+
+Just as software engineers share reusable code through package repositories like npm or crates.io, knowledge engineers now have an equivalent mechanism for sharing reusable Datalog rule sets and SHACL validation shapes. Version 0.104.0 introduces a complete package management infrastructure for domain rule libraries: a library is authored as a structured Turtle file containing metadata including title, description, version, license, and dependencies, then published at any accessible URL. The `install_rule_library()` function fetches a library, validates its license against permissive SPDX identifiers, resolves its dependencies in topological order, and activates its rules and shapes — all in a single command with full error reporting for each failure mode. License enforcement prevents inadvertent use of incompatible rule sets in commercial products.
+
+For organizations working in domains like healthcare, financial services, or supply chain logistics — where well-established ontological reasoning patterns are documented in published standards and industry ontologies — this means that battle-tested rule implementations can be shared across deployments without rebuilding them from scratch. Upgrade and uninstall operations are fully managed, with dependency safety checks preventing removal of libraries that other installed libraries depend on. A companion REST endpoint makes library management scriptable from external orchestration tools and CI pipelines. A detailed documentation chapter guides rule library authors through the format specification, metadata requirements, and the complete publishing workflow from authoring through distribution, lowering the barrier to contributing reusable domain knowledge to the broader pg_ripple community.
 
 ### Added
 
@@ -969,6 +1061,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 
 **Find contradictory Datalog rules before they cause problems. Two detection modes: static structural analysis and live runtime scanning of derived facts.**
 
+As knowledge graphs grow and multiple teams contribute rules, the risk of logical contradictions quietly entering the rule set increases. One team might write a rule that concludes a product qualifies for a discount under certain conditions, while another writes a rule that concludes it does not, with both rules firing for the same data. Version 0.103.0 addresses this risk with a dedicated conflict detection system that can find such contradictions either statically — by analyzing the structure of the rules themselves before they run — or dynamically, by examining the actual derived facts already in the database. Static analysis catches the most common conflict types: rules with the same head predicate that derive contradictory constant values, and rules that derive triples for predicates that a SHACL shape prohibits.
+
+Runtime detection goes further by querying the actual derivation table to find cases where two different inferred values currently exist for the same subject and predicate, or where inferred facts violate `sh:disjoint` constraints — surfacing contradictions that only emerge because of specific combinations of data. A configurable `block_on_conflict` GUC can make the inference engine automatically halt and raise a structured error if any contradictions are found after inference, giving teams an opt-in safety guarantee that inference results are internally consistent. A companion REST endpoint allows external governance and data quality tools to poll for conflict status programmatically, making it straightforward to integrate conflict checking into CI pipelines for rule set changes or into regular data quality monitoring dashboards.
+
 ### Added
 
 - **CONFLICT-01**: `pg_ripple.rule_conflicts(ruleset TEXT, mode TEXT DEFAULT 'static') → JSONB` — detects conflicting rules in a rule set.
@@ -994,6 +1090,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 
 **Run Datalog inference on speculative graph modifications without persisting changes. All VP tables are left unchanged; isolation is guaranteed via PostgreSQL internal sub-transactions.**
 
+The ability to safely experiment with the consequences of proposed changes before committing them is invaluable in any domain where decisions have downstream effects. Version 0.102.0 introduces hypothetical inference — the ability to ask the knowledge graph's reasoning engine "if I were to add or remove these facts, what new conclusions would follow, and which existing conclusions would no longer hold?" The new `hypothetical_inference()` function accepts a set of proposed assertions and retractions, runs the full inference engine against a speculative version of the graph, and returns two lists: the triples that would be newly derived if the changes were applied, and the triples that were previously derived but would no longer hold. The live database data is never modified at any point during this process.
+
+The isolation guarantee is absolute: all speculative changes are wrapped in PostgreSQL internal sub-transactions that are rolled back after inference completes, meaning no matter how large or complex the proposed change set, the actual database is left exactly as it was before the call. This makes hypothetical inference safe to use in production, from reports, from interactive exploratory sessions, and from multi-step planning workflows where the consequences of each step must be evaluated before proceeding. Use cases range from policy simulation — "if we update this regulation, what classifications change?" — to data quality validation — "if we merge these two customer records, what contradictions does that create?" A configurable limit on the number of hypothetical assertions prevents accidental runaway queries from consuming excessive resources.
+
 ### Added
 
 - **HYPO-01**: `pg_ripple.hypothetical_max_assertions` GUC (INT, default `10000`, min 1, max 1,000,000) — maximum total number of assert + retract triples in a single `hypothetical_inference()` call. Exceeding this limit raises error code PT0450.
@@ -1015,6 +1115,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 ## [0.101.0] — 2026-05-09 — Natural Language Explanation
 
 **Natural language explanation of Datalog-derived facts via LLM or deterministic fallback renderer.**
+
+Proof trees are valuable for engineers and auditors who can read JSON structures and reason about derivation graphs, but most of the people who need to understand why a system made a decision are not in that category. Version 0.101.0 bridges that gap by translating the technical structure of proof trees into readable, natural-language narratives. The new `explain_inference()` function retrieves the proof tree for any derived fact and produces a plain-English account of the reasoning chain, either by sending the proof structure to a connected large language model for a rich, context-aware explanation, or by using a clean deterministic fallback renderer that always produces something useful even when no LLM is available. The result can be formatted as plain text or as a structured JSON object containing both the proof tree and the narrative, depending on what the calling application needs.
+
+Explanations are stored in a cache table keyed by fact identifier, output format, and LLM model, so that repeated requests for the same explanation incur no additional LLM cost. A configurable TTL governs how long cached explanations remain valid, and a `vacuum_explanation_cache()` function removes expired entries on demand. This release also performs an important rename: the `explain_inference` name is freed for this new natural-language capability, with the older derivation-chain walker available under the new name `explain_inference_provenance()`. HTTP endpoints expose both capabilities to external applications, meaning customer-facing portals, compliance dashboards, and audit tools can all surface human-readable explanations without requiring any direct SQL access.
 
 ### Added
 
@@ -1040,6 +1144,10 @@ See `sql/pg_ripple--0.111.0--0.112.0.sql`.
 ## [0.100.0] — 2026-05-09 — Proof trees & justification infrastructure
 
 **Proof trees & justification infrastructure: `_pg_ripple.derivations` table, `pg_ripple.record_derivations` GUC, `justify()` proof-tree function, and `vacuum_derivations()` cleanup. No schema changes required beyond the new `derivations` table and supporting indexes added via migration script.**
+
+One of the most powerful guarantees a data system can offer is not just the ability to answer questions, but the ability to explain how it arrived at those answers. Version 0.100.0 lays the foundation for this kind of deep accountability by introducing proof trees — a persistent record of every reasoning step taken by the inference engine. Each time the system derives a new fact by applying a Datalog rule, it now records exactly which source facts were used as premises, which rule was applied, and how deep the chain of reasoning ran. This history is stored in a dedicated `_pg_ripple.derivations` table and can be queried at any time through a new `justify()` function that walks the derivation chain backward from any derived fact to its ultimate source evidence.
+
+For organizations that must explain and defend their automated decisions — whether for regulatory compliance, legal review, or internal governance — this infrastructure transforms pg_ripple from a powerful reasoning engine into a fully transparent and auditable knowledge system. A configurable on/off switch means the performance overhead of recording derivations is only incurred when it is actually needed, keeping production workloads lean while allowing auditing modes to be activated on demand. Automatic cleanup of orphaned derivation records, cycle protection in the proof tree walker, and a configurable depth limit ensure the system remains robust even for very deep reasoning chains with complex interdependencies. This release also corrects a subtle version comparison bug that affected tests using minor version numbers of 100 or greater, ensuring the test suite remains reliable as the project crosses into triple-digit versioning territory.
 
 ### Added
 
