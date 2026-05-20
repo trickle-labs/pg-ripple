@@ -1215,6 +1215,10 @@ For organizations that must explain and defend their automated decisions — whe
 
 **Implements v0.99.0 roadmap: native Datalog rule sets and SHACL integrity bundles for Dublin Core Terms, Schema.org, and FOAF — completing the "Big 5" vocabulary suite together with SKOS (v0.98.0). Evidence: `src/datalog/builtins.rs`, `src/skos.rs`, `tests/pg_regress/sql/v099_features.sql`, `docs/src/cookbook/common-vocabularies.md`, `sql/pg_ripple--0.98.0--0.99.0.sql`.**
 
+Real-world data rarely follows just one vocabulary — organizations routinely combine Dublin Core for document metadata, Schema.org for search engine compatibility, and FOAF for social and professional networks in the same knowledge graph. Version 0.99.0 completes pg_ripple's "Big 5" vocabulary suite by adding native Datalog rule sets and SHACL integrity bundles for all three of these ubiquitous standard vocabularies, alongside cross-vocabulary bridges that automatically connect them. When Schema.org's `schema:author` property is used, the system can now automatically infer the FOAF `foaf:maker` relationship; when Dublin Core's `dcterms:creator` is present, it is bridged to `foaf:maker` as well. Fifteen Schema.org rules, eleven Dublin Core rules, and eight FOAF rules activate a rich web of entailments with a single function call per vocabulary.
+
+For teams building knowledge graphs that must interoperate with the broader semantic web ecosystem, this release is a significant quality-of-life improvement. Instead of manually writing dozens of inference rules to handle the standard relationships defined in these well-known vocabularies, teams can activate a complete, W3C-aligned rule set instantly. Integrity bundles automatically catch common modeling mistakes — self-referential relationships, circular hierarchies in Dublin Core's `hasPart`/`isPartOf` structure, inconsistent date ranges, and knows-chain cycles in FOAF. SQL helper functions like `pg_ripple.schema_type_ancestors()` and `pg_ripple.foaf_persons()` turn complex SPARQL traversal queries into simple, readable function calls that domain experts can use directly.
+
 ### Added
 
 - **DCTERMS-01**: `load_datalog_bundle('dcterms')` — 11 Datalog rules: five `dc11:` compatibility aliases (`dc11:creator` → `dcterms:creator`, etc.), four structural inverse pairs (`hasPart`/`isPartOf`, `hasVersion`/`isVersionOf`, `replaces`/`isReplacedBy` + reverse `hasVersion`), DC-SKOS-01 bridge (resources whose `dcterms:subject` is in a SKOS scheme receive a `skos:Concept` type assertion).
@@ -1245,6 +1249,10 @@ For organizations that must explain and defend their automated decisions — whe
 ## [0.98.0] — 2026-05-06 — SKOS Support, Named Bundle API & Graph Intelligence
 
 **Implements v0.98.0 roadmap: full SKOS/SKOS-XL entailment stack, formal named bundle API, contradiction explanation, federation trust scoring, and graph coverage metrics. Evidence: `src/skos.rs`, `tests/pg_regress/sql/v098_features.sql`, `docs/src/cookbook/skos-thesaurus.md`, `sql/pg_ripple--0.97.0--0.98.0.sql`.**
+
+Taxonomies, thesauri, and controlled vocabularies are the backbone of enterprise information management — from library catalogs and medical terminology systems to product hierarchies and regulatory classification frameworks. Version 0.98.0 delivers a complete, W3C-compliant SKOS inference engine covering all 28 SKOS entailment rules plus the SKOS-XL label extension, enabling pg_ripple to automatically derive transitive broader/narrower concept relationships, symmetric associations, and correct label hierarchies without any custom rule writing. Five SQL helper functions — `skos_ancestors()`, `skos_descendants()`, `skos_label()`, `skos_related()`, and `skos_siblings()` — turn complex SPARQL traversal queries into simple function calls that data librarians and ontology engineers can use directly.
+
+The release also introduces a formal named bundle API that treats rule sets and SHACL shapes as first-class, versioned artifacts with dependency management. Instead of loading individual rules and shapes manually, teams can call `load_datalog_bundle()` once and have all dependencies resolved automatically in the correct order. New contradiction explanation capabilities let users ask why two statements in a knowledge graph are logically inconsistent — surfacing the minimal set of conflicting facts in plain terms useful for debugging, data quality audits, and explaining validation failures to domain experts. Federation trust scoring and graph coverage metrics give teams quantitative measures of how complete and reliable their knowledge graph is across different topic areas, turning abstract data quality concerns into actionable numbers.
 
 ### Added
 
@@ -1280,6 +1288,10 @@ For organizations that must explain and defend their automated decisions — whe
 ## [0.97.0] — 2026-05-06 — Assessment 15 Low-Severity Polish & Supply-Chain
 
 **Implements v0.97.0 roadmap: closes all 13 Low-severity findings from PLAN_OVERALL_ASSESSMENT_15.**
+
+A healthy production system requires more than correct functionality — it demands confidence in the supply chain, rigorous test coverage for edge cases, and documentation that accurately reflects real system behavior. Version 0.97.0 addresses all thirteen low-severity findings from the fifteenth assessment cycle with improvements spread across code quality, testing, documentation, and supply chain transparency. All unsafe Rust code blocks now carry mandatory justification comments explaining why each use is safe, a practice later formalized as an automatically enforced lint. Conformance suite badges for the Jena SPARQL test suite and OWL 2 RL conformance suite are added to the README and automatically updated by CI, giving users at-a-glance visibility into standards compliance status without needing to run the test suites themselves.
+
+A particularly important improvement fixes the migration chain test, which previously relied on a manually maintained checkpoint constant that could silently fall out of sync as new migrations were added. The test now automatically discovers the most recent migration script, eliminating a class of false-passing tests that could miss coverage of recent migrations. New example SQL files covering Arrow Flight bulk export, PageRank analysis, and bidirectional CDC relay setup are verified in CI, ensuring they actually work rather than just appearing to. A cycle-safety regression test for `owl:sameAs` confirms the system handles symmetric, triangular, and self-referential identity assertions gracefully without entering infinite loops, closing a class of potential infinite-loop vulnerabilities in identity-heavy datasets.
 
 ### Added
 
@@ -1331,6 +1343,10 @@ of five large source files and the HTTP routing module, zero missing-docs
 warnings, concurrent-load PageRank benchmark, SHACL column-order regression
 test, four new Prometheus metrics, Datalog cyclic-group parallel regression
 test, and Arrow Flight EXPLAIN-only path.**
+
+Version 0.96.0 delivers a focused set of performance and code quality improvements from the Assessment 15 medium-severity findings. The most impactful performance improvement is a tombstone-skip optimization in the HTAP storage layer: when a VP table has no deleted rows, the query path now omits the LEFT JOIN against the tombstone table entirely, eliminating join overhead that previously existed even when there were no deletions to account for. A new star-join collapse optimization detects when multiple triple patterns share the same subject variable and combines them into a more efficient query structure, reducing redundant table access for the common star-shaped query patterns that dominate RDF workloads. A configurable federation connect-timeout GUC gives operators fine-grained control over how long federation requests wait before failing.
+
+Code quality receives substantial attention with the decomposition of five large source files into focused sub-modules and the HTTP routing module for Datalog handlers being split in two, making the handler code easier to navigate and test in isolation. A new Arrow Flight EXPLAIN-only row estimation path replaces a `COUNT(*)` pre-check that could produce inconsistent row counts on active HTAP tables. Four new Prometheus metrics cover merge cycle duration, Datalog stratum evaluation time, SHACL validation queue depth, and CDC replication slot lag — giving operations teams comprehensive visibility into the most resource-intensive internal subsystems. A parallel Datalog regression test and a concurrent PageRank plus HTAP merge benchmark ensure performance characteristics remain stable under the simultaneous read/write/analyze workloads common in production.
 
 ### Added
 
@@ -1399,6 +1415,10 @@ SSE error redaction, dictionary VACUUM threshold GUC, property-path+OPTIONAL+
 vp_rare regression tests, NaN/Inf confidence rejection, schema_generation plan
 cache key, and ADD/COPY/MOVE through full SPARQL update pipeline.**
 
+Correctness and security in a database extension require constant vigilance about how user-supplied data flows through the system and where assumptions can be violated by unusual inputs. Version 0.95.0 addresses eight medium-severity correctness and security findings, starting with a complete fix for DNS rebinding attacks in the federation layer. The new `resolve_and_check_endpoint()` function resolves hostnames to IP addresses once, validates every resolved IP against the SSRF blocklist, and uses the IP-based URL for the actual connection — preventing an attacker from exploiting the window between hostname validation and connection establishment to redirect a request to a private address.
+
+Several other important correctness improvements ship alongside the security fixes. A new event trigger automatically cleans up CDC replication slots when the extension is dropped, preventing orphaned slots from consuming PostgreSQL WAL resources indefinitely. SPARQL ADD, COPY, and MOVE operations now correctly flow through the mutation journal and SPARQL audit log, matching the post-processing applied to all other SPARQL Update operations — ensuring that CONSTRUCT writeback rules fire for these operations just as they do for INSERT and DELETE. Explicit NaN and infinity checks in the confidence loader produce clear, actionable error messages rather than cryptic numeric range failures. A schema generation sequence lets the plan cache detect when VP tables have been promoted and automatically evict stale plans, preventing "table not found" errors after rare-predicate promotion.
+
 ### Added
 
 - **M15-01**: `src/pagerank/export.rs`, `src/pagerank/centrality.rs` — replaced
@@ -1455,6 +1475,10 @@ None.
 injection fix), bump-version recipe improvements, bounded bidi relay channel with
 Prometheus counter, and shared copy_into_vp() helper for COPY-style bulk loads.**
 
+When the same system function is used in security-sensitive contexts, even a small gap in its defenses can create an exploitable vulnerability. Version 0.94.0 addresses the highest-priority finding from Assessment 15: a potential search-path injection vulnerability in a SECURITY DEFINER trigger function that could allow a privileged attacker to substitute their own functions for standard PostgreSQL library calls. The fix pins the search path to known-safe schemas inside the function definition, and a new CI lint script verifies that every SECURITY DEFINER function in the codebase has an explicit, pinned search path — turning a one-time fix into a permanent, automatically enforced protection that prevents the issue from recurring in future code.
+
+This release also introduces a bounded bidi relay channel with an operator-configurable inflight limit and automatic back-pressure, preventing the relay from consuming unlimited memory when the downstream consumer falls behind. A Prometheus counter tracks dropped events when the inflight limit is reached, giving operations teams visibility into backpressure events before they affect data reliability. A new `copy_into_vp()` helper function implements an efficient batch insertion path using UNNEST-array semantics, laying the groundwork for the 5–10× bulk load performance improvement delivered in v0.113.0. The `bump-version` justfile recipe is enhanced to accept an explicit compatibility minimum argument, making coordinated version management less error-prone for teams maintaining the extension alongside the HTTP companion.
+
 ### Added
 
 - **H15-01**: `justfile` — `bump-version NEW_VERSION [COMPAT_MIN]` accepts an
@@ -1498,6 +1522,10 @@ Prometheus counter, and shared copy_into_vp() helper for COPY-style bulk loads.*
 **Implements v0.93.0 roadmap: integrates pg_tide as the recommended relay transport
 layer and modernises all documentation to reflect the new pg-trickle v0.46.0
 architecture (relay, outbox, inbox extracted to pg_tide).**
+
+The CDC relay ecosystem around pg_ripple underwent a significant architectural change when pg_trickle version 0.46.0 extracted the relay, outbox, and inbox components into a separate pg_tide extension. Version 0.93.0 updates pg_ripple to work correctly with this new architecture, adding runtime detection of pg_tide, clear error messages that guide users toward installing it when it is absent, and comprehensive updates to all documentation, blog posts, and example code that referenced the old relay API. The Docker image is updated to bundle both pg_trickle 0.46.0 and pg_tide 0.4.0 together, so deployments using the official image get the correct combination out of the box.
+
+For existing users who relied on relay functionality, this release provides a clear migration path and backward-compatible behavior: a new `pg_ripple.pg_tide_available()` function lets applications detect at runtime whether pg_tide is installed and adapt their behavior accordingly. All documentation — including the bidirectional relay operations guide, the semantic hub blog post, and the integration plans — is updated with correct API references, migration notes that document the exact pg_trickle to pg_tide call-site changes, and version compatibility tables. A new compatibility matrix section clearly documents which versions of pg_trickle and pg_tide work with which versions of pg_ripple, giving operators the information they need to plan upgrades with confidence and without trial and error.
 
 ### Added
 
@@ -1547,6 +1575,10 @@ architecture (relay, outbox, inbox extracted to pg_tide).**
 **Implements v0.92.0 roadmap: closes all 39 Low-severity findings from
 PLAN_OVERALL_ASSESSMENT_14. This is the final Assessment 14 remediation release
 before v1.0.0 production hardening.**
+
+Version 0.92.0 closes all thirty-nine low-severity findings from Assessment 14, touching nearly every part of the system. PageRank receives improvements to its documentation — a new "Tuning Damping for Your Graph" section gives operators guidance tailored to sparse social, citation, knowledge, and temporal graph types — and its row-level security policies are hardened with the same graph isolation policies applied to the confidence side table. The `owl:sameAs` handling documentation is clarified to confirm that entity clusters are merged before PageRank computation, preventing double-counting an important correctness guarantee for entity-rich datasets where multiple IRIs refer to the same real-world object.
+
+Operations receive several meaningful improvements. The diagnostic report function is extended with four new PageRank-related entries covering confidence row counts, last PageRank computation time, queue depth, and centrality metrics, giving operators a more complete system health picture in a single call. The HTTP companion gains a configurable graceful shutdown timeout, allowing operators to tune how long the service waits for in-flight requests to complete before exiting — critical in production environments where SLA requirements prohibit abrupt connection drops. CDC payload length is now checked against PostgreSQL's 8,000-byte `pg_notify` limit before sending, raising a warning rather than silently truncating notifications. The PageRank `find_duplicates()` function's volatility is correctly classified as STABLE rather than VOLATILE, enabling the query planner to make better optimization decisions for queries that call it repeatedly.
 
 ### Added
 
@@ -1634,6 +1666,10 @@ v0.91.x, ProbLog citation, IVM boundary architecture doc, named-argument pageran
 SSE regression test, BUILD lint-version-sync CI job, dedicated migration-chain workflow,
 bidi relay throughput benchmark wiring, and two new GUCs for CDC watermark control.**
 
+Version 0.91.0 delivers the second half of the Assessment 14 medium-severity remediation with twenty-seven improvements spanning observability, API ergonomics, standards compliance, build quality, and documentation. Three new Prometheus gauges expose PageRank IVM queue telemetry — queue depth, maximum delta, and oldest enqueue age — enabling SLO-based alerting when PageRank becomes stale and helping teams understand the lag between graph changes and updated rank scores. Arrow Flight row count estimation is improved by using EXPLAIN-style plan row estimates rather than `COUNT(*)`, which could produce inconsistent counts on active HTAP tables. A dedicated migration chain CI workflow runs automatically whenever migration SQL files are modified, ensuring the upgrade path is always tested when it changes.
+
+An important ergonomics improvement makes the `pg:` namespace prefix automatically available in all SPARQL queries without a manual prefix declaration, eliminating a friction point that required users to add `PREFIX pg: <http://pg-ripple.org/fn/>` before using any pg_ripple extension function. A new `explain_pagerank_json()` function returns a structured explanation tree showing exactly why a node has its current rank and which nodes contributed to it — the PageRank equivalent of a query execution plan. A complete error code documentation table covers all PT0301–PT0423 codes, giving developers immediate context when they encounter any error the system can produce. Two new GUCs provide fine-grained control over CDC watermark batch processing, allowing operators to tune throughput and latency independently.
+
 ### Added
 
 - **OBS-01**: `pg_ripple_http/src/metrics.rs` — Three new Prometheus gauges for PageRank IVM queue telemetry: `pg_ripple_pagerank_queue_depth`, `pg_ripple_pagerank_queue_max_delta`, `pg_ripple_pagerank_queue_oldest_enqueue_seconds`. Exposed in `/metrics` endpoint via `pg_ripple_http/src/routing/admin_handlers.rs`.
@@ -1687,6 +1723,10 @@ module directories, datalog_handlers routing migration, clippy::unwrap_used lint
 convergence norm documentation, IVM error bounds documentation, cyclic convergence
 guarantee documentation, and new test coverage (proptest oracle, fuzz confidence
 loader, concurrency scripts, scale benchmark).**
+
+As pg_ripple's feature surface expanded with the probabilistic Datalog and PageRank engines in versions 0.87 and 0.88, a number of medium-severity findings accumulated around their operational characteristics — convergence behavior, concurrency safety, and the configuration surface needed to tune them for different workloads. Version 0.90.0 addresses all twenty-four of these findings. PageRank gains integration with the worst-case optimal join executor for graphs exceeding ten million edges, making large-scale graph analysis practical without exponential intermediate result sets. An advisory lock prevents concurrent `pagerank_run()` calls on the same topic from interfering with each other, and an IVM full-recompute threshold automatically triggers a complete recalculation when incremental updates have accumulated enough staleness to compromise accuracy.
+
+This release marks a major structural investment in code organization: seven large source files approaching the 1,800-line CI gate are proactively decomposed into focused sub-modules before they become maintenance problems. The `src/pagerank.rs` and `src/uncertain_knowledge_api.rs` files become proper directory modules with logical sub-components, and the Datalog HTTP handlers are extracted to the routing module where they belong architecturally. A `clippy::unwrap_used` CI gate prevents new panicking unwrap calls from entering the codebase going forward. Five property-based tests verify the algebraic identity laws of the noisy-OR confidence operator — commutativity, associativity, monotonicity, and absorbing elements — and a fuzz target exercises the confidence loader with adversarial float inputs including NaN, infinities, and denormal numbers that can cause incorrect results in probabilistic computations.
 
 ### Added
 
@@ -1745,6 +1785,10 @@ GUC name audit with deprecated aliases for v0.87/v0.88 GUCs, default rate limit 
 fuzzy input length guard (SEC-02), pagerank seed array guard (SEC-03), IRI escaping in
 export_pagerank (SEC-04), and actionable pg_trgm diagnostic in fuzzy SPARQL (CB-03).**
 
+Security findings, even when they appear minor in isolation, require immediate and thorough remediation to prevent them from combining into larger vulnerabilities. Version 0.89.0 addresses the critical and high findings from Assessment 14, starting with four targeted security improvements. A default rate limit of 100 requests per second is now enforced in the HTTP companion out of the box — previously the rate limiter was disabled, leaving deployments with no protection against denial-of-service; a maximum input length guard prevents oversized strings from reaching the fuzzy matching functions; a seed array size limit caps the number of PageRank seed nodes that can be specified in a single call; and the PageRank export function is hardened against injection by switching from string interpolation to parameterized SQL with percent-encoded IRI output.
+
+The release also corrects a naming convention gap: several GUC parameters introduced in v0.87.0 and v0.88.0 violated pg_ripple's established `noun_verb_unit` snake_case naming convention. Canonical names are introduced for all four non-conforming GUCs, with the deprecated names kept functional until the v1.0.0 removal to avoid breaking existing configurations. The migration chain test is extended with checkpoint assertions for v0.84.0 through v0.88.0, verifying that the complete upgrade path works correctly end-to-end across five releases. A suite of seven algebraic property tests for the noisy-OR confidence operator validates commutativity, associativity, monotonicity, idempotence, and output range invariants that the probabilistic reasoning engine depends on for mathematically correct confidence propagation.
+
 ### Added
 
 - **DEAD-FILE-01 (CQ-01)**: Deleted `src/gucs/registration.rs.bak`; added `.bak`, `.orig`, `.swp` patterns to `.gitignore`; new `lint-no-backup-files` CI job.
@@ -1779,6 +1823,10 @@ confidence-weighted edges, four centrality measures (betweenness, closeness, deg
 score-explanation trees, standard-format export (CSV/Turtle/N-Triples/JSON-LD), probabilistic
 score bounds, SHACL-aware ranking, federation blend mode, centrality-guided entity deduplication,
 HTTP companion PageRank/centrality REST API, pg_regress test suite, and benchmarks.**
+
+PageRank is one of the most famous algorithms in computer science — the formula originally used by Google to rank web pages and now widely applied to knowledge graphs, citation networks, social media, and supply chains to identify the most influential or important nodes. Version 0.88.0 implements a full, Datalog-native PageRank engine inside pg_ripple that goes far beyond a simple implementation: it supports topic-sensitive and personalized PageRank, incremental refresh when the graph changes, confidence-weighted edges, and four centrality measures (betweenness, closeness, degree, and Katz centrality). Results include probabilistic score bounds derived from the confidence side table, giving every rank score a lower and upper bound that reflects the uncertainty in the underlying data, and a SHACL-aware ranking mode can exclude nodes that fail shape validation constraints.
+
+The practical applications are wide-ranging. Business intelligence teams can identify the most influential products in a supply chain graph or the most connected entities in a customer relationship graph. Research teams can surface the most-cited papers in a literature knowledge base or the most authoritative sources in a fact-checking graph. The `pg:pagerank()` SPARQL extension function makes it possible to filter and sort SPARQL query results by centrality without leaving the query language. A centrality-guided entity deduplication function uses PageRank scores to identify the canonical representative when resolving `owl:sameAs` identity clusters. Score explanation trees show exactly why a node has its current rank and which neighbors contributed to it most, and standard-format exports in CSV, Turtle, N-Triples, and JSON-LD make it easy to consume results in downstream analytics and visualization tools.
 
 ### Added
 
@@ -1837,6 +1885,10 @@ side table (`_pg_ripple.confidence`), fuzzy SPARQL extension functions (`pg:conf
 export with confidence annotations, HTTP companion endpoints (`/confidence/*`), and garbage
 collection (`pg_ripple.vacuum_confidence()`).**
 
+Real-world knowledge graphs rarely deal with certainties — information extracted from text has varying reliability, facts from sensors carry measurement error, and rules that combine multiple pieces of evidence should produce conclusions with appropriately reduced confidence. Version 0.87.0 introduces a complete uncertain knowledge engine for pg_ripple: a confidence side table stores a numerical confidence score for any triple in the graph, probabilistic Datalog rules with `@weight` annotations propagate uncertainty through inference using noisy-OR semantics, and SPARQL queries can filter by confidence threshold or traverse high-confidence paths using the new `pg:confPath()` property path operator. The result is a knowledge graph that represents not just what it knows, but how confident it is in each thing it knows.
+
+Soft SHACL quality scoring extends the validation framework into the probabilistic domain: instead of simply passing or failing, shapes can now return weighted quality scores, and a score log tracks how data quality evolves over time — allowing teams to set alerts when quality drops below a threshold. Bulk loading of triples with associated confidence values makes it straightforward to feed scores from external machine learning models, document extractors, or human annotation pipelines directly into the graph. A PROV-O integration propagates confidence through provenance chains, so the reliability of a conclusion can be traced back through the complete derivation to the reliability of its source facts. Eight HTTP endpoints expose the full confidence API to external applications, making probabilistic knowledge graph queries accessible from any programming language.
+
 ### Added
 
 - **PROB-DATALOG-01**: `@weight(F)` annotation on Datalog rules; noisy-OR confidence propagation via `_pg_ripple.confidence` side table.
@@ -1875,6 +1927,10 @@ expiry dates (`DS13-02`/`S13-04`), Renovate rust-toolchain update config (`DS13-
 error-codes registry (`A13-03`), deprecated-gucs docs (`A13-04`), GeoSPARQL function
 inventory (`SC13-03`), compatibility matrix v0.80–v0.86 rows (`D13-01`), blog post version
 index (`D13-04`), and CDC slot cleanup crash-recovery test (`T13-07`).**
+
+Version 0.86.0 closes the final thirty-plus low-priority and backlog findings from Assessment 13, marking the complete resolution of all 82 findings in that assessment cycle. Among the most operationally significant additions is a Server-Sent Events streaming cursor that allows clients to receive SPARQL query results as a continuous stream rather than waiting for the entire result set to materialize — a key capability for dashboards and monitoring applications that display live graph data. Axum graceful shutdown ensures the HTTP companion completes in-flight requests before exiting on SIGTERM, protecting queries in progress during rolling restarts. Structured JSON log output from the HTTP companion makes it straightforward to feed logs into centralized aggregation platforms like Elasticsearch or Loki without custom parsing.
+
+Security and supply chain hardening receive careful attention throughout. The Arrow Flight endpoint now runs a row count pre-check before materializing results and returns HTTP 413 with a generic message when the export limit is exceeded — importantly, the actual row count is only logged server-side to avoid leaking internal state in error responses visible to clients. The Docker Compose configuration is updated to use the POSTGRES_PASSWORD_FILE Docker secrets pattern, replacing plaintext password environment variables with secrets file injection. Four security advisories in `audit.toml` gain explicit expiry dates, turning an implicit "we know about this" list into a tracked obligation with documented review deadlines. A complete error code registry and a deprecated-GUCs reference document close two documentation gaps that had been making troubleshooting harder than necessary.
 
 ### Tests (T13-02 – T13-07)
 
@@ -1945,6 +2001,10 @@ module splits, CI 1,800-line lint gate, `describe_cbd` depth GUC, per-predicate
 merge fence lock, `encode_batch` single-CTE API, dictionary hot-cache Prometheus
 counters, and VP-promotion crash-recovery regression test.**
 
+Data correctness in a knowledge graph system depends on precise handling of edge cases that can seem minor until they cause subtle bugs in production. Version 0.85.0 addresses all twenty-two medium-severity findings from Assessment 13. The dictionary's `batch_decode()` function is corrected to properly handle negative IDs — which represent inline-encoded integers — that were being incorrectly treated as missing values and triggering unnecessary warnings. A new `strict_dictionary` GUC mode makes missing dictionary IDs raise a proper PostgreSQL error rather than silently returning empty strings, giving teams a choice between strict correctness guarantees and graceful degradation for legacy compatibility. Typed literals are now correctly routed through the typed literal encoder in the Datalog magic sets compiler, fixing incorrect encoding of values like `"42"^^xsd:integer` that would silently produce wrong inference results.
+
+Performance improvements are grounded in measured optimization. A new `encode_batch()` internal API reduces the number of database round-trips when encoding multiple terms simultaneously from O(n) to O(1) by using a single CTE INSERT for all cache-miss terms — providing a meaningful throughput improvement for bulk operations. Per-predicate merge fence locks replace the previous global lock, eliminating contention between concurrent merge workers operating on different predicates and allowing multiple predicates to merge simultaneously. A VP-promotion crash-recovery regression test verifies that an interrupted promotion leaves the system in a recoverable state, providing confidence that the self-healing recovery function works correctly before it is needed in production. A CI file size gate enforces the 1,800-line per-file limit going forward, preventing architectural debt from silently accumulating.
+
 ### Correctness
 
 - **C13-02** — `batch_decode` now raises a PostgreSQL error (`PT512`) when a dictionary ID is missing and `pg_ripple.strict_dictionary = on`. Previously returned a silent empty string. Graceful-degradation `WARNING` path retained for `strict_dictionary = off`.
@@ -1991,6 +2051,10 @@ gate, SECURITY DEFINER inline annotations, migration-chain v0.80–v0.83 test
 coverage, gucs/registration.rs 6-domain split, nested OPTIONAL+EXISTS
 regression test, /health/ready deep-check endpoint, plan-cache double-parse
 elimination, and justfile automation recipes.**
+
+Version 0.84.0 closes all thirteen critical and high findings from Assessment 13, with the most significant being a six-version lag in the HTTP companion's compatibility tracking that had been recurring across multiple assessment cycles. The companion's `COMPATIBLE_EXTENSION_MIN` is raised to the current value, and a new `PG_RIPPLE_HTTP_STRICT_COMPAT` environment variable allows operators to configure the companion to exit with an error rather than just log a warning when connected to an incompatible extension version — providing a hard guarantee for production environments where silent incompatibility could cause subtle failures. A new `/health/ready` deep-check endpoint performs a real PostgreSQL round-trip to verify both database connectivity and extension installation, giving orchestration platforms accurate readiness information.
+
+Code quality improvements address two security-sensitive areas. The `src/gucs/registration.rs` file, at over 2,000 lines, is decomposed into six domain-specific submodules covering SPARQL, storage, federation, Datalog, security, and observability GUCs — making the GUC catalog far easier to navigate, audit, and extend. A plan-cache double-parse bug is fixed by threading the canonical SPARQL form through the parse and cache layers so each query string is parsed only once rather than twice on cache misses, improving performance for uncached queries. The justfile gains four automation recipes for version bumping, SBOM regeneration, OpenAPI spec generation, and version sync verification — eliminating manual multi-file updates that were a frequent source of version string inconsistencies across the codebase.
 
 ### HTTP Companion (pg_ripple_http)
 
@@ -2042,6 +2106,10 @@ LISTEN/NOTIFY barrier integration test, bidi module split, blank node export
 validation, load_jsonld alias, datalog cost-model GUCs, merge worker exponential
 backoff, RFC 3339 build timestamp in /health, JSON 401 error envelope,
 WWW-Authenticate header, and CHANGELOG/GUC naming conventions.**
+
+A knowledge graph system's correctness guarantees are only as strong as its ability to detect regressions, and version 0.83.0 significantly expands that ability. Three new fuzz targets exercise the N-Triples, N-Quads, and TriG format parsers with arbitrary byte sequences, hardening the parsers against malformed input that could cause unexpected behavior. A new proptest suite compares pg_ripple's N-Triples parsing results against oxigraph as an independent reference implementation, catching any case where the two implementations disagree on what constitutes valid syntax. A CDC LISTEN/NOTIFY integration test demonstrates the correct event-driven pattern for waiting on CDC events without using `sleep()`, which is prone to timing-related flakiness in CI.
+
+Two API improvements in this release have lasting impact. The `load_jsonld()` function is introduced as the new canonical name for JSON-LD loading, with the old `json_ld_load()` emitting a deprecation notice and scheduled for removal at v1.0.0, giving teams a clear migration path with a long runway. The `src/bidi.rs` module, at over 2,500 lines, is decomposed into five focused sub-modules — protocol, relay, subscribe, and sync — the largest single-file split in the project's history. The HTTP companion gains proper 401 JSON error responses with `WWW-Authenticate` headers consistent with RFC 7235, matching the JSON error envelope used throughout the REST API. Merge worker exponential backoff replaces a flat retry interval, making the worker recover more gracefully from transient errors without flooding logs during extended incidents.
 
 ### Test Coverage
 
@@ -2146,6 +2214,10 @@ hardening items. No breaking schema changes; one new internal table
 (`_pg_ripple.cdc_lsn_watermark`) and one new public function
 (`pg_ripple.recover_stuck_promotions()`).**
 
+Version 0.81.0 is a deep correctness and stability release addressing thirty-four issues spanning the full system stack. Several correctness bugs that had been present since early versions are fixed: the HTAP merge was using non-deterministic SID selection due to a missing `ORDER BY` before `DISTINCT ON`, DRed retraction was performing only a single seed pass instead of a full semi-naive fixpoint (causing incomplete re-derivation after retraction), and blank-node variable names are now prefixed with a query-scoped hex nonce to prevent aliasing across subqueries. The OPTIONAL-to-INNER-JOIN optimization is extended from single-predicate patterns to multi-predicate basic graph patterns, improving query performance for a structural pattern that appears frequently in real-world SPARQL queries.
+
+Infrastructure reliability receives equal attention. A new `recover_stuck_promotions()` function detects and repairs VP promotions that were abandoned mid-flight without a server restart, making the promotion mechanism self-healing without operator intervention. A CDC slot cleanup background worker automatically drops orphaned replication slots that have been idle beyond a configurable threshold, preventing slot accumulation from blocking WAL cleanup and causing disk space exhaustion in production. Dictionary race conditions are addressed: a hash collision now raises a clean PostgreSQL error instead of panicking, and sub-transaction aborts correctly invalidate the LRU caches to prevent stale entries from causing incorrect decode results for subsequent queries. The plan cache key is extended to include nine additional GUC parameters, ensuring that changing any relevant session setting mid-session correctly evicts stale plans rather than returning results computed under different settings.
+
 ### Correctness
 
 - **MERGE-SID-01** — `ORDER BY i ASC` added before `DISTINCT ON` in HTAP merge CTE template (tests/pg_regress/sql/htap_merge.sql), fixing non-deterministic SID selection during merge.
@@ -2230,6 +2302,10 @@ hardening items. No breaking schema changes; one new internal table
 Security Assessment 12. No new SQL schema changes; all fixes are in the Rust
 implementation and companion HTTP service.**
 
+Security in depth means that every layer of the system independently validates and protects against threats, without depending on other layers to catch what it misses. Version 0.80.0 closes all thirteen critical and high security findings from Assessment 12. Five SQL injection vulnerabilities in the views catalog insertion functions are fixed by migrating from `format!()` string interpolation with manual quote escaping to fully parameterized `Spi::run_with_args()` calls with typed bind parameters — a change that makes injection impossible by construction rather than by careful escaping. A plan cache cross-user leakage vulnerability is closed by including the current PostgreSQL role OID in the plan cache key, preventing cached query plans from being shared across users with different privilege levels.
+
+The SPARQL Update mutation journal is wired to flush at the end of every update statement, ensuring that CONSTRUCT writeback rules fire correctly for every mutation rather than only when the dictionary API is used. IPv6 Unique Local addresses are added to the SSRF blocklist, closing a gap that could have allowed federation requests to reach internal network services via IPv6 even when the IPv4 blocklist was complete. The `/explorer` admin interface now requires authentication, preventing unauthenticated access to the interactive graph explorer in deployments where the HTTP companion is reachable from less-trusted networks. All HTTP error responses from the companion are standardized to return JSON with structured error codes rather than inconsistent text or empty bodies, making error handling in client code more predictable and diagnostic.
+
 ### Security fixes
 
 - **FLUSH-02-01** — `sparql_update()` and `execute_delete_insert()` now call
@@ -2291,6 +2367,10 @@ implementation and companion HTTP service.**
 (WCOJ-LFTI-01 and SHACL-SPARQL-01). All `feature_status()` rows now show
 `implemented`. The "Known limitations" table has been removed from README.md.**
 
+Two capabilities had been marked as planned but unimplemented in pg_ripple's feature status since the beginning of the project, and version 0.79.0 delivers both. The first is a true Leapfrog Triejoin executor for cyclic join patterns — graph patterns involving triangles, cliques, and other cyclic structures where standard nested-loop joins produce exponentially large intermediate results. The LFTI executor loads VP table data into sorted in-memory structures and evaluates multi-way joins using the Leapfrog algorithm, achieving worst-case optimal join complexity and making previously impractical graph pattern queries feasible on large graphs without requiring any hint-based query tuning.
+
+The second is full `sh:SPARQLRule` support in the SHACL engine. SHACL rules expressed as SPARQL CONSTRUCT or SELECT queries can now be parsed, validated, and executed natively, with their results materialized into the target graph. `sh:order` is respected for execution ordering, and fixpoint iteration ensures that newly materialized triples can trigger further rules until no new conclusions are drawn. With both features delivered, all rows in `pg_ripple.feature_status()` show `implemented` status, and the "Known limitations" section is removed from the README — replaced by a note pointing users to `feature_status()` for the authoritative, machine-readable status surface that stays current automatically.
+
 ### What's new
 
 - **WCOJ-LFTI-01** — True Leapfrog Triejoin executor for cyclic BGP joins.
@@ -2344,6 +2424,10 @@ No schema changes. Run `ALTER EXTENSION pg_ripple UPDATE TO '0.79.0'` to upgrade
 **Implements v0.78.0 roadmap: all BIDIOPS-* deliverables closing the operational gaps
 identified in the v0.77.0 review. Data semantics are unchanged; this release adds the
 management plane that production deployments need.**
+
+Introducing bidirectional data integration between a knowledge graph and external systems is only the first step — operating it reliably in production requires a full management plane. Version 0.78.0 delivers the operational infrastructure that makes the v0.77.0 integration primitives production-ready: write-side outbox depth limits with three overflow policies (pause, drop oldest, drop newest), a dead-letter table for events that exhausted their retry policy, and a reconciliation toolkit for resolving divergent states between the knowledge graph and its integration partners. Fine-grained per-subscription bearer tokens with named scopes let administrators grant exactly the permissions each integration partner needs and revoke them independently.
+
+Data governance receives first-class support through two significant new features. Frame-level redaction allows specific predicates containing PII or sensitive information to be marked for redaction, so their values are replaced with a structured redaction marker in the outbound event stream while an unredacted variant remains available for internal compliance pipelines. A complete event audit log records every mutating action with token hash, remote address, and session user, creating a tamper-evident trail of all integration activity. Schema evolution policies govern how changes to frame definitions, IRI templates, or exclude-graph lists are handled when subscriptions are modified, preventing breaking changes from propagating silently to downstream systems. A draft vendor-neutral "RDF Bidirectional Integration Profile" specification captures the design decisions in a reusable, community-shareable format.
 
 ### What's new
 
@@ -2416,6 +2500,10 @@ management plane that production deployments need.**
 between pg_ripple and external systems via named-graph attribution, declarative conflict
 policies, upsert/diff ingest modes, symmetric delete, linkback rendezvous, CAS events,
 pg-trickle outbox/inbox transport, per-graph observability, and a frozen JSON wire format.**
+
+Modern enterprise data architectures rarely have a single authoritative source — the same information may exist in a CRM, an ERP, a data warehouse, and a knowledge graph simultaneously, with each system maintaining its own version. Version 0.77.0 introduces a comprehensive set of primitives for bidirectional synchronization between pg_ripple and external systems. Source attribution, declarative conflict resolution policies, upsert and diff ingest modes, symmetric delete, linkback rendezvous for target-assigned IDs, compare-and-swap event verification, and pg-trickle outbox/inbox transport are all delivered in a single release, providing the complete foundation for production-grade bidirectional integration.
+
+Four conflict resolution strategies give teams precise control over how divergent values are handled: source priority (a ranked list of authoritative sources), latest-wins (highest timestamp prevails), reject-on-conflict (raise an error if values disagree), and union (all values coexist). The diff ingest mode derives per-triple change timestamps from payload-level fields and stores them as RDF-star annotations, enabling time-aware queries and audit of exactly what changed and when. A frozen JSON wire format with a version discriminator ensures that event consumers remain compatible across pg_ripple upgrades without custom parsing changes. Per-graph observability through `graph_stats()` gives operations teams a live view of triple counts, last write times, conflict rejection rates, and active subscription counts for each named graph.
 
 ### What's new
 
@@ -2511,6 +2599,10 @@ Arrow dep minor-version pin, benchmark baseline refresh, 24 new regression tests
 /metrics auth documentation, xact PRE_COMMIT SPI citation, log-hook defense-in-depth audit,
 clippy re-verification, and cross-verification of LLM/KGE feature status and CI integration.**
 
+Production deployments require not just correct functionality but reproducible builds, well-documented security tradeoffs, and a regression test suite wide enough to catch subtle breakage. Version 0.76.0 addresses all low-severity findings from Assessment 11 with twenty-four new regression tests — raising the total to 227 — covering SPARQL BIND, HAVING, NOT EXISTS, LANG filters, string and numeric functions, VALUES, CONSTRUCT with blanks, named graph copy, and many more patterns that real queries use every day. The Rust toolchain is pinned to a specific version in `rust-toolchain.toml`, making builds fully reproducible across CI runner updates and developer machines.
+
+The RLS policy name generation function is upgraded from XXH3-64 to XXH3-128 hashing, reducing the birthday-paradox collision probability from roughly 50% at four billion named graphs to essentially zero — a change that matters for large multi-tenant deployments managing thousands of named graphs. Benchmark baselines are refreshed to reflect the HTAP merge optimizations delivered across the previous twenty versions, providing accurate performance regression detection for ongoing development. A defense-in-depth audit of all log call sites confirms that no HMAC keys, connection strings, bearer tokens, or other credentials appear in any error or warning message, closing a class of potential credential leakage via log aggregation pipelines. The `/metrics` Prometheus endpoint authentication is fully documented, giving operators clear guidance on securing the observability endpoint.
+
 ### What's new
 
 - **TOOLCHAIN-PIN-01** — `rust-toolchain.toml` now pins `channel = "1.87.0"` instead of
@@ -2578,6 +2670,10 @@ clippy re-verification, and cross-verification of LLM/KGE feature status and CI 
 Citus and Arrow CI integration tests, roadmap status validation, property-path/vp_rare
 regression tests, URL host parser fuzz target, fuzz duration increase, HTTP companion
 production docs, and mutation_journal feature_status entry.**
+
+Security and robustness improvements often require verifying not just that a feature works correctly in isolation, but that it integrates correctly with the full system under realistic conditions. Version 0.75.0 addresses all medium-severity findings from Assessment 11, with a focus on verifying that protections that should be in place actually are. CI integration tests for both Citus distributed tables and Arrow Flight bulk export are added, ensuring these features are tested end-to-end in the CI pipeline rather than relying only on unit tests. A roadmap status validation job verifies that the current version is correctly marked as Released in the roadmap after each deployment, catching forgotten status updates before they mislead users browsing the roadmap.
+
+RLS error surfacing is improved: failures in applying row-level security policies were previously silently discarded; they now surface as WARNING messages that operators can detect in PostgreSQL logs and act on before they cause data access issues. A URL host parser fuzz target exercises the Citus shard-pruning host extraction function with arbitrary input, expanding the fuzz surface to cover network-layer parsing code that handles externally supplied hostnames. Property path regression tests are added for three specific combinations that had not previously been tested: property paths inside OPTIONAL clauses, inside GRAPH clauses, and on vp_rare predicates. The HTTP companion production documentation is completed with a compatibility warning explaining exactly why bypassing the version check in production is unsafe, giving operators the context they need to make an informed decision.
 
 ### What's new
 
@@ -2650,6 +2746,10 @@ production docs, and mutation_journal feature_status entry.**
 
 **Implements v0.74.0 roadmap: evidence truthfulness for all 12 missing reference docs, mutation journal wired through Datalog inference and executor-end hook, VP promotion plan-cache invalidation, interrupted-promotion recovery, and comprehensive CI validation.**
 
+Trustworthy documentation and correctly wired system internals are the foundation that makes everything else in a knowledge graph system reliable. Version 0.74.0 addresses the highest-priority findings from Assessment 11, starting with a documentation truthfulness audit that revealed twelve reference documentation pages cited by the feature status API simply did not exist. All twelve pages were created — covering SPARQL, Datalog, SHACL, storage, CONSTRUCT rules, federation, CDC, GraphRAG, observability, query optimization, vector search, and development guides — giving every feature status citation a live, informative destination. A CI job now verifies that all evidence paths cited by `feature_status()` resolve to real files on disk, making it impossible for future features to be marked as delivered with missing documentation.
+
+Three important internal correctness fixes ship alongside the documentation improvements. The mutation journal is now correctly wired through the Datalog inference engine, ensuring that CONSTRUCT writeback rules fire automatically after Datalog-derived triples are inserted — a gap that had required manual `refresh_construct_rule()` calls after inference runs. VP promotion now resets the query plan cache after completing a predicate promotion, preventing queries compiled against the `vp_rare` table from running stale plans after the predicate gets its own dedicated VP table. A background recovery mechanism calls `recover_interrupted_promotions()` at merge worker startup to repair any promotions interrupted by a server crash, making the promotion process fully self-healing.
+
 ### What's new
 
 - **EVIDENCE-01** — Created 12 missing `docs/src/reference/` pages cited by `feature_status()`:
@@ -2704,6 +2804,10 @@ None — all changes are in the Rust implementation only.
 
 **Implements v0.73.0 roadmap: SPARQL 1.2 compatibility tracking, SPARQL live subscription API via SSE, named bidirectional JSON↔RDF mapping registry, multi-graph JSON-LD ingest, CONTRIBUTING.md, Helm chart sidecar image config, and feature-status taxonomy.**
 
+Modern data applications don't just query data once — they subscribe to changes and react in real time. Version 0.73.0 introduces SPARQL live subscriptions: clients can register a named subscription with any SPARQL SELECT or CONSTRUCT query, and pg_ripple will automatically re-execute that query and deliver updated results via Server-Sent Events every time the relevant graph is written to. This makes it straightforward to build dashboards, monitoring applications, and notification pipelines that stay current without polling. Each subscription is lightweight, and pg_ripple sends a compact "changed" notification rather than recomputing and transmitting the full result set when payloads would exceed 8 KB.
+
+The release also introduces a formal bidirectional JSON⇔RDF mapping registry that makes it much easier to exchange data between REST APIs and the knowledge graph. Teams can register named mappings that specify a JSON-LD `@context` and an optional SHACL shape for validation, then use `ingest_json()` and `export_json_node()` to convert in either direction without writing custom conversion code. Multi-graph JSON-LD documents can now be ingested in a single call, with each node automatically routed to the correct named graph. A SPARQL 1.2 tracking document records compatibility status for every new SPARQL 1.2 feature, and a full `CONTRIBUTING.md` gives new contributors a clear path from first clone to merged PR.
+
 ### What's new
 
 - **SUB-01** — SPARQL live subscription API: `subscribe_sparql(id, query, graph_iri)` registers a subscription in `_pg_ripple.sparql_subscriptions`; `unsubscribe_sparql(id)` removes it; `list_sparql_subscriptions()` enumerates active subscriptions. After each graph write, `notify_affected_subscriptions()` re-executes the query and fires `pg_notify('pg_ripple_subscription_<id>', <json>)`. Payloads >8 KB send `{"changed":true}` instead. The `pg_ripple_http` companion now exposes `GET /subscribe/{id}` as a Server-Sent Events stream. Regression test: `tests/pg_regress/sql/v073_features.sql`.
@@ -2738,6 +2842,10 @@ None — all changes are in the Rust implementation only.
 ## [0.72.0] — 2026-05-01 — Architecture and Protocol Hardening
 
 **Implements v0.72.0 roadmap: sub-transaction safety, JSON-LD fixes, Flight nonce replay protection, observability, module splitting.**
+
+A database system that silently discards data during a transaction rollback is fundamentally unreliable, and version 0.72.0 closes this gap. Sub-transaction savepoint support is added via a PostgreSQL sub-transaction callback, ensuring that CONSTRUCT writeback rule entries accumulated within a savepoint are correctly cleaned up when the savepoint is rolled back. Three JSON-LD encoding bugs are fixed: object-form `@context` term definitions that were being silently dropped, integer values exceeding `i64::MAX` that were causing panics instead of correct string encoding, and fractional JSON numbers like `1.5` that were being misclassified as integers. An IRI key validation check prevents malformed IRIs from ever entering the triple store.
+
+Security receives meaningful hardening with the introduction of Arrow Flight nonce replay protection: the HTTP companion now maintains a time-bounded nonce cache and rejects any Arrow Flight ticket whose nonce has been used before, preventing replay attacks against the bulk export endpoint. A new `/metrics/extension` endpoint exposes extension-level Prometheus metrics directly from the PostgreSQL side, and a new `export_jsonld_node()` SQL function returns the complete JSON-LD representation of any subject IRI. Five large source files are decomposed into focused modules across the SPARQL, HTTP routing, storage, and GUC subsystems, reducing average file size and making each sub-component easier to review and test in isolation.
 
 ### What's new
 
@@ -2779,6 +2887,10 @@ None.
 
 **Implements v0.71.0 roadmap: closes the High-severity Assessment 10 gaps requiring runtime infrastructure.**
 
+Arrow Flight is the high-performance columnar data transport protocol that makes bulk exports of triple store data possible at enterprise scale. Version 0.71.0 upgrades the Arrow Flight implementation from a basic batch response to true streaming: the HTTP companion now produces chunked Transfer-Encoding responses, allowing clients to begin processing Arrow record batches before the full export completes. This means that a large export no longer requires the client to wait for all data to be serialized before any of it can be processed — a meaningful improvement for analytical pipelines that feed RDF data into columnar data stores or stream it to downstream consumers.
+
+Version compatibility checking is introduced as a first-class feature: the HTTP companion now queries the installed extension version at startup and warns operators when the extension is below the minimum compatible version. A new compatibility matrix document clearly shows which HTTP companion versions work with which extension versions. A multi-node Citus integration test verifies that row-level security policies are correctly propagated to VP shard tables on distributed deployments — a critical correctness guarantee for multi-tenant environments. Approximate distinct count documentation clarifies exactly when HyperLogLog is used and what error bounds to expect, and a new Citus SERVICE pruning GUC enables a planned 10× speedup for bound-subject federated queries.
+
 ### What's new
 
 - **FLIGHT-STREAM-01** — `pg_ripple_http` `/flight/do_get` now uses `axum::body::Body::from_stream` with 64 KiB chunks, producing `Transfer-Encoding: chunked` HTTP responses. The IPC buffer is streamed lazily so clients can begin decoding Arrow record batches before the full export completes. Integration test `tests/http_integration/arrow_export_large.sh` validates streaming behavior and RSS bounds. `docs/src/reference/arrow-flight.md` updated with memory-bound documentation.
@@ -2800,6 +2912,10 @@ None.
 ## [0.70.0] — 2026-04-29 — Assessment 10 Critical Remediation
 
 **Implements v0.70.0 roadmap: closes four Critical and seven High/Medium findings from Overall Assessment 10.**
+
+Four critical and seven high and medium findings from the tenth security and correctness assessment are closed in version 0.70.0. The most important correctness improvement ensures that CONSTRUCT writeback rules fire automatically after every write operation, not just those that use the dictionary API. Bulk-load functions now wire into the mutation journal and flush it after each batch, and SPARQL Update flushes are deferred to the pre-commit event hook so that writeback fires once per statement regardless of how many individual triples were modified. Together these changes mean that raw-to-canonical data transformation pipelines built on CONSTRUCT rules work correctly without any manual refresh calls.
+
+Documentation truthfulness receives careful attention: twelve documentation citations pointing to nonexistent files are fixed, stub pages are created for Arrow Flight and scalability references, and the README is updated to accurately reflect the system's current capabilities rather than a version from months earlier. Role name validation in the RLS grant functions prevents SQL injection through malformed role names, and `grant_graph_access()` now uses parameterized DDL throughout. A version check script is added to the justfile's release assessment tool, making it impossible to publish a release with a stale README version number. A migration chain test extended to cover v0.67.0 through v0.69.0 verifies that the complete upgrade path works end-to-end.
 
 ### What's new
 
@@ -2843,6 +2959,10 @@ All 192+ pg_regress tests pass; `validate-feature-status` CI job exits non-zero 
 
 **Implements v0.69.0 roadmap: splits four large source modules along single-responsibility boundaries with zero behavioral changes.**
 
+A 2,252-line file is not a module — it is a wall of code that no reviewer can navigate safely, no test can exercise cleanly, and no new contributor can approach without weeks of orientation. Version 0.69.0 makes a focused investment in code organization, decomposing four large modules into properly bounded sub-components with clear single responsibilities. The SPARQL engine is split across parse, plan, decode, and execute modules. The HTTP companion main entry point shrinks from 2,252 lines to 250 lines by extracting routing, database bridge, Arrow Flight, and streaming components. The CONSTRUCT writeback rules module is restructured into catalog, scheduler, delta, and retraction components, each with a clear and auditable purpose.
+
+The storage module's public mutation API is narrowed so that insertion and deletion functions are only accessible within the crate, preventing internal implementation details from leaking into callers that should be using the higher-level journal-aware APIs. VP promotion helpers are extracted to their own module with proper documentation. All 186 regression tests continue to pass without change — this is purely a code quality release with no behavioral changes. The result is a codebase that is meaningfully easier to review, easier to test in isolation, and easier for new contributors to navigate without needing a guide through the full architecture before making their first contribution.
+
 ### What's new
 
 - **ARCH-01 — `src/sparql/mod.rs` split** (already delivered in prior sessions): `parse.rs`, `plan.rs`, `decode.rs`, `execute.rs` extracted; `mod.rs` is now a 157-line facade with re-exports and the three public SQL-entry-point functions.
@@ -2884,6 +3004,10 @@ None. This is a pure Rust module restructuring.
 ## [0.68.0] — 2026-04-29 — Distributed Scalability, Streaming Completion, and Fuzz Hardening
 
 **Implements v0.68.0 roadmap: portal-based CONSTRUCT cursor streaming, Citus HLL COUNT(DISTINCT), Citus SERVICE shard pruning, nonblocking VP promotion with crash recovery, and scheduled nightly fuzz CI.**
+
+Three important platform capabilities reach production quality in version 0.68.0. CONSTRUCT query results can now be streamed through a lazy portal-based cursor that materializes only one page at a time, bounding memory use to a configurable batch size regardless of result set size. This makes it practical to run large CONSTRUCT queries — generating Turtle or JSON-LD exports of entire named graph subsets — without risking memory exhaustion. Citus deployments gain two new optimizations: HyperLogLog approximate COUNT(DISTINCT) for SPARQL aggregates on distributed tables, and SERVICE shard pruning that routes federated queries to the single Citus worker that owns the relevant data range.
+
+VP promotion — the process by which a predicate that has accumulated enough triples moves from the shared `vp_rare` table to its own dedicated VP table — is made non-blocking and crash-safe in this release. Promotion now tracks its progress in a status column so that a recovery function can detect and retry any promotion interrupted by a server crash, eliminating a class of inconsistent half-promoted states that previously required manual intervention. A comprehensive fuzz CI workflow runs all twelve fuzz targets nightly for 60 seconds each, with corpus and crash artifacts uploaded on every run, providing continuous automated discovery of parser and codec vulnerabilities across the SPARQL, Turtle, Datalog, SHACL, JSON-LD, federation, and geospatial parsing paths.
 
 ### What's new
 
@@ -2940,6 +3064,10 @@ None. This is a pure Rust module restructuring.
 
 **Implements v0.67.0 roadmap: Arrow Flight security hardening, mutation journal for CONSTRUCT writeback, Row Level Security propagation to all VP tables, panic→error conversion, Python gate tooling, benchmark correctness fixes, and scheduled performance trend CI.**
 
+Production readiness requires not just functional correctness but a comprehensive set of operational and security protections that catch problems before they become incidents. Version 0.67.0 addresses eight findings from Assessment 9, starting with two Arrow Flight security hardening items: unsigned tickets are now rejected by default (requiring an explicit opt-in GUC for development use only), and the tombstone exclusion query prevents deleted triples from appearing in bulk exports. A transaction-local mutation journal unifies CONSTRUCT writeback across all write paths — `insert_triple`, SPARQL INSERT DATA, `load_ntriples`, and `load_turtle` — so that derived triples are always updated regardless of which entry point was used to make a change.
+
+The release also delivers significant infrastructure improvements for reliability and observability. A `validate-feature-status` CI job verifies after every build that all features claimed as implemented have live evidence files on disk — making it structurally impossible to ship a release with misleading status claims. Row-level security policies are now applied to VP delta and main tables when created and when predicates are promoted, closing a gap where RLS protection was only applied to the original table at creation time. A scheduled weekly performance trend CI workflow catches regressions automatically by comparing new benchmark results against a four-week rolling average. Python-based replacements for legacy shell gate scripts provide more reliable parsing and require a `--version` argument to prevent stale invocations from passing silently.
+
 ### What's new
 
 - **Arrow Flight unsigned-ticket hardening** (FLIGHT-SEC-01): Unsigned Arrow Flight tickets are now rejected by default. New GUC `pg_ripple.arrow_unsigned_tickets_allowed` (BOOL, default `off`) must be explicitly set to allow unsigned tickets. Corresponding `ARROW_UNSIGNED_TICKETS_ALLOWED` env var for `pg_ripple_http`. Ticket rejections are tracked in `streaming_metrics()`. Evidence: `pg_ripple.feature_status()`, `pg_ripple.streaming_metrics()`.
@@ -2979,6 +3107,10 @@ None — all v0.67.0 changes are implemented using already-present dependencies.
 
 **Implements the v0.66.0 roadmap: true paged SPARQL cursors via PostgreSQL portal API, HMAC-SHA256 signed Arrow Flight v2 tickets, real Arrow IPC streaming in pg_ripple_http, WCOJ explain metadata, streaming observability metrics, and Citus BRIN summarise SQL API.**
 
+Version 0.66.0 delivers three capabilities that make pg_ripple competitive with dedicated graph analytics platforms. True SPARQL cursor streaming uses the PostgreSQL portal API to provide memory-bounded paging — peak memory use is proportional to page size rather than total result size, making it possible to stream arbitrarily large result sets without risk of memory exhaustion. Real Arrow IPC streaming in the HTTP companion validates HMAC-SHA256-signed tickets, connects directly to the PostgreSQL extension, and delivers triple store data as a binary columnar stream that Arrow-native analytics tools can consume at full memory bandwidth. WCOJ explain metadata in the query plan output shows operators whether the worst-case optimal join executor was activated for a given query and why it made that decision.
+
+The observability improvements are equally significant: a new `streaming_metrics()` function exposes live atomic counters for every streaming activity in the system — cursor pages opened, rows streamed, Arrow batches sent, ticket rejections, and Citus BRIN summarize completions — giving operations teams real-time visibility into the data export subsystem. The Citus BRIN summarize SQL API enables operations teams to keep BRIN index statistics current across all promoted VP main-partition tables with a single function call, an important maintenance operation for keeping the HTAP merge storage path efficient on Citus distributed deployments.
+
 ### What's new
 
 - **True SPARQL cursor streaming** (STREAM-01): `sparql_cursor()` now uses the PostgreSQL portal API (`SpiCursor::detach_into_name()` + `SpiClient::find_cursor()`) for memory-bounded paged streaming. Peak memory is proportional to `pg_ripple.export_batch_size`, not the full result size. The cursor survives across SPI sessions within the same transaction.
@@ -3006,6 +3138,10 @@ None — all v0.67.0 changes are implemented using already-present dependencies.
 ## [0.65.0] — 2026-04-28 — CONSTRUCT Writeback Correctness Closure
 
 **Implements the v0.65.0 roadmap: real delta maintenance, HTAP-aware retraction, exact provenance capture, parameterized rule catalog writes, observability, pipeline status API, and the full CWB behavior test matrix.**
+
+SPARQL CONSTRUCT writeback rules are one of pg_ripple's most powerful features — they allow teams to express raw-to-canonical data transformation pipelines as SPARQL CONSTRUCT queries that automatically keep derived graphs up to date. Version 0.65.0 makes these rules fully automatic for the first time. Previously, after any write to a source graph, users had to manually call `refresh_construct_rule()` to propagate changes to dependent target graphs. Now, source graph inserts and deletes automatically trigger incremental derivation and DRed-style retraction in the same transaction, with no manual intervention required. Derived triples are always consistent with their sources immediately after every write.
+
+HTAP split storage receives a correctness fix for retraction: the `retract_exclusive_triples()` function now correctly handles the case where derived triples live in either the delta or the main partition, using direct deletes for delta-resident triples and tombstones for main-resident triples to prevent silent retraction failures after a merge cycle. A parameterized SPI fix eliminates potential injection through catalog writes, and mode validation ensures only valid pipeline modes are accepted at rule creation time. A new pipeline status API lets operators check the current derivation state of every registered CONSTRUCT rule — whether it is fully derived, partially derived, or needs a full refresh — through observable SQL function calls rather than internal catalog queries.
 
 ### What's new
 
@@ -3037,6 +3173,10 @@ None — all v0.67.0 changes are implemented using already-present dependencies.
 
 **Implements the v0.64.0 roadmap: feature-status SQL API, deep /ready readiness, GitHub Actions SHA pinning, Docker release digest integrity, documentation truth pass, roadmap evidence scripts, API drift checks, `just assess-release`, release evidence dashboard, and optional-feature degradation semantics guide.**
 
+A system that claims to have capabilities it does not actually have is more dangerous than one that honestly admits its limitations, because users build on false foundations. Version 0.64.0 introduces a formal truthfulness and evidence culture for pg_ripple: a new `feature_status()` SQL function returns one row per major capability with an honest status value drawn from a defined taxonomy — implemented, experimental, planner_hint, manual_refresh, stub, degraded, or planned — making it impossible for the project to accidentally overstate its capabilities. The `/ready` readiness endpoint is extended to include a feature status snapshot so that deployment automation and operators can make informed decisions about what the system can actually do right now.
+
+Reproducibility and supply chain security are enforced with equal rigor. All GitHub Actions workflow steps are pinned to full 40-character commit SHAs with human-readable tag comments, and a CI script rejects any mutable reference that could allow a compromised or renamed action to execute different code in a future run. Docker release image digests are required to be present in the release artifact — a missing digest fails the release. Three tooling improvements automate ongoing quality: `check_roadmap_evidence.sh` flags completion claims without evidence, `check_api_drift.sh` verifies that every exported SQL function appears in documentation, and `just assess-release` runs the entire quality gate suite as a single command.
+
 ### What's new
 
 - **`pg_ripple.feature_status()`** (TRUTH-01): New SQL function returning one row per major capability with an honest status value. Status taxonomy: `implemented`, `experimental`, `planner_hint`, `manual_refresh`, `stub`, `degraded`, `planned`. Reports honest statuses for Arrow Flight (`stub`), WCOJ (`planner_hint`), SHACL-SPARQL rules (`planned`), CONSTRUCT writeback (`manual_refresh`), Citus SERVICE pruning (`planned`), and all other major features.
@@ -3067,6 +3207,10 @@ None — all v0.67.0 changes are implemented using already-present dependencies.
 
 **Implements the v0.63.0 roadmap: SPARQL CONSTRUCT writeback rules (CWB-01 through CWB-11), raw-to-canonical pipelines, incremental delta maintenance via Delete-Rederive (DRed), pipeline stratification with cycle detection, and Citus scalability improvements CITUS-30 through CITUS-37.**
 
+Data integration pipelines often need to maintain multiple representations of the same information — raw sensor data needs to be canonicalized into a standard schema, external API responses need to be normalized to internal IRIs, and inferred relationships need to be materialized for query performance. Version 0.63.0 introduces SPARQL CONSTRUCT writeback rules, which express these transformation pipelines as persistent SPARQL CONSTRUCT queries registered in the knowledge graph. When source data changes, the system automatically re-evaluates the registered rules and updates the derived target graphs. Pipeline stratification detects dependency order using topological sort, and circular dependencies are rejected at rule registration time with a clear error.
+
+The CONSTRUCT writeback engine includes full Delete-Rederive support: when a source triple is deleted, the engine correctly retracts only those derived triples that were exclusively supported by the deleted triple, leaving in place any derived triples still supported by other facts. Validation at rule registration catches blank nodes in CONSTRUCT templates, unbound variables, non-CONSTRUCT queries, and self-referential graphs before they can cause runtime failures. Three new Citus scalability functions round out the release: SERVICE result shard pruning, HyperLogLog availability detection, and per-worker BRIN index summarization — each addressing distributed query bottlenecks that emerge as VP tables are sharded across Citus workers.
+
 ### What's new
 
 - **CONSTRUCT writeback rules** (CWB-01 to CWB-11): New SQL API `pg_ripple.create_construct_rule(name, sparql, target_graph, mode)` registers a SPARQL CONSTRUCT query as a persistent writeback rule. Derived triples are stored in the target named graph with `source = 1`. Supporting functions: `drop_construct_rule`, `refresh_construct_rule`, `list_construct_rules`, `explain_construct_rule`.
@@ -3092,6 +3236,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.63.0'` or apply `sql/pg_ripple--0.62
 ## [0.62.0] — 2025 — Query Frontier
 
 **Implements the v0.62.0 roadmap: Apache Arrow Flight bulk export, Leapfrog-Triejoin WCOJ planner integration, visual graph explorer in `pg_ripple_http`, tiered dictionary, Citus vp_rare vacuum, distributed inference dispatch, live shard rebalance, multi-hop pruning carry-forward, and `cargo deny` / `cargo audit` CI gates.**
+
+The most capable features of a knowledge graph system are often the ones that were too expensive to run before a key algorithmic or engineering investment. Version 0.62.0 makes three previously impractical capabilities practical. Apache Arrow Flight bulk export generates a signed ticket that the HTTP companion can use to stream all triples in a named graph as a binary columnar data stream — enabling large-scale knowledge graph exports to analytical platforms at memory bandwidth speeds. The Leapfrog Triejoin WCOJ integration detects cyclic Basic Graph Patterns (triangles, cliques, and other cyclic structures) and activates the worst-case optimal join algorithm, providing sub-second execution for query patterns that previously ran for minutes as the graph grew.
+
+An interactive graph explorer is served directly from the HTTP companion at `/explorer`, rendering a force-directed D3.js visualization of graph data that domain experts can browse and explore without writing SPARQL queries. On the distributed scalability side, this release introduces Citus HyperLogLog COUNT(DISTINCT) for scalable approximate aggregates, a live non-blocking shard rebalance function, multi-hop subject ID carry-forward for pruning efficiency, per-graph vacuum for the rare-predicate table, and a tiered dictionary with configurable cold-tier eviction. `cargo deny` license and advisory checking plus `cargo audit` vulnerability scanning are added as required CI gates, bringing supply chain security to parity with the code quality gates already in place.
 
 ### What's new
 
@@ -3120,6 +3268,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.63.0'` or apply `sql/pg_ripple--0.62
 ## [0.61.0] — 2025 — Ecosystem Depth & Polish
 
 **Implements the v0.61.0 roadmap: per-graph access control, GDPR right-to-erasure, inference explainability, SHACL-AF rule execution, dbt adapter, OTLP traceparent propagation, richer federation stats, Citus scalability improvements (object pruning, direct-shard bulk-load, graph shard affinity), and test quality improvements.**
+
+Enterprise knowledge graph deployments require features that go well beyond query execution — they need access control, compliance tooling, provenance tracking, and integration with the broader data platform ecosystem. Version 0.61.0 delivers a rich set of these capabilities. Per-named-graph access control allows row-level security policies to be installed for individual named graphs, restricting which database roles can query which portions of the knowledge graph. A complete GDPR right-to-erasure implementation removes all traces of a subject across VP tables, the dictionary, KGE embeddings, provenance graphs, and audit logs in a single transactional call that returns a per-relation deletion count for the compliance record.
+
+AI and data engineering integrations receive significant investment. An OTLP traceparent propagation path creates unbroken distributed traces from the HTTP load balancer through the companion service all the way into query execution, enabling millisecond-precision performance debugging across the full request stack. A dbt adapter published as a Python package gives data engineers SPARQL-aware model, source, and ref macros that mix SQL and SPARQL transformations in a single dbt project with full lineage tracking. Inference explainability via `explain_inference()` walks the derivation chain for any inferred triple, returning the full rule firing history as a structured JSON tree. Three Citus scalability improvements — object-based shard pruning, direct-shard bulk load, and named-graph shard affinity — extend the distributed query performance work to cover object-bound queries and named graph locality.
 
 ### What's new
 
@@ -3179,6 +3331,10 @@ Upgrade from v0.60.0 with `ALTER EXTENSION pg_ripple UPDATE`.
 
 **Implements the v0.60.0 roadmap: HTAP merge atomic swap, CI supply-chain hardening, three new fuzz harnesses, `/ready` Kubernetes readiness probe, SERVICE SILENT circuit-breaker test, architecture diagram refresh, pg_trickle dependency matrix, and pg_dump round-trip test.**
 
+Production deployments expose failure modes that development and staging environments never reveal, and version 0.60.0 systematically addresses the most dangerous ones. The most critical fix is the HTAP merge atomic rename-swap: the previous merge implementation had a race window where the VP view's backing relation could briefly be absent during a merge cycle, causing "relation does not exist" errors under concurrent query load. The new implementation uses an `ACCESS EXCLUSIVE`-locked rename-swap that atomically replaces the old main partition with the new one, eliminating the race entirely. A chaos test that hammers VP views with continuous SPARQL queries during merge cycles validates that zero such errors occur across a 60-second soak test.
+
+Three new fuzz harnesses expand the adversarial input surface to cover GeoSPARQL WKT geometry parsing, R2RML mapping documents in Turtle format, and the LLM prompt sanitizer — specifically asserting that no injection markers survive sanitization regardless of the input. A Docker CVE scan gate blocks release if HIGH or CRITICAL vulnerabilities are found in the image. A Kubernetes readiness probe endpoint (`/ready`) lets orchestration platforms distinguish between a starting server and a fully operational one, preventing traffic from being routed to the container before it is ready to serve queries. A pg_dump round-trip CI test verifies that the extension can be dumped and restored without data loss, providing confidence for the upgrade path.
+
 ### What's new
 
 - **HTAP merge atomic rename-swap** (F7-1): Replaced the `DROP TABLE … CASCADE → RENAME → CREATE OR REPLACE VIEW` sequence in `src/storage/merge.rs` with an `ACCESS EXCLUSIVE`-locked rename-swap (`main → main_old → drop`, `main_new → main`). The VP view's backing relation is now never absent during a merge cycle, eliminating the race that caused `relation does not exist` errors under concurrent query load.
@@ -3225,6 +3381,10 @@ No schema changes. Upgrade from v0.59.0 with `ALTER EXTENSION pg_ripple UPDATE`.
 
 **Implements the v0.59.0 roadmap: SPARQL shard-pruning for bound subject patterns, NOTIFY-based rebalance coordination, `explain_sparql()` Citus section, and `citus_rebalance_progress()`.**
 
+Distributed query execution over Citus shard tables can be dramatically inefficient when every triple pattern fans out to all workers looking for a match. Version 0.59.0 introduces SPARQL shard pruning for bound subject patterns: when a SPARQL triple pattern has a specific subject IRI, pg_ripple encodes it to its dictionary integer, looks up which Citus shard owns that integer range, and routes the query directly to the correct worker — achieving a 10 to 100 times speedup for the common single-entity lookup pattern. The implementation gracefully falls back to full fan-out when Citus is not installed, making the optimization completely transparent for non-distributed deployments.
+
+Rebalance coordination ensures that shard movement and SPARQL query processing remain consistent during Citus rebalancing operations: `pg_notify` signals at the start and end of each rebalance allow pg-trickle to suspend CDC slot polling during the window, preventing replication lag spikes caused by simultaneous rebalancing and slot drain. The SPARQL explain function gains a Citus section showing whether shard pruning was activated for a given query, which worker owns the pruned shard, and the estimated per-shard row count — giving operators the information they need to verify that shard pruning is working correctly in production. A comprehensive integration guide documents end-to-end Citus deployment, GUC configuration, shard pruning verification queries, and a complete rebalancing runbook.
+
 ### What's new
 
 - **SPARQL shard-pruning** (CITUS-10): New shard-pruning infrastructure in `src/citus.rs`. When `pg_ripple.citus_sharding_enabled = on`, bound subject IRIs in SPARQL triple patterns are encoded to their integer subject ID and mapped to the physical Citus shard table via `pg_dist_shard`. Helper functions `compute_shard_id()`, `prune_bound_subject()`, and `resolve_shard_table()` implement the 10–100× speedup for queries like `SELECT ?p ?o WHERE { <http://example.org/Alice> ?p ?o }` that previously fan-out to all workers. Gracefully falls back to full fan-out when Citus is not installed.
@@ -3250,6 +3410,10 @@ ALTER EXTENSION pg_ripple UPDATE TO '0.59.0';
 ## [0.58.0] — 2026-05-14 — Temporal RDF, SPARQL-DL, Citus Sharding & PROV-O
 
 **Implements the v0.58.0 roadmap: Temporal RDF point-in-time queries, SPARQL-DL OWL axiom routing, Citus horizontal sharding of VP tables, PROV-O provenance tracking, v1 readiness integration test suite, and CI gate hardening.**
+
+Four significant capabilities converge in version 0.58.0 to make pg_ripple a more complete platform for enterprise data management. Temporal RDF queries allow any named graph to be queried at a specific past point in time: calling `point_in_time()` with a timestamp restricts all subsequent SPARQL queries to triples that existed at that moment, using a BRIN-indexed timeline table to efficiently filter by statement ID. This makes it possible to answer audit and compliance questions like "what did our supplier network look like on the date of the contract?" without maintaining separate historical copies of the graph.
+
+SPARQL-DL extends the query engine to route OWL vocabulary patterns — `owl:subClassOf`, `owl:equivalentClass`, `owl:disjointWith`, `owl:inverseOf` — directly to VP table data rather than maintaining a separate in-memory index, making TBox querying consistent with the rest of the query architecture. Citus horizontal sharding ships as an opt-in feature with full VP table distribution, dictionary and predicate catalog as reference tables, and a merge fence lock that coordinates with pg-trickle during rebalancing. W3C PROV-O provenance tracking automatically emits structured provenance triples for every bulk-load operation, recording what data was loaded, when, and from which source — giving compliance teams an auditable history of every dataset ingested into the knowledge graph.
 
 ### What's new
 
@@ -3278,6 +3442,10 @@ ALTER EXTENSION pg_ripple UPDATE TO '0.58.0';
 ## [0.57.0] — 2026-05-07 — Reasoning Platform & AI Integration
 
 **Implements the v0.57.0 roadmap: OWL 2 EL/QL reasoning profiles, Knowledge-Graph Embeddings (TransE/RotatE), entity alignment via HNSW ANN search, LLM-augmented SPARQL repair, automated ontology mapping, multi-tenant graph isolation, columnar VP storage guard, adaptive index advisor, and probabilistic Datalog GUC.**
+
+Reasoning over ontologies and integrating with AI systems are two of the highest-value use cases for knowledge graphs, and version 0.57.0 delivers a comprehensive platform for both. OWL 2 EL and QL reasoning profiles are implemented as built-in Datalog rule sets, making it possible to activate different levels of ontological reasoning with a single `load_rules_builtin()` function call. Knowledge-graph embeddings using TransE and RotatE store entity representations in a pgvector HNSW index, enabling embedding-based entity alignment to propose `owl:sameAs` candidates across different graphs using cosine similarity search. An LLM-augmented SPARQL repair function sends broken queries to any OpenAI-compatible endpoint and returns a suggested fix.
+
+Multi-tenant graph isolation provides database-level separation between tenants with quota-enforcing triggers that prevent any single tenant from consuming unbounded resources. An adaptive index advisor monitors actual access patterns and recommends index changes based on real query behavior rather than developer intuition. An automated ontology mapping function proposes `owl:sameAs` and property alignment candidates between two graphs using either lexical similarity (Jaccard over tokenized labels) or embedding cosine similarity — reducing what would otherwise be days of manual ontology alignment work to a function call. The probabilistic Datalog GUC lays the configuration foundation for the full confidence propagation and noisy-OR reasoning engine delivered in v0.87.0.
 
 ### What's new
 
@@ -3318,6 +3486,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE` or apply `sql/pg_ripple--0.56.0--0.57.0.s
 ## [0.56.0] — 2026-04-30 — Standards Completeness & Operational Depth
 
 **Implements the v0.56.0 roadmap: GeoSPARQL 1.1 geometry functions, federation circuit breaker, SPARQL audit log, DDL event trigger, BRIN re-summarize after merge, SID sequence runway monitor, incremental RDFS closure mode, R2RML direct mapping, lz4 dictionary compression, dead-code audit, and deprecated GUC removal.**
+
+A production knowledge graph system needs more than query correctness — it needs comprehensive operational tooling that lets administrators manage, protect, and monitor the system reliably. Version 0.56.0 delivers a wide range of operational capabilities. The federation circuit breaker prevents cascading failures when a remote SERVICE endpoint becomes unavailable: after five consecutive failures, the circuit opens and returns a fast error rather than blocking each query for a full network timeout, with automatic recovery after a configurable reset period. A SPARQL audit log records every update operation with role, transaction ID, operation type, and full query text, giving compliance teams an immutable record of all data modification activity.
+
+GeoSPARQL 1.1 support is expanded with five new geometry functions covering spatial containment, intersection, buffer, convex hull, and envelope operations, enabling complex spatial queries over geographic knowledge graphs. An R2RML direct mapping function reads a W3C R2RML 2012 mapping document and executes it in one call, automatically generating triples from relational database queries without writing transformation code. A DDL event trigger watches for attempts to drop VP tables outside the extension's maintenance functions and emits an error with instructions, preventing accidental structural damage. An incremental RDFS closure mode limits schema-property inference to new merges rather than recomputing the full closure on every write, dramatically reducing inference overhead for large datasets with stable schemas.
 
 ### What's new
 
@@ -3360,6 +3532,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE` or apply `sql/pg_ripple--0.55.0--0.56.0.s
 ## [0.55.0] — 2026-04-24 — Security Hardening, Observability & Developer Experience
 
 **Implements the v0.55.0 roadmap: federation SSRF protection, Unicode normalization, tombstone GC optimization, SPARQL-star annotation tests, SHACL snapshot semantics, Datalog dead-code cleanup, pg_ripple_http OpenAPI spec and VoID/Service endpoints, parallel concurrent insert tests, and comprehensive error catalog additions.**
+
+Security and developer experience improvements compound over time — each hardening measure reduces the attack surface, and each developer experience improvement accelerates the pace of building on the platform. Version 0.55.0 introduces SSRF protection for the federation layer: all federation endpoints are validated against a deny policy that blocks private, loopback, and link-local addresses by default, preventing an attacker from using a crafted SERVICE URL to make pg_ripple issue unauthorized internal network requests. Unicode NFC normalization on IRI ingestion prevents homoglyph attacks and encoding inconsistencies from causing triples that look identical to be stored as separate dictionary entries.
+
+The developer experience receives several meaningful improvements. The pg_ripple_http companion now serves an OpenAPI 3.1 specification at `/openapi.yaml`, making it easy to generate client SDKs in any language with a spec-driven generator. W3C VoID and SPARQL Service Description endpoints give data consumers machine-readable descriptions of the dataset and query capabilities. A comprehensive error catalog adds eighteen new error codes with documentation, a lint script that verifies all codes are documented, and a CI job that enforces this requirement on every push. SHACL validation reports now include a WAL LSN captured at validation start, enabling precise correlation between a validation result and the exact database state it was computed against.
 
 ### What's new
 
@@ -3421,6 +3597,10 @@ The `sql/pg_ripple--0.54.0--0.55.0.sql` migration script:
 
 **Implements the v0.54.0 roadmap: RDF logical replication, batteries-included Docker image, Kubernetes Helm chart, CloudNativePG extension image volume, and vector-index performance benchmarks.**
 
+Enterprise deployments require robust availability guarantees that can survive individual server failures. Version 0.54.0 introduces RDF logical replication: a background worker subscribes to a PostgreSQL logical replication slot, receives N-Triples batches from the primary, and applies them to the replica via the standard load path. Conflict resolution uses a configurable `last_writer_wins` strategy per statement ID, and a `replication_stats()` function exposes the current slot state, replication lag in bytes, and last applied LSN, giving operations teams the monitoring data they need to verify the replica is keeping up without falling behind.
+
+A batteries-included Docker image with pg_ripple, PostGIS, and pgvector pre-installed eliminates the friction of setting up a local development environment or staging cluster. A CloudNativePG extension image enables zero-build deployment on Kubernetes with the CloudNativePG operator — no custom PostgreSQL image required, just point the operator at the extension image. A Helm chart deploys the complete stack as a StatefulSet with configurable storage, load balancer service, Prometheus probes, and federation endpoint configuration. A vector-index comparison benchmark covering HNSW versus IVFFlat at single, half, and binary precision provides concrete guidance for choosing the right vector index type for embedding-based similarity search workloads.
+
 ### What's new
 
 - **RDF logical replication** (`src/replication.rs`): New `pg_ripple.logical_apply_worker` background worker (enabled via `pg_ripple.replication_enabled = on`) that subscribes to the `pg_ripple_pub` publication, receives N-Triples batches, and applies them via `load_ntriples()` in order. Conflict resolution: `last_writer_wins` per SID, configurable via `pg_ripple.replication_conflict_strategy`.
@@ -3463,6 +3643,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.54.0';` or use the supplied migratio
 
 **Implements the v0.53.0 roadmap: SHACL-SPARQL constraints, COPY rdf FROM, RAG pipeline hardening, CDC lifecycle events, fuzz coverage expansion, WatDiv gate promotion, and merge-throughput baselines.**
 
+Developer experience improvements that save time on routine tasks compound across every team that uses a platform. Version 0.53.0 delivers three substantial improvements. SHACL-SPARQL constraints allow validation rules to be expressed as SPARQL SELECT queries that are executed with the focus node bound as `$this` — any non-empty result triggers a violation — making it possible to express complex validation logic that cannot be captured in standard SHACL Core constraints. A new `pg_ripple.copy_rdf_from()` function loads RDF files in any supported format directly from server-side paths, eliminating the need to pipe file content through the SQL wire protocol for large datasets. A RAG pipeline cache with a one-hour TTL makes repeated `rag_context()` calls fast without re-running expensive vector recall and graph expansion operations.
+
+CDC lifecycle events allow applications to react in real time to merge worker completions: a `pg_notify` signal carries the predicate ID, merged triple count, and tombstone count at the end of each successful merge cycle, making it easy to build reactive architectures that trigger downstream processing when new batches of data become available. Three new fuzz targets exercise the RDF/XML parser, JSON-LD framer, and HTTP query-string parsing paths with arbitrary byte sequences. The WatDiv benchmark suite is promoted to a required CI gate, meaning that no change degrading any of the 32 WatDiv query templates can be merged. Merge throughput baseline measurements anchor the performance regression gate for future releases.
+
 ### What's new
 
 - **SHACL-SPARQL constraint component** (`src/shacl/`): Implements `sh:SPARQLConstraintComponent` (W3C SHACL-SPARQL). A new `SparqlConstraint` variant on `ShapeConstraint` stores a SPARQL SELECT query; during validation the query is executed with `$this` bound to the focus-node IRI. Any non-empty result set generates a `Violation`. The parser now recognises `sh:sparql` predicates in node and property shapes.
@@ -3499,6 +3683,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.53.0';` or use the supplied migratio
 
 **Implements the v0.52.0 roadmap: JSON→RDF pipeline, CDC bridge triggers, JSON-LD event serializer, outbox dedup keys, vocabulary alignment templates, and pg-trickle runtime detection with graceful degradation.**
 
+Real-world enterprise data integration requires a reliable, bidirectional bridge between the knowledge graph and the broader event-driven data platform. Version 0.52.0 introduces a complete CDC (change data capture) bridge for pg-trickle integration. Per-predicate `AFTER INSERT` triggers on VP delta tables decode dictionary IDs back to IRIs, serialize each triple as a JSON-LD event with a dedup key, and write it to a configured outbox table within the same transaction — ensuring that the event and the data modification are committed atomically. Downstream consumers can use pg-trickle to relay these events to Apache Kafka, AWS EventBridge, or any other event platform that pg-trickle supports.
+
+A JSON-to-RDF pipeline converts any JSON object to N-Triples using a JSON-LD `@context` for key-to-IRI mapping, handling nested objects as blank nodes, arrays as repeated predicates, and all standard JSON value types. Four built-in vocabulary alignment templates provide ready-to-use Datalog rule sets for Schema.org to SAREF IoT sensor data, FHIR R4, PROV-O, and generic JSON-to-Schema.org mappings that can be loaded with a single function call. A runtime detection function checks at query time whether pg-trickle is installed and enabled, with graceful degradation and clear error codes for deployments where pg-trickle has not been installed, so applications can handle both configurations without code changes.
+
 ### What's new
 
 - **JSON → RDF pipeline** (`src/bulk_load.rs`): New `pg_ripple.json_to_ntriples(payload JSONB, subject_iri TEXT, type_iri TEXT, context JSONB) RETURNS TEXT` converts any JSON object to N-Triples using an optional `@vocab` context for key-to-IRI mapping. Handles nested objects (blank nodes), arrays (repeated predicates), and plain string values. `json_to_ntriples_and_load()` combines conversion and load in one call.
@@ -3526,6 +3714,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.53.0';` or use the supplied migratio
 ## [0.51.0] — 2026-04-23 — Security Hardening & Production Readiness
 
 **Completes the v0.51.0 roadmap: SPARQL DoS protection (PT440), OWL 2 RL 100% conformance, SPARQL CSV/TSV output, SHACL complex path traversal, per-predicate workload stats, OTLP tracing wiring, non-root Docker container, blocking cargo-audit on PRs, SBOM generation, and comprehensive operational tooling.**
+
+The transition from a feature-complete system to a production-ready one is defined by the hardening, monitoring, and operational tooling that surrounds the core functionality. Version 0.51.0 delivers a comprehensive production readiness pass. SPARQL DoS protection adds configurable maximum algebra depth and triple pattern count limits that reject pathologically complex queries at parse time before they can consume server resources. OWL 2 RL conformance reaches 100% — all 66 rules pass — with four previously failing rules fixed: property chains, bidirectional subclass equivalence, `owl:sameAs` plus `owl:differentFrom` consistency, and XSD numeric type hierarchy entailment.
+
+SPARQL CSV and TSV output formats are added for compatibility with data science pipelines that consume tabular result formats rather than SPARQL Results JSON. A blocking `cargo audit` gate on every pull request prevents dependencies with known security vulnerabilities from entering the codebase. SBOM generation as part of every release provides a machine-readable bill of materials for supply chain security audits. A non-root Docker container, per-predicate workload statistics, OTLP tracing endpoint wiring, and storage cache invalidation on vacuum complete the operational hardening. A `just release` recipe and new scripts for SQL format linting, migration header checking, and error code validation ensure the release process is repeatable and verifiable.
 
 ### What's new
 
@@ -3575,6 +3767,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.53.0';` or use the supplied migratio
 
 **Completes the v0.50.0 roadmap: `explain_sparql(analyze:=true)` interactive query debugger with `cache_status` and `actual_rows`; `rag_context()` full RAG pipeline; migration chain passes through v0.50.0.**
 
+The gap between a query running correctly and a developer understanding why it ran correctly is often wider than the gap between a query failing and a developer fixing it. Version 0.50.0 delivers a dramatically improved SPARQL query debugging experience: the explain function now reports cache status — `"hit"`, `"miss"`, or `"bypass"` — rather than a simple boolean, includes actual row counts from EXPLAIN ANALYZE when run in analyze mode, and correctly generates explain output for all four query types including DESCRIBE. This means that every slow query, every cache miss, and every unexpected result can now be traced through the complete execution path from SPARQL algebra to actual row counts.
+
+The full GraphRAG pipeline is assembled and operational in this release. `rag_context()` runs a five-step pipeline: HNSW vector recall to find the most relevant entities, SPARQL 1-hop graph expansion to gather neighborhood context, JSON-LD assembly into a rich text context for LLM ingestion, and optional NL→SPARQL query execution to augment the context with targeted SPARQL results. The function degrades gracefully with a WARNING and empty return when pgvector is not installed, so applications that run on both vector-enabled and non-vector deployments can handle both cases without code branching. Two new documentation pages explain the explain output format in detail and walk through the complete RAG pipeline configuration with concrete examples.
+
 ### What's new
 
 - **Extended `pg_ripple.explain_sparql(query TEXT, analyze BOOL DEFAULT FALSE) RETURNS JSONB`** (`src/sparql/explain.rs`):
@@ -3618,6 +3814,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.50.0'` — no schema changes; new Ru
 
 **Completes the v0.49.0 roadmap: `sparql_from_nl()` NL-to-SPARQL via configurable LLM endpoint; `suggest_sameas()` and `apply_sameas_candidates()` for embedding-based entity alignment; four new GUCs; error codes PT700–PT702.**
 
+Natural language interfaces to knowledge graphs have historically required complex, hand-written translation logic. Version 0.49.0 introduces `sparql_from_nl()`, which converts a natural-language question to a SPARQL SELECT query using any OpenAI-compatible LLM endpoint. Few-shot examples stored with `add_llm_example()` improve translation quality for domain-specific queries, and when SHACL shapes are loaded, they are automatically included as context to help the LLM understand the graph structure. A mock endpoint mode allows full testing of the NL-to-SPARQL pipeline without requiring a live LLM service, making it possible to develop and test NL-to-SPARQL workflows in CI.
+
+Embedding-based entity alignment provides a data quality tool that can identify likely duplicate entities across different graphs. `suggest_sameas()` runs a cosine similarity self-join over stored KGE embeddings and returns candidate `owl:sameAs` pairs above a configurable similarity threshold, while `apply_sameas_candidates()` materializes accepted pairs as actual `owl:sameAs` triples in the graph. The cluster size bound prevents runaway merging when data quality issues cause inadvertent large equivalence classes. Three new GUCs control LLM endpoint, model, API key environment variable, and shape inclusion, and a complete test suite exercises all error paths through mock endpoints to verify correct error code reporting.
+
 ### What's new
 
 - **`pg_ripple.sparql_from_nl(question TEXT) RETURNS TEXT`** (`src/llm/mod.rs`): converts a natural-language question to a SPARQL SELECT query using any OpenAI-compatible LLM endpoint.
@@ -3643,6 +3843,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.49.0'` — adds `_pg_ripple.llm_exam
 ## [0.48.0] — 2026-04-23 — SHACL Core Completeness, OWL 2 RL Closure & SPARQL Completeness
 
 **Completes the v0.48.0 roadmap: all 35 SHACL Core constraints implemented; complex `sh:path` expressions with recursive CTEs; OWL 2 RL rule-set closure (five new rules); SPARQL Update ADD/COPY/MOVE; SPARQL-star variable-inside-quoted-triple patterns; `federation_max_response_bytes` GUC; `insert_triples()` batch SRF; WatDiv baselines; `pg-upgrade.md` operations guide.**
+
+Full SHACL Core compliance is achieved in version 0.48.0 with the implementation of the final seven constraint types: string length bounds, exclusive-or shape logic (exactly-one-of), and four XSD numeric range constraints. Complex `sh:path` expressions with inverse, alternative, sequence, and recursive path operators are now compiled to efficient `WITH RECURSIVE ... CYCLE` SQL queries that correctly detect cycles. A violation report enhancement adds the decoded focus-node IRI and the W3C component IRI to every violation, making it possible for downstream tools to generate standard-conformant SHACL violation reports without additional dictionary lookups.
+
+Five new OWL 2 RL rules close the gap toward complete conformance: full `rdfs:subClassOf` transitive closure, `rdfs:subPropertyOf` chains, inverse functional property `owl:sameAs` propagation, `owl:allValuesFrom` with subclass hierarchy chaining, and cardinality entailment rules. SPARQL Update ADD, COPY, and MOVE graph management operations are implemented through a pre-parser that handles these non-standard forms before the main SPARQL algebra translation. SPARQL-star variable-inside-quoted-triple patterns — where a variable appears as the subject, predicate, or object of a quoted triple — are now correctly handled with a dictionary join, enabling powerful provenance queries that traverse annotation layers. A batch triple insert SRF and WatDiv latency baselines round out the release.
 
 ### What's new
 
@@ -3688,6 +3892,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.49.0'` — adds `_pg_ripple.llm_exam
 
 **Completes the v0.47.0 roadmap: sh:lessThanOrEquals SHACL constraint; six GUC check_hook validators; three individual cache hit-rate SRFs; SPARQL `sqlgen.rs` module split (≤800 lines); parallel Datalog SID pre-allocation wired; five new cargo-fuzz targets; CI security hygiene (cargo-audit workflow, deny.toml, check_no_security_definer.sh); OWL 2 RL baseline 93.9%; promotion-race stress test; four new SHACL pg_regress tests.**
 
+Operational reliability depends on catching configuration mistakes at the moment they are made rather than at the moment they cause a failure. Version 0.47.0 introduces check_hook validators for six GUC parameters, ensuring that invalid values for federation error policy, SPARQL overflow action, tracing exporter, and embedding precision are rejected at the `SET` command rather than silently accepted and then misinterpreted at runtime. Three individual cache hit-rate table-returning functions replace the previous JSONB blob, giving monitoring queries precise hit rates, miss counts, and eviction counts for each of the plan cache, dictionary cache, and federation cache independently.
+
+The SPARQL SQL generation module, which had grown to 3,632 lines, is decomposed into eight focused translation modules covering BGP, filter, graph, group, join, left join, union, and distinct translation — reducing the maximum file size by 80% while keeping the public API identical. Five new fuzz targets cover the SPARQL parser, Turtle and N-Triples parsers, Datalog rule tokenizer, SHACL parser, and dictionary hash determinism. Weekly scheduled `cargo audit` with auto-created GitHub issues on failure, a license and advisory deny policy, and a `check_no_security_definer.sh` CI script collectively harden the supply chain and SQL security posture. A promotion-race stress test with 50 concurrent sessions validates SID uniqueness under heavy contention.
+
 ### What's new
 
 - **`sh:lessThanOrEquals` SHACL constraint** (`src/shacl/constraints/shape_based.rs`) — implements `sh:lessThanOrEquals` per SHACL Core §4.4. For each focus node, checks that every value of the subject property is ≤ the corresponding value of the comparison property. Violations include `"constraint": "sh:lessThanOrEquals"`. pg_regress test `shacl_lt_or_equals.sql` covers less-than, greater-than (violation), and equal-value cases.
@@ -3720,6 +3928,10 @@ Run `ALTER EXTENSION pg_ripple UPDATE TO '0.49.0'` — adds `_pg_ripple.llm_exam
 ## [0.46.0] — 2026-04-21 — Property-Based Testing, Fuzz Hardening & OWL 2 RL Conformance
 
 **Adds three property-based test suites (SPARQL round-trip, dictionary encode/decode, JSON-LD framing), a cargo-fuzz federation result decoder target, an OWL 2 RL conformance suite, TopN push-down optimisation, sequence range pre-allocation for parallel Datalog, BSBM regression gate, Rustdoc lint gate, HTTP companion CA-bundle support, and expanded worked examples.**
+
+Property-based testing catches a class of bugs that example-based tests miss: when a property must hold for all inputs, not just the ones a developer happened to think of when writing tests. Version 0.46.0 introduces three proptest suites running 10,000 cases each, covering SPARQL algebra round-trip stability across encoding and whitespace variations, XXH3-128 dictionary hash stability and collision resistance across 10,000 distinct terms, and JSON-LD framing round-trip correctness. A cargo-fuzz federation result decoder target feeds arbitrary byte sequences through the SPARQL XML results parser, asserting that malformed XML never produces a panic — only the appropriate error code.
+
+A TopN push-down optimization embeds `ORDER BY ... LIMIT N` constraints directly in the generated SQL when no DISTINCT or OFFSET is present, letting the PostgreSQL planner use index scans and early termination rather than materializing the full result set before truncation. The W3C OWL 2 RL conformance suite adds a proper test adapter tracking progress toward the 95% pass rate target. Sequence range pre-allocation for parallel Datalog workers eliminates sequence contention by reserving a range of statement IDs per worker before parallel evaluation begins, improving throughput for multi-stratum inference on large graphs. A BSBM regression gate checks performance against 12 BSBM explore queries at 1-million-triple scale on every CI run, and HTTP companion CA-bundle support enables connections to endpoints with private or custom certificate authorities.
 
 ### What's new
 
@@ -3821,6 +4033,10 @@ None.
 
 **Adds the LUBM (Lehigh University Benchmark) conformance suite: 14 canonical SPARQL queries over a university-domain OWL ontology, validating OWL RL inference correctness end-to-end. All 14 queries pass with 0 known failures. The Datalog validation sub-suite separately confirms that `pg_ripple.infer('owl-rl')` produces identical results from implicit-type data.**
 
+Ontological reasoning is only as trustworthy as the tests that verify it, and the LUBM (Lehigh University Benchmark) has been the canonical standard for evaluating OWL reasoner correctness for two decades. Version 0.44.0 adds a self-contained LUBM conformance suite with all 14 canonical benchmark queries validated against a synthetic university-domain dataset. All 14 queries pass with exact reference cardinality match against the bundled fixture, and no external data generator or Java runtime is required. A CI gate blocks any merge that breaks LUBM conformance, ensuring that OWL RL inference correctness is continuously tested alongside functional and regression tests.
+
+The Datalog validation sub-suite provides a complementary perspective on reasoning correctness: six SQL test files verify that `load_rules_builtin('owl-rl')` compiles at least 20 rules, that fixpoint iteration converges within a reasonable bound, that key supertype entailments produce correct minimum counts, and that goal-directed inference agrees with full materialization for three representative LUBM queries. A `vp_rare` uniqueness fix prevents duplicate quad insertions from creating duplicate rows, fixing a SPARQL Update set semantics correctness issue for rare predicates. The LUBM conformance reference documentation page provides a complete per-query table with descriptions, inference rules exercised, expected counts, and pass/fail status.
+
 ### What's new
 
 - **LUBM test harness** (`tests/lubm_suite.rs`) — 14 canonical LUBM queries (`q01.sparql`–`q14.sparql`) validated against the bundled `tests/lubm/fixtures/univ1.ttl` synthetic dataset. All 14 pass with exact reference cardinality match. **0 known failures.**
@@ -3858,6 +4074,10 @@ None.
 ## [0.43.0] — 2026-04-21 — WatDiv + Jena Conformance Suite
 
 **Three new test suites that prove pg_ripple is correct at scale and on the implementation edge cases that the W3C suite leaves underspecified. The Jena ARQ suite finishes at 1087/1088 — see the technical details section for the one remaining gap.**
+
+Passing a hand-curated set of example queries is very different from passing nearly a thousand independently-authored conformance tests. Version 0.43.0 delivers two independent conformance suites that probe the SPARQL query engine at a depth that was not previously tested. The Apache Jena ARQ test suite covers 1,088 tests across SPARQL query, update, syntax, and algebra sub-suites — probing XSD numeric promotions, timezone-aware date comparisons, blank-node scoping across GRAPH boundaries, and every SPARQL string function. The final score of 1,087 out of 1,088 passing (99.9%) is strong validation that pg_ripple's query translation is correct for the full breadth of SPARQL syntax.
+
+The WatDiv benchmark suite tests correctness at scale with all 32 query templates — star, chain, snowflake, and complex patterns — validated against a 10-million-triple dataset, with results within 0.1% of pre-computed baselines. Four SQL generation bugs discovered by the Jena suite are fixed: blank-node colon characters in SQL identifiers, missing graph column propagation through UNION subqueries, invalid DISTINCT ORDER BY on non-projected variables, and confusing errors for ARQ extension functions. A semantic validation step correctly rejects four SPARQL syntax forms that spargebra would otherwise silently accept: self-referential SELECT expressions, cross-referential AS clauses, nested aggregate functions, and UPDATE scope violations.
 
 ### What's new
 
@@ -3939,6 +4159,10 @@ No schema changes — this is a pure test infrastructure and query engine correc
 ## [0.42.0] — 2026-04-20 — Parallel Merge, Cost-Based Federation & Live CDC
 
 **Three architectural improvements that close the last major gaps before the 1.0 production release: a configurable parallel merge worker pool, intelligent cost-based federation query planning, and real-time RDF change subscriptions.**
+
+Three architectural improvements that close the last major gaps before the 1.0 production release ship together in version 0.42.0. The configurable parallel merge worker pool replaces the single background merge worker with up to sixteen worker processes sharing the predicate workload, with work-stealing that automatically rebalances when some predicates are merging faster than others. On workloads with many distinct predicates, four merge workers deliver more than three times the sustained write throughput of a single worker. Cost-based federation source selection uses VoID statistics cached from endpoint registration to rank SERVICE clause endpoints by estimated selectivity, routing triple patterns to the source most likely to return a small result set.
+
+Live CDC subscriptions make it possible to build real-time reactive applications on top of the knowledge graph. `create_subscription()` registers a named PostgreSQL NOTIFY channel with an optional SPARQL or SHACL filter, so applications receive notifications only for triple changes that match their declared interest pattern. An IP/CIDR allowlist for federation endpoints blocks private, loopback, and link-local addresses by default, preventing SSRF attacks through the federation layer. The HTTP companion receives three security improvements: TLS with native root certificate trust, CORS default changed from wildcard to empty, and a configurable request body limit. Parallel SERVICE clause execution dispatches independent SERVICE endpoints concurrently, improving response time for complex federated queries that span multiple external sources.
 
 ### What's new
 
