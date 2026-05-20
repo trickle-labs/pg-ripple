@@ -354,10 +354,14 @@ jobs:
           else
             TITLE="${TAG}"
           fi
-          gh release create "${TAG}" \
-            --title "${TITLE}" \
-            --notes-file /tmp/release_notes.md \
-            --verify-tag
+          if gh release view "${TAG}" > /dev/null 2>&1; then
+            echo "Release ${TAG} already exists — skipping creation"
+          else
+            gh release create "${TAG}" \
+              --title "${TITLE}" \
+              --notes-file /tmp/release_notes.md \
+              --verify-tag
+          fi
 
       # v0.51.0 + v0.67.0 SBOM-01 + DS13-03 (v0.86.0): Generate SBOM and verify version.
       # DS13-03: SBOM regeneration is a required step on every tagged release; the
