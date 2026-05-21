@@ -1,12 +1,11 @@
--- pg_regress test: pg-trickle integration (v0.52.0)
+-- pg_regress test: pg_tide relay integration (v0.52.0, migrated v0.127.0)
 --
 -- Tests the full JSON → RDF → CDC → outbox pipeline.
--- When pg-trickle is not available, tests the JSON/CDC features using a
--- local mock outbox table that mimics the outbox schema.
+-- When pg_tide is not available, tests the JSON/CDC graceful-degradation path.
 --
 -- Tests:
 -- 1. JSON → N-Triples pipeline
--- 2. CDC bridge trigger writes to an outbox table
+-- 2. CDC bridge trigger publishes to a pg_tide outbox when pg_tide is available
 -- 3. statement_dedup_key uniqueness
 -- 4. triples_to_jsonld star-pattern serialization
 -- 5. Vocabulary alignment rules
@@ -15,14 +14,6 @@ SET client_min_messages = warning;
 CREATE EXTENSION IF NOT EXISTS pg_ripple;
 SET client_min_messages = DEFAULT;
 SET search_path TO pg_ripple, public;
-
--- ── Mock outbox table (mimics pg-trickle outbox schema) ───────────────────────
-
-CREATE TABLE IF NOT EXISTS mock_outbox (
-    event_id TEXT PRIMARY KEY,
-    payload  JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
 
 -- ── Part 1: JSON → N-Triples → store pipeline ────────────────────────────────
 
@@ -55,7 +46,7 @@ SELECT pg_ripple.json_to_ntriples(
     '{"@vocab": "https://schema.org/"}'::jsonb
 ) LIKE '%"rdf"%' AS array_produces_multiple_triples;
 
--- ── Part 3: CDC bridge trigger → mock outbox ─────────────────────────────────
+-- ── Part 3: CDC bridge trigger → pg_tide outbox ─────────────────────────────
 
 -- Load a predicate so it has a VP table
 SELECT pg_ripple.json_to_ntriples_and_load(
@@ -65,17 +56,26 @@ SELECT pg_ripple.json_to_ntriples_and_load(
     '{"alertLevel": "https://example.org/alertLevel"}'::jsonb
 ) >= 0 AS alert_loaded;
 
--- Install bridge trigger (requires trickle_integration = on; skip if unavailable)
+-- Install bridge trigger (requires pg_tide; skip the publish path when unavailable).
 DO $$
+DECLARE
+    tide_available BOOLEAN := false;
+    published_count BIGINT := 0;
 BEGIN
-    IF NOT pg_ripple.trickle_available() THEN
+    IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_tide') THEN
+        CREATE EXTENSION IF NOT EXISTS pg_tide;
+    END IF;
+
+    tide_available := pg_ripple.relay_available();
+
+    IF NOT tide_available THEN
         -- With trickle_integration off, test graceful degradation path
         SET pg_ripple.trickle_integration = off;
         BEGIN
             PERFORM pg_ripple.enable_cdc_bridge_trigger(
                 'alert_bridge',
                 '<https://example.org/alertLevel>',
-                'mock_outbox'
+                'ripple-events'
             );
         EXCEPTION
             WHEN OTHERS THEN
@@ -83,11 +83,22 @@ BEGIN
         END;
         RESET pg_ripple.trickle_integration;
     ELSE
-        -- pg-trickle is available: install trigger and test outbox delivery
+        BEGIN
+            PERFORM tide.outbox_create(
+                p_name             := 'ripple-events',
+                p_retention_hours  := 24,
+                p_inline_threshold := 10000
+            );
+        EXCEPTION
+            WHEN OTHERS THEN
+                NULL; -- outbox already exists in environments that reuse databases
+        END;
+
+        -- pg_tide is available: install trigger and test outbox publish
         PERFORM pg_ripple.enable_cdc_bridge_trigger(
             'alert_bridge',
             '<https://example.org/alertLevel>',
-            'mock_outbox'
+            'ripple-events'
         );
 
         -- Insert via json_to_ntriples_and_load — should fire the trigger
@@ -98,8 +109,15 @@ BEGIN
             '{"alertLevel": "https://example.org/alertLevel"}'::jsonb
         );
 
-        -- Verify dedup key in outbox
-        PERFORM count(*) FROM mock_outbox WHERE event_id LIKE 'ripple:%';
+        SELECT count(*) INTO published_count
+        FROM tide.tide_outbox_messages
+        WHERE outbox_name = 'ripple-events'
+            AND headers ->> 'event_type' = 'pg_ripple.triple.insert'
+            AND headers ->> 'dedup_key' LIKE 'ripple:%';
+
+        IF published_count = 0 THEN
+            RAISE EXCEPTION 'expected pg_tide outbox publish was not observed';
+        END IF;
 
         -- Clean up
         PERFORM pg_ripple.disable_cdc_bridge_trigger('alert_bridge');
@@ -172,5 +190,4 @@ SELECT pg_ripple.insert_triple(
 -- Run inference
 SELECT pg_ripple.infer('schema_to_saref') >= 0 AS inference_ran;
 
--- ── Cleanup ───────────────────────────────────────────────────────────────────
-DROP TABLE IF EXISTS mock_outbox;
+-- ── End ─────────────────────────────────────────────────────────────────────

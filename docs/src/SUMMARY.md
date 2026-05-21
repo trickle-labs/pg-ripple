@@ -104,7 +104,7 @@
 - [Logical Replication](operations/replication.md)
 - [CDC Operations](operations/cdc.md)
 - [Citus + pg-trickle Integration](operations/citus-integration.md)
-- [pg-trickle Relay: Hub-and-Spoke](operations/pg-trickle-relay.md)
+- [pg-tide Relay: Hub-and-Spoke](operations/pg-tide-relay.md)
 - [Bidi Operations Runbook](operations/bidi-runbook.md)
 - [Bidi Production Checklist](operations/bidi-production-checklist.md)
 - [Configuration](operations/configuration.md)

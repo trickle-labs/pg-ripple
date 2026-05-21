@@ -2,34 +2,34 @@
 
 > v0.78.0 — BIDIOPS-DOC-01
 
-This runbook covers day-two operations for the bidirectional integration (bidi) subsystem introduced in v0.77.0 and v0.78.0. It assumes the reader has completed the [pg-trickle relay guide](./pg-trickle-relay.md).
+This runbook covers day-two operations for the bidirectional integration (bidi) subsystem introduced in v0.77.0 and v0.78.0. It assumes the reader has completed the [pg-tide relay guide](./pg-tide-relay.md).
 
 ---
 
 ## Queue draining procedure
 
-When a relay goes down or pg-trickle delivery stalls:
+When a relay goes down or pg_tide delivery stalls:
 
 1. **Check the queue depth** for each subscription:
 
    ```sql
    SELECT subscription_name, outbox_depth, outbox_oldest_age,
-          dead_letter_count, pg_trickle_paused
+          dead_letter_count, pg_tide_paused
    FROM pg_ripple.bidi_status();
    ```
 
-2. **Pause delivery** (delegated to pg-trickle) if you need a maintenance window:
+2. **Pause delivery** if you need a maintenance window:
 
    ```sql
-   SELECT pg_trickle.pause_subscription('<outbox_table_name>');
+   SELECT tide.relay_disable('<pipeline_name>');
    ```
 
-   `bidi_status()` will show `pg_trickle_paused = true` while paused. New outbox events continue to accumulate.
+   `bidi_status()` will show `pg_tide_paused = true` while paused. New outbox events continue to accumulate.
 
 3. **Resolve the relay issue**, then resume:
 
    ```sql
-   SELECT pg_trickle.resume_subscription('<outbox_table_name>');
+   SELECT tide.relay_enable('<pipeline_name>');
    ```
 
 4. **Monitor drain progress** until `outbox_depth` returns to 0:
@@ -115,7 +115,7 @@ When you need to change the subscription frame, IRI template, or exclude list:
    ```
 
    Already-rendered outbox IRIs are not retroactively rewritten.  
-   For broken templates, pause pg-trickle, drop/requeue affected rows if needed, and record the action in `_pg_ripple.subscription_schema_changes`.
+   For broken templates, pause the pg_tide relay pipeline, drop/requeue affected rows if needed, and record the action in `_pg_ripple.subscription_schema_changes`.
 
 3. **Exclude-graphs change**:
 

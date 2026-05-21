@@ -1,28 +1,29 @@
--- pg_regress test: pg-trickle graceful degradation (v0.52.0)
+-- pg_regress test: pg_tide relay graceful degradation (v0.52.0, migrated v0.127.0)
 --
 -- Tests that:
--- 1. trickle_available() returns false when pg-trickle is absent.
+-- 1. relay_available() and the deprecated trickle_available() alias return booleans.
 -- 2. enable_cdc_bridge_trigger() raises an error when trickle_integration is off.
--- 3. disable_cdc_bridge_trigger() is a no-op when pg-trickle is absent.
+-- 3. disable_cdc_bridge_trigger() is a no-op when pg_tide is absent.
 -- 4. cdc_bridge_triggers() returns empty when no triggers registered.
--- 5. All non-bridge v0.52.0 functions work without pg-trickle.
+-- 5. All non-bridge v0.52.0 functions work without pg_tide.
 
 SET client_min_messages = warning;
 CREATE EXTENSION IF NOT EXISTS pg_ripple;
 SET client_min_messages = DEFAULT;
 SET search_path TO pg_ripple, public;
 
--- ── Part 1: trickle_available() ───────────────────────────────────────────────
+-- ── Part 1: relay availability checks ───────────────────────────────────────
 
--- In a standard CI environment without pg-trickle, this returns false.
--- In an environment with pg-trickle, this returns true.
+-- In a standard CI environment without pg_tide, these return false.
+-- In an environment with pg_tide, these return true.
 -- Accept either value (the boolean type itself is what we verify).
-SELECT pg_ripple.trickle_available() IN (true, false) AS trickle_available_is_bool;
+SELECT pg_ripple.relay_available() IN (true, false)
+    AND pg_ripple.trickle_available() IN (true, false) AS trickle_available_is_bool;
 
 -- ── Part 2: Error when trickle_integration is off ────────────────────────────
 
 -- enable_cdc_bridge_trigger raises an error when trickle_integration = off.
--- We test the off case since pg-trickle may or may not be available in CI.
+-- We test the off case since pg_tide may or may not be available in CI.
 SET pg_ripple.trickle_integration = off;
 
 DO $$
@@ -139,8 +140,9 @@ SELECT EXISTS (
     WHERE n.nspname = '_pg_ripple' AND c.relname = 'cdc_bridge_triggers'
 ) AS cdc_bridge_triggers_table_exists;
 
--- trickle_available function exists in pg_ripple schema
-SELECT COUNT(*) = 1 AS trickle_available_fn_exists
+-- relay_available and trickle_available functions exist in pg_ripple schema
+SELECT COUNT(*) = 2 AS trickle_available_fn_exists
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'pg_ripple' AND p.proname = 'trickle_available';
+WHERE n.nspname = 'pg_ripple'
+    AND p.proname IN ('relay_available', 'trickle_available');

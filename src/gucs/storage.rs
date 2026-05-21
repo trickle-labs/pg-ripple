@@ -81,7 +81,7 @@ pub static MERGE_WORKERS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(1
 
 // ─── v0.52.0 CDC bridge GUCs ─────────────────────────────────────────────────
 
-/// GUC: master switch for the CDC → pg-trickle outbox bridge worker (v0.52.0).
+/// GUC: master switch for the CDC → pg_tide outbox bridge worker (v0.52.0, migrated v0.127.0).
 pub static CDC_BRIDGE_ENABLED: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(false);
 
 /// GUC: maximum number of CDC notifications batched before a flush (v0.52.0).
@@ -90,11 +90,11 @@ pub static CDC_BRIDGE_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32
 /// GUC: maximum milliseconds between bridge worker flush cycles (v0.52.0).
 pub static CDC_BRIDGE_FLUSH_MS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(200);
 
-/// GUC: outbox table that the CDC bridge worker writes JSON-LD events to (v0.52.0).
+/// GUC: pg_tide outbox name that the CDC bridge worker publishes JSON-LD events to (v0.52.0).
 pub static CDC_BRIDGE_OUTBOX_TABLE: pgrx::GucSetting<Option<std::ffi::CString>> =
     pgrx::GucSetting::<Option<std::ffi::CString>>::new(None);
 
-/// GUC: master switch for pg-trickle integration features (v0.52.0).
+/// GUC: legacy master switch for relay bridge integration features (v0.52.0).
 pub static TRICKLE_INTEGRATION: pgrx::GucSetting<bool> = pgrx::GucSetting::<bool>::new(true);
 
 // ─── v0.54.0 logical replication GUCs ────────────────────────────────────────

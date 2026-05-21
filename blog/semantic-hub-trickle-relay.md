@@ -6,7 +6,7 @@
 
 > **Note (v0.93.0)**: pg-trickle v0.46.0 extracted the relay, outbox, and inbox subsystem into
 > the standalone `pg_tide` extension (`trickle-labs/pg-tide`). After v0.46.0, pg_trickle provides
-> IVM only. This post has been updated to reflect the new architecture. Use pg_tide ≥ 0.4.0 for
+> IVM only. This post has been updated to reflect the new architecture. Use pg_tide ≥ 0.33.0 for
 > all relay examples shown here.
 
 ---
@@ -36,8 +36,8 @@ This is the integration hub pattern. Most teams build it with Kafka Connect, sch
                             └─────────────┘
 ```
 
-Both extensions live in the same PostgreSQL 18 instance. pg-tide handles the transport — its
-`pg-tide-relay` CLI speaks Kafka, NATS, SQS, Redis Streams, and HTTP. pg_ripple handles the
+Both extensions live in the same PostgreSQL 18 instance. pg-tide handles the transport: its
+`pg-tide` relay process speaks Kafka, NATS, SQS, Redis Streams, and HTTP. pg_ripple handles the
 semantics — vocabulary alignment, entity resolution, Datalog inference, SHACL validation, and
 SPARQL query. pg_trickle (IVM only since v0.46.0) provides incremental materialized view maintenance.
 
@@ -51,16 +51,19 @@ pg-tide's outbox for forward relay — all of that can happen within a single Po
 
 ### Step 1: Relay Delivers Events to an Inbox
 
-pg-tide's relay process (`pg-tide-relay`) runs outside PostgreSQL as a lightweight binary. In reverse mode, it consumes from external sources and writes to inbox tables:
+pg-tide's relay process (`pg-tide`) runs outside PostgreSQL as a lightweight binary. In reverse mode, it consumes from external sources and writes to inbox tables:
 
 ```sql
 -- Kafka topic → pg_tide inbox
-SELECT tide.relay_set_inbox(
-  'order-events',
-  'order_inbox',
-  '{"brokers": "kafka:9092", "topic": "orders.events"}'::jsonb,
-  p_source := 'kafka'
-);
+SELECT tide.relay_set_inbox_v2(jsonb_build_object(
+  'name',   'order-events',
+  'inbox',  'order_inbox',
+  'source', 'kafka',
+  'config', jsonb_build_object(
+    'brokers', 'kafka:9092',
+    'topic',   'orders.events'
+  )
+));
 ```
 
 Events arrive as JSON rows in `order_inbox`:
@@ -187,20 +190,26 @@ SELECT tide.outbox_create(
 );
 
 -- Enriched data → Kafka
-SELECT tide.relay_set_outbox(
-  'enriched-to-kafka',
-  'enriched-events',
-  'kafka',
-  '{"brokers": "kafka:9092", "topic": "enriched.orders"}'::jsonb
-);
+SELECT tide.relay_set_outbox_v2(jsonb_build_object(
+  'name',      'enriched-to-kafka',
+  'outbox',    'enriched-events',
+  'sink_type', 'kafka',
+  'config',    jsonb_build_object(
+    'brokers', 'kafka:9092',
+    'topic',   'enriched.orders'
+  )
+));
 
 -- Alerts → NATS
-SELECT tide.relay_set_outbox(
-  'alerts-to-nats',
-  'enriched-events',
-  'nats',
-  '{"url": "nats://localhost:4222", "subject_template": "alerts.{event_type}"}'::jsonb
-);
+SELECT tide.relay_set_outbox_v2(jsonb_build_object(
+  'name',      'alerts-to-nats',
+  'outbox',    'enriched-events',
+  'sink_type', 'nats',
+  'config',    jsonb_build_object(
+    'url',     'nats://localhost:4222',
+    'subject', 'alerts.{event_type}'
+  )
+));
 ```
 
 ---

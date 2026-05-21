@@ -1,19 +1,31 @@
-//! pg_ripple SQL API — CDC bridge, JSON→RDF, vocabulary templates, trickle checks (v0.52.0)
+//! pg_ripple SQL API — CDC bridge, JSON→RDF, vocabulary templates, relay checks (v0.52.0)
 
 #[pgrx::pg_schema]
 mod pg_ripple {
     use pgrx::prelude::*;
 
-    // ── v0.52.0: pg-trickle runtime detection ─────────────────────────────────
+    // ── v0.52.0 / v0.127.0: relay runtime detection ──────────────────────────
 
-    /// Return `true` when the pg-trickle extension is installed and integration
-    /// is enabled (`pg_ripple.trickle_integration = on`).
+    /// Return `true` when pg_tide relay integration is available.
     ///
-    /// All CDC bridge functions require pg-trickle; call this to check
-    /// availability before using bridge features.
+    /// This is the canonical relay/outbox/inbox availability check. The bridge
+    /// still uses the legacy `pg_ripple.trickle_integration` GUC as its master
+    /// switch for backward compatibility, but relay transport now requires
+    /// `pg_tide`, not pg_trickle.
+    #[pg_extern]
+    fn relay_available() -> bool {
+        crate::TRICKLE_INTEGRATION.get() && crate::has_pg_tide()
+    }
+
+    /// Deprecated compatibility alias for `relay_available()`.
+    ///
+    /// Historically this checked the old pg-trickle relay integration. The relay,
+    /// outbox, and inbox subsystem now lives in pg_tide; use
+    /// `pg_ripple.relay_available()` for new code and
+    /// `pg_ripple.pg_trickle_available()` for IVM checks.
     #[pg_extern]
     fn trickle_available() -> bool {
-        crate::TRICKLE_INTEGRATION.get() && crate::has_pg_trickle()
+        relay_available()
     }
 
     // ── v0.52.0: CDC bridge trigger management ────────────────────────────────
@@ -21,10 +33,10 @@ mod pg_ripple {
     /// Install a CDC bridge trigger on the VP delta table for `predicate`.
     ///
     /// When a triple for `predicate` is inserted into the delta table, the
-    /// trigger decodes the `(s, p, o)` dictionary IDs and writes a JSON-LD
-    /// event with a dedup key to `outbox` within the same transaction.
+    /// trigger decodes the `(s, p, o)` dictionary IDs and publishes a JSON-LD
+    /// event with a dedup key to the pg_tide outbox within the same transaction.
     ///
-    /// Raises PT800 when pg-trickle is absent or `trickle_integration = off`.
+    /// Raises PT800 when pg_tide is absent or `trickle_integration = off`.
     #[pg_extern]
     fn enable_cdc_bridge_trigger(name: &str, predicate: &str, outbox: &str) {
         crate::storage::cdc_bridge::enable_cdc_bridge_trigger(name, predicate, outbox);

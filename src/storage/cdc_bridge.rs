@@ -1,25 +1,25 @@
-//! CDC → pg-trickle Outbox Bridge (v0.52.0).
+//! CDC → pg_tide Outbox Bridge (v0.52.0, migrated in v0.127.0).
 //!
 //! Provides:
 //! - `enable_cdc_bridge_trigger` — install a per-predicate VP-delta trigger that
-//!   writes decoded JSON-LD events to an outbox table within the same transaction.
+//!   publishes decoded JSON-LD events to a pg_tide outbox within the same transaction.
 //! - `disable_cdc_bridge_trigger` — drop the trigger.
 //! - `cdc_bridge_triggers` — catalog SRF listing all active triggers.
 //! - Bridge schema initialisation (`_pg_ripple.cdc_bridge_triggers` catalog).
 //!
 //! The optional background worker (`_pg_ripple.cdc_bridge_worker`) is registered
 //! from `worker.rs`; the worker body reads from the CDC NOTIFY channel, performs
-//! a bulk dictionary-decode SPI call, and batch-inserts JSON-LD events into the
-//! configured outbox table.
+//! a bulk dictionary-decode SPI call, and publishes JSON-LD events into the
+//! configured pg_tide outbox.
 //!
 //! # Graceful degradation
 //!
-//! All bridge SQL functions gate on `crate::TRICKLE_INTEGRATION.get()` and on
-//! `crate::has_pg_trickle()`.  When pg-trickle is absent (or integration is
-//! disabled), the functions return the `PT800` error code:
+//! All bridge SQL functions gate on the legacy `crate::TRICKLE_INTEGRATION.get()`
+//! switch and on `crate::has_pg_tide()`.  When pg_tide is absent (or relay
+//! integration is disabled), the functions return the `PT800` error code:
 //!
 //! ```text
-//! PT800: pg_trickle extension is not installed; install pg_trickle to use bridge features
+//! PT800: pg_tide extension is not installed; install pg_tide to use bridge features
 //! ```
 
 use pgrx::datum::DatumWithOid;
@@ -27,22 +27,23 @@ use pgrx::prelude::*;
 
 // ─── Error code ───────────────────────────────────────────────────────────────
 
-/// Raise a user-facing error when pg-trickle is not available or integration
+/// Raise a user-facing error when pg_tide is not available or integration
 /// is disabled via GUC.
 ///
 /// Uses SQLSTATE `0A000` (feature_not_supported) to allow callers to catch
 /// this specific error condition.
-pub(crate) fn require_trickle(fn_name: &str) {
+pub(crate) fn require_tide(fn_name: &str) {
     if !crate::TRICKLE_INTEGRATION.get() {
         pgrx::error!(
             "{fn_name}(): pg_ripple.trickle_integration is off; \
-             set it to on to use bridge features"
+             set it to on to use pg_tide bridge features"
         );
     }
-    if !crate::has_pg_trickle() {
+    if !crate::has_pg_tide() {
         pgrx::error!(
-            "{fn_name}(): pg_trickle extension is not installed; \
-             install pg_trickle to use bridge features"
+            "{fn_name}(): pg_tide extension is not installed; \
+             install pg_tide from https://github.com/trickle-labs/pg-tide \
+             and run CREATE EXTENSION pg_tide to use bridge features"
         );
     }
 }
@@ -58,49 +59,77 @@ pub fn initialize_cdc_bridge_schema() {
              name         TEXT NOT NULL PRIMARY KEY, \
              predicate_id BIGINT NOT NULL, \
              outbox_table TEXT NOT NULL, \
+             outbox_name  TEXT, \
              created_at   TIMESTAMPTZ NOT NULL DEFAULT now() \
          )",
         &[],
     )
     .unwrap_or_else(|e| pgrx::error!("cdc_bridge_triggers table creation error: {e}"));
 
+    Spi::run_with_args(
+        "ALTER TABLE _pg_ripple.cdc_bridge_triggers \
+         ADD COLUMN IF NOT EXISTS outbox_name TEXT",
+        &[],
+    )
+    .unwrap_or_else(|e| pgrx::error!("cdc_bridge_triggers outbox_name migration error: {e}"));
+
+    Spi::run_with_args(
+        "UPDATE _pg_ripple.cdc_bridge_triggers \
+         SET outbox_name = outbox_table WHERE outbox_name IS NULL",
+        &[],
+    )
+    .unwrap_or_else(|e| pgrx::error!("cdc_bridge_triggers outbox_name backfill error: {e}"));
+
+    Spi::run_with_args(
+        "ALTER TABLE _pg_ripple.cdc_bridge_triggers \
+         ALTER COLUMN outbox_name SET NOT NULL",
+        &[],
+    )
+    .unwrap_or_else(|e| {
+        pgrx::error!("cdc_bridge_triggers outbox_name not-null migration error: {e}")
+    });
+
     // PL/pgSQL trigger function used by per-predicate CDC bridge triggers.
-    // Encodes the new row as a JSON-LD object and inserts into the outbox table.
-    // TG_ARGV[0] = predicate_id (bigint text), TG_ARGV[1] = outbox table name.
+    // Encodes the new row as a JSON-LD object and publishes it to a pg_tide outbox.
+    // TG_ARGV[0] = predicate_id (bigint text), TG_ARGV[1] = pg_tide outbox name.
     Spi::run_with_args(
         r#"
 CREATE OR REPLACE FUNCTION _pg_ripple.cdc_bridge_trigger_fn()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
     pred_id    BIGINT  := TG_ARGV[0]::bigint;
-    outbox_tbl TEXT    := TG_ARGV[1];
+    outbox_name TEXT   := TG_ARGV[1];
     s_iri      TEXT;
     p_iri      TEXT;
     o_iri      TEXT;
     payload    JSONB;
+    headers    JSONB;
     dedup_key  TEXT;
     sid        BIGINT;
 BEGIN
-    -- Look up human-readable IRIs from the dictionary
     SELECT value INTO s_iri FROM _pg_ripple.dictionary WHERE id = NEW.s;
     SELECT value INTO p_iri FROM _pg_ripple.dictionary WHERE id = pred_id;
     SELECT value INTO o_iri FROM _pg_ripple.dictionary WHERE id = NEW.o;
 
-    -- Get the statement id (SID) for the dedup key
     sid := NEW.i;
     dedup_key := 'ripple:' || sid::text;
 
     payload := jsonb_build_object(
         '@context',   'https://schema.org/',
         '@id',        COALESCE(s_iri, '_:' || NEW.s::text),
-        p_iri,        COALESCE(o_iri, NEW.o::text),
-        '_dedup_key', dedup_key
+        p_iri,        COALESCE(o_iri, NEW.o::text)
     );
 
-    EXECUTE format(
-        'INSERT INTO %I (event_id, payload) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        outbox_tbl
-    ) USING dedup_key, payload;
+    headers := jsonb_build_object(
+        'event_id',     dedup_key,
+        'dedup_key',    dedup_key,
+        'event_type',   'pg_ripple.triple.insert',
+        'predicate_id', pred_id,
+        'statement_id', sid,
+        'graph_id',     NEW.g
+    );
+
+    PERFORM tide.outbox_publish(outbox_name, payload, headers);
 
     RETURN NEW;
 END;
@@ -116,13 +145,13 @@ $$"#,
 ///
 /// When a triple is inserted into the VP delta table for the given predicate,
 /// the trigger decodes the (s, p, o) dictionary IDs and writes a JSON-LD event
-/// to `outbox` in the same transaction.
+/// to the pg_tide outbox named by `outbox` in the same transaction.
 ///
 /// # Errors
-/// Raises `PT800` when pg-trickle is absent or `trickle_integration = off`.
+/// Raises `PT800` when pg_tide is absent or `trickle_integration = off`.
 /// Raises an ERROR when the predicate IRI is not in the dictionary.
 pub fn enable_cdc_bridge_trigger(name: &str, predicate: &str, outbox: &str) {
-    require_trickle("enable_cdc_bridge_trigger");
+    require_tide("enable_cdc_bridge_trigger");
 
     // Validate name
     if name.is_empty() || name.len() > 63 {
@@ -133,6 +162,29 @@ pub fn enable_cdc_bridge_trigger(name: &str, predicate: &str, outbox: &str) {
             "enable_cdc_bridge_trigger: name must contain only ASCII letters, digits, and underscores"
         );
     }
+
+    if outbox.is_empty() || outbox.len() > 63 {
+        pgrx::error!("enable_cdc_bridge_trigger: outbox name must be 1–63 characters");
+    }
+
+    let _ = Spi::get_one_with_args::<pgrx::JsonB>(
+        "SELECT tide.outbox_status($1)",
+        &[DatumWithOid::from(outbox)],
+    )
+    .unwrap_or_else(|_| {
+        pgrx::error!(
+            "enable_cdc_bridge_trigger: pg_tide outbox '{}' does not exist; \
+             create it first with SELECT tide.outbox_create(...) ",
+            outbox
+        )
+    })
+    .unwrap_or_else(|| {
+        pgrx::error!(
+            "enable_cdc_bridge_trigger: pg_tide outbox '{}' returned no status; \
+             create it first with SELECT tide.outbox_create(...) ",
+            outbox
+        )
+    });
 
     // Resolve predicate IRI → dictionary ID
     let pred_iri = if predicate.starts_with('<') && predicate.ends_with('>') {
@@ -159,19 +211,22 @@ pub fn enable_cdc_bridge_trigger(name: &str, predicate: &str, outbox: &str) {
 
     // Install trigger
     let trigger_name = format!("cdc_bridge_{name}");
+    let outbox_literal = outbox.replace('\'', "''");
     let sql = format!(
         "CREATE TRIGGER {trigger_name} \
          AFTER INSERT ON {delta_table} \
-         FOR EACH ROW EXECUTE FUNCTION _pg_ripple.cdc_bridge_trigger_fn({pred_id}, '{outbox}')"
+         FOR EACH ROW EXECUTE FUNCTION _pg_ripple.cdc_bridge_trigger_fn({pred_id}, '{outbox_literal}')"
     );
     Spi::run_with_args(&sql, &[])
         .unwrap_or_else(|e| pgrx::error!("enable_cdc_bridge_trigger: trigger install error: {e}"));
 
     // Record in catalog
     Spi::run_with_args(
-        "INSERT INTO _pg_ripple.cdc_bridge_triggers (name, predicate_id, outbox_table) \
-         VALUES ($1, $2, $3) ON CONFLICT (name) DO UPDATE \
-         SET predicate_id = EXCLUDED.predicate_id, outbox_table = EXCLUDED.outbox_table, \
+        "INSERT INTO _pg_ripple.cdc_bridge_triggers (name, predicate_id, outbox_table, outbox_name) \
+         VALUES ($1, $2, $3, $3) ON CONFLICT (name) DO UPDATE \
+         SET predicate_id = EXCLUDED.predicate_id, \
+             outbox_table = EXCLUDED.outbox_table, \
+             outbox_name = EXCLUDED.outbox_name, \
              created_at = now()",
         &[
             DatumWithOid::from(name),
@@ -231,7 +286,7 @@ pub struct CdcBridgeTriggerRow {
     pub name: String,
     /// Predicate IRI.
     pub predicate: String,
-    /// Target outbox table.
+    /// Target pg_tide outbox name.
     pub outbox: String,
     /// Whether the underlying PG trigger exists.
     pub active: bool,
@@ -242,7 +297,7 @@ pub fn list_cdc_bridge_triggers() -> Vec<CdcBridgeTriggerRow> {
     let mut rows = Vec::new();
     let result = Spi::connect(|client| {
         let tup_table = client.select(
-            "SELECT t.name, d.value AS predicate, t.outbox_table, \
+            "SELECT t.name, d.value AS predicate, COALESCE(t.outbox_name, t.outbox_table) AS outbox, \
              EXISTS( \
                SELECT 1 FROM pg_trigger pg \
                JOIN pg_class c ON c.oid = pg.tgrelid \
@@ -260,10 +315,7 @@ pub fn list_cdc_bridge_triggers() -> Vec<CdcBridgeTriggerRow> {
                     let name: String = row["name"].value().unwrap_or(None).unwrap_or_default();
                     let predicate: String =
                         row["predicate"].value().unwrap_or(None).unwrap_or_default();
-                    let outbox: String = row["outbox_table"]
-                        .value()
-                        .unwrap_or(None)
-                        .unwrap_or_default();
+                    let outbox: String = row["outbox"].value().unwrap_or(None).unwrap_or_default();
                     let active: bool = row["active"].value().unwrap_or(None).unwrap_or(false);
                     rows.push(CdcBridgeTriggerRow {
                         name,

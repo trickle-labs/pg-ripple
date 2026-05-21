@@ -2764,9 +2764,37 @@ SELECT pg_ripple.plan_cache_reset();
 
 ---
 
+### `relay_available`
+
+Check whether relay integration is enabled and the pg_tide companion extension is installed.
+
+```sql
+pg_ripple.relay_available() RETURNS BOOLEAN
+```
+
+```sql
+SELECT pg_ripple.relay_available();
+```
+
+---
+
+### `pg_tide_available`
+
+Check whether the pg_tide companion extension is installed. Use `relay_available()` when the legacy `pg_ripple.trickle_integration` GUC must also be enabled.
+
+```sql
+pg_ripple.pg_tide_available() RETURNS BOOLEAN
+```
+
+```sql
+SELECT pg_ripple.pg_tide_available();
+```
+
+---
+
 ### `pg_trickle_available`
 
-Check whether the pg_trickle companion extension is installed and available.
+Check whether the pg_trickle companion extension is installed for IVM-backed views.
 
 ```sql
 pg_ripple.pg_trickle_available() RETURNS BOOLEAN
@@ -2774,4 +2802,18 @@ pg_ripple.pg_trickle_available() RETURNS BOOLEAN
 
 ```sql
 SELECT pg_ripple.pg_trickle_available();
+```
+
+---
+
+### `trickle_available`
+
+Deprecated relay compatibility alias for `relay_available()`.
+
+```sql
+pg_ripple.trickle_available() RETURNS BOOLEAN
+```
+
+```sql
+SELECT pg_ripple.trickle_available();
 ```

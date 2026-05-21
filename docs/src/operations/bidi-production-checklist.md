@@ -74,9 +74,10 @@ ORDER BY tablename;
 - [ ] `tests/stress/bidi_chaos.sh` passes on the production instance before each major release.
 - [ ] Linkback idempotency is confirmed (`abandon_linkback` re-called ≥ 2× without error).
 
-## 11. pg-trickle relay
+## 11. pg_tide relay
 
-- [ ] pg-trickle version matches `pg_ripple_http` compatibility matrix (see [compatibility.md](./compatibility.md)).
+- [ ] pg_tide version matches the compatibility matrix (see [compatibility.md](./compatibility.md)).
+- [ ] `SELECT pg_ripple.relay_available();` returns `true` in the relay database.
 - [ ] Relay acknowledges rows within `outbox_oldest_age` SLA (recommended: ≤ 1 minute under normal load).
 - [ ] Relay TLS certificate expiry is monitored.
 
@@ -99,5 +100,5 @@ ORDER BY tablename;
 | Health monitoring active | | |
 | Dead-letter triage procedure documented | | |
 | Chaos test passed | | |
-| pg-trickle relay confirmed | | |
+| pg_tide relay confirmed | | |
 | Backup verified | | |

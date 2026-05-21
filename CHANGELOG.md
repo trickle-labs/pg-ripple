@@ -13,6 +13,49 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.127.0] — 2026-05-21 — pg_tide Relay Migration Cleanup
+
+**Moves relay-facing CDC bridge behavior from the obsolete pg-trickle relay model
+to pg_tide named outboxes, updates the project documentation to current pg_tide
+terminology and deployment commands, and adds a detailed remediation plan for the
+remaining historical references.**
+
+pg_trickle remains the companion extension for incremental view maintenance only.
+Relay, outbox, inbox, consumer-group, and relay-process guidance now points at
+pg_tide. The CDC bridge now validates pg_tide availability and publishes events
+with `tide.outbox_publish()` instead of inserting into a pg-trickle-style outbox
+table, while retaining compatibility names for existing callers.
+
+### Added
+
+- **PGTIDE-RELAY-01** `pg_ripple.relay_available() -> BOOLEAN` canonical SQL
+  helper for relay/outbox/inbox availability checks.
+- **PGTIDE-RELAY-02** `_pg_ripple.cdc_bridge_triggers.outbox_name` catalog column
+  for pg_tide outbox names, with `outbox_table` retained as a compatibility alias.
+- **PGTIDE-DOC-01** [pg-tide-relay-fixes.md](pg-tide-relay-fixes.md) detailed
+  research and remediation plan.
+- Migration script `sql/pg_ripple--0.126.0--0.127.0.sql`.
+- Roadmap file `roadmap/v0.127.0.md`.
+
+### Changed
+
+- **PGTIDE-RELAY-03** CDC bridge trigger publishing now calls
+  `tide.outbox_publish(outbox_name, payload, headers)` and stores the stable
+  `ripple:{statement_id}` dedup key in pg_tide headers.
+- **PGTIDE-RELAY-04** Deprecated `pg_ripple.trickle_available()` now aliases
+  `relay_available()` for relay checks; use `pg_ripple.pg_trickle_available()`
+  for IVM checks.
+- **PGTIDE-DOC-02** User-facing relay docs, runbooks, examples, and Docker
+  snippets now use the `pg-tide` command, `ghcr.io/trickle-labs/pg-tide` image,
+  `PG_TIDE_POSTGRES_URL`, and stable `tide.relay_set_outbox_v2()` /
+  `tide.relay_set_inbox_v2()` SQL APIs.
+- **DEP-01** `pg_tide` tested/bundled version bumped from `0.16.0` to `0.33.0`
+  in `.versions.toml` and `Dockerfile`.
+- `pg_ripple_http`: `COMPATIBLE_EXTENSION_MIN` bumped from `"0.125.0"` to
+  `"0.126.0"`.
+
+---
+
 ## [0.126.0] — 2026-05-21 — Per-Endpoint Federation Credentials (FEAT-03)
 
 **Adds encrypted per-endpoint OAuth2 Bearer / API-key credential storage with
@@ -2427,7 +2470,7 @@ management plane that production deployments need.**
 
 Introducing bidirectional data integration between a knowledge graph and external systems is only the first step — operating it reliably in production requires a full management plane. Version 0.78.0 delivers the operational infrastructure that makes the v0.77.0 integration primitives production-ready: write-side outbox depth limits with three overflow policies (pause, drop oldest, drop newest), a dead-letter table for events that exhausted their retry policy, and a reconciliation toolkit for resolving divergent states between the knowledge graph and its integration partners. Fine-grained per-subscription bearer tokens with named scopes let administrators grant exactly the permissions each integration partner needs and revoke them independently.
 
-Data governance receives first-class support through two significant new features. Frame-level redaction allows specific predicates containing PII or sensitive information to be marked for redaction, so their values are replaced with a structured redaction marker in the outbound event stream while an unredacted variant remains available for internal compliance pipelines. A complete event audit log records every mutating action with token hash, remote address, and session user, creating a tamper-evident trail of all integration activity. Schema evolution policies govern how changes to frame definitions, IRI templates, or exclude-graph lists are handled when subscriptions are modified, preventing breaking changes from propagating silently to downstream systems. A draft vendor-neutral "RDF Bidirectional Integration Profile" specification captures the design decisions in a reusable, community-shareable format.
+Data governance receives first-class support through two significant new features. Frame-level redaction allows specific predicates containing PII or sensitive information to be marked for redaction, so their values are replaced with a structured redaction marker in the outbound event stream while an unredacted variant remains available for internal compliance pipelines. A complete event audit log records every mutating action with token hash, remote address, and session user, creating a tamper-evident trail of all integration activity. Schema evolution policies govern how changes to frame definitions, IRI templates, or exclude-graph lists are handled when subscriptions are modified, preventing incompatible schema changes from propagating silently to downstream systems. A draft vendor-neutral "RDF Bidirectional Integration Profile" specification captures the design decisions in a reusable, community-shareable format.
 
 ### What's new
 

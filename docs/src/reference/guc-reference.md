@@ -1397,7 +1397,7 @@ Enable the backend-local predicate OID cache, which stores the mapping from pred
 | Context | `sighup` |
 | Since | v0.52.0 |
 
-Master switch for the CDC → pg-trickle outbox bridge worker. When `on`, triple inserts and deletes are serialized as JSON-LD events and written to `cdc_bridge_outbox_table`.
+Master switch for the CDC → pg_tide outbox bridge worker. When `on`, triple inserts and deletes are serialized as JSON-LD events and published to the configured pg_tide outbox.
 
 ---
 
@@ -1436,7 +1436,7 @@ Maximum milliseconds between CDC bridge worker flush cycles.
 | Context | `sighup` |
 | Since | v0.52.0 |
 
-Qualified table name (`schema.table`) that the CDC bridge worker writes JSON-LD events to. Must be set when `cdc_bridge_enabled = on`.
+Legacy name for the pg_tide outbox that the CDC bridge worker publishes JSON-LD events to. The outbox must already exist via `tide.outbox_create(...)` when `cdc_bridge_enabled = on`.
 
 ---
 
@@ -1449,7 +1449,7 @@ Qualified table name (`schema.table`) that the CDC bridge worker writes JSON-LD 
 | Context | `sighup` |
 | Since | v0.52.0 |
 
-Master switch for pg-trickle integration features. When `off`, all pg-trickle–dependent code paths are disabled (live views, CDC bridge).
+Legacy master switch for relay bridge integration features. When `off`, CDC bridge code paths are disabled even when pg_tide is installed. Use `pg_ripple.pg_trickle_available()` separately for IVM-backed live views.
 
 ---
 

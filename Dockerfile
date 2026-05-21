@@ -35,8 +35,8 @@ FROM rust:1-bookworm AS builder
 ARG PGRX_VERSION=0.18.0
 ARG POSTGIS_VERSION=3.5.6
 ARG PGVECTOR_VERSION=0.8.2
-ARG PG_TRICKLE_VERSION=0.57.0
-ARG PG_TIDE_VERSION=0.16.0
+ARG PG_TRICKLE_VERSION=0.68.0
+ARG PG_TIDE_VERSION=0.33.0
 
 # Add the PostgreSQL Global Development Group APT repository so we get the
 # exact PostgreSQL 18 server development headers that match postgres:18-bookworm.

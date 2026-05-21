@@ -19,6 +19,7 @@ extension version is outside its known-compatible range.
 
 | pg_ripple_http version | pg_ripple extension range | Notes |
 |------------------------|---------------------------|-------|
+| 0.127.x | ≥ 0.126.0 | pg_tide relay bridge migration: CDC bridge publishes named outbox events via `tide.outbox_publish`; current pg_tide pins use 0.33.0 and the stable `relay_set_*_v2` APIs |
 | 0.123.x | ≥ 0.122.0 | A17 observability & docs: replica pool Prometheus gauges (OBS-M-01), rule-library stream latency/error counters (OBS-M-02), `bench_workload_result()` SQL wrapper (ERG-L-01) |
 | 0.122.x | ≥ 0.121.0 | A17 god-module decomposition & test coverage closure (H17-02); WatDiv correctness gating; pg_regress coverage for v0.119.0–v0.120.0 features |
 | 0.121.x | ≥ 0.120.0 | A17 security hardening (H17-01 SSRF, SEC-M-03 CGNAT/multicast, BUG-M-01 silent degradation, OBS-L-01 mutation journal); mutation journal for rule-library ops |
@@ -107,7 +108,7 @@ pg_ripple integrates with two companion PostgreSQL extensions:
 | Extension | Purpose | Required for |
 |-----------|---------|--------------|
 | pg_trickle ≥ 0.46.0 | Incremental materialized view maintenance (IVM only) | SPARQL views, Datalog views, CONSTRUCT/DESCRIBE/ASK views, ExtVP |
-| pg_tide ≥ 0.4.0 | Relay, outbox, and inbox subsystem | Bidirectional relay (BIDI-OUTBOX-01, BIDI-INBOX-01), hub-and-spoke integration |
+| pg_tide ≥ 0.33.0 | Relay, outbox, and inbox subsystem | Bidirectional relay (BIDI-OUTBOX-01, BIDI-INBOX-01), hub-and-spoke integration |
 
 > **Architecture change (pg_ripple v0.93.0 / pg_trickle v0.46.0)**: pg_trickle v0.46.0 extracted
 > the relay, outbox, and inbox subsystem (~6,150 Rust LOC + ~2,500 SQL LOC) into the new standalone
@@ -127,17 +128,18 @@ pg_ripple integrates with two companion PostgreSQL extensions:
 
 | pg_ripple version | pg_tide version | Relay status |
 |-------------------|-----------------|--------------|
-| ≥ 0.93.0 | ≥ 0.4.0 | ✅ Full relay support (tide.* API) |
+| ≥ 0.127.0 | ≥ 0.33.0 | ✅ Full relay support with named outbox publishing via `tide.outbox_publish()` and stable `relay_set_*_v2` configuration APIs |
+| 0.93.0 – 0.126.x | ≥ 0.4.0 | ✅ Relay API detection and docs; CDC bridge users should upgrade to 0.127.0 for current named-outbox publish semantics |
 | ≥ 0.93.0 | 0.1.0 – 0.3.x | ✅ Core relay support (tide.* API, older feature set) |
 | ≥ 0.93.0 | not installed | ⚠ Core pg_ripple + IVM work; bidirectional relay unavailable |
 | < 0.93.0 | any | pg_tide not yet supported (use pg_trickle ≤ 0.45.0 for relay) |
 
-### Recommended stack (pg_ripple ≥ 0.93.0)
+### Recommended stack (pg_ripple ≥ 0.127.0)
 
 ```sql
-CREATE EXTENSION pg_tide;      -- relay, outbox, inbox (trickle-labs/pg-tide ≥ 0.4.0)
+CREATE EXTENSION pg_tide;      -- relay, outbox, inbox (trickle-labs/pg-tide ≥ 0.33.0)
 CREATE EXTENSION pg_trickle;   -- IVM (trickle-labs/pg-trickle ≥ 0.46.0)
-CREATE EXTENSION pg_ripple;    -- RDF triple store (≥ 0.93.0)
+CREATE EXTENSION pg_ripple;    -- RDF triple store (≥ 0.127.0)
 ```
 
 Call `pg_ripple.pg_tide_available()` to verify pg_tide is installed at runtime.
