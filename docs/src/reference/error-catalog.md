@@ -195,13 +195,13 @@ Errors from extension initialization, GUC validation, and background workers.
 
 ---
 
-## PT800–PT899: pg-trickle CDC Bridge
+## PT800–PT899: pg_tide CDC Bridge
 
-Errors from the pg-trickle CDC bridge integration.
+Errors from the pg_tide CDC bridge integration.
 
 | Code | Message | Cause | Fix |
 |---|---|---|---|
-| PT800 | pg_trickle not installed or trickle_integration disabled | A CDC bridge function was called but the pg_trickle extension is not installed or `pg_ripple.trickle_integration = off` | Install pg_trickle and set `pg_ripple.trickle_integration = on`, or use `pg_ripple.load_ntriples()` for direct loads |
+| PT800 | pg_tide not installed or relay integration disabled | A CDC bridge function was called but the pg_tide extension is not installed or `pg_ripple.trickle_integration = off` | Install pg_tide, run `CREATE EXTENSION pg_tide`, create the target outbox with `tide.outbox_create(...)`, and set `pg_ripple.trickle_integration = on`; or use `pg_ripple.load_ntriples()` for direct loads |
 
 ```admonish warning title="Reporting bugs"
 If you encounter an error code not listed here, or a message that says "contact maintainers", please open a GitHub issue with the full error output, your pg_ripple version (`SELECT pg_ripple.canary()`), and a minimal reproducer.

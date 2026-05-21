@@ -20,7 +20,7 @@ No additional setup is needed — simply start the container and `CREATE EXTENSI
 ```bash
 docker run --rm -p 5432:5432 \
   -e POSTGRES_PASSWORD=ripple \
-  ghcr.io/trickle-labs/pg-ripple:0.98.0
+  ghcr.io/trickle-labs/pg-ripple:0.127.0
 ```
 
 ```bash
@@ -52,11 +52,11 @@ curl -G http://localhost:7878/sparql \
 
 | Extension | Version | Notes |
 |-----------|---------|-------|
-| pg_ripple | 0.98.0 | RDF triple store with native SPARQL |
+| pg_ripple | 0.127.0 | RDF triple store with native SPARQL |
 | PostGIS | 3.5.6 | Geospatial queries via GeoSPARQL |
 | pgvector | 0.8.2 | Vector similarity search for hybrid SPARQL + semantic |
-| pg_trickle | 0.48.0 | Incremental materialised SPARQL views |
-| pg_tide | 0.15.0 | Relay, outbox, and inbox for CDC |
+| pg_trickle | 0.57.0 | Incremental materialised SPARQL views |
+| pg_tide | 0.33.0 | Relay, outbox, and inbox for CDC |
 
 ## Environment Variables
 

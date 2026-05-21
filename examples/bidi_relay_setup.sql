@@ -3,17 +3,21 @@
 --
 -- This example demonstrates how to configure, monitor, and manage pg_ripple's
 -- bidirectional Change Data Capture (CDC) relay for synchronising knowledge
--- graphs across PostgreSQL instances using pg-trickle.
+-- graphs across PostgreSQL instances using pg_tide relay pipelines.
 --
 -- Prerequisites:
 --   - pg_ripple extension installed on both source and target instances
---   - pg_trickle replication setup (see docs/src/operations/bidi-production-checklist.md)
+--   - pg_tide relay setup (see docs/src/operations/bidi-production-checklist.md)
 --   - Logical replication enabled: wal_level = logical
 --
 -- Usage:
 --   psql -f examples/bidi_relay_setup.sql
 
--- ── 1. Check pg-trickle relay prerequisites ───────────────────────────────────
+-- ── 1. Check pg_tide relay prerequisites ─────────────────────────────────────
+
+-- Relay transport requires pg_tide. pg_trickle is still used separately for
+-- IVM-backed views, not for relay transport.
+SELECT pg_ripple.relay_available() AS relay_available;
 
 -- Verify logical replication is available
 SHOW wal_level;  -- should be 'logical'

@@ -609,8 +609,8 @@ pub fn bidi_status_impl() -> Vec<(
         let iter = c.select(
             "SELECT \
                 s.name AS subscription_name, \
-                NULL::boolean AS pg_trickle_paused, \
-                NULL::text AS pg_trickle_pause_reason, \
+                NULL::boolean AS pg_tide_paused, \
+                NULL::text AS pg_tide_pause_reason, \
                 COALESCE(( \
                     SELECT COUNT(*)::bigint FROM _pg_ripple.event_dead_letters d \
                     WHERE d.subscription_name = s.name \
@@ -637,8 +637,8 @@ pub fn bidi_status_impl() -> Vec<(
             let sub_name = row["subscription_name"]
                 .value::<String>()?
                 .unwrap_or_default();
-            let paused = row["pg_trickle_paused"].value::<bool>()?;
-            let pause_reason = row["pg_trickle_pause_reason"].value::<String>()?;
+            let paused = row["pg_tide_paused"].value::<bool>()?;
+            let pause_reason = row["pg_tide_pause_reason"].value::<String>()?;
             let dead_letter_count = row["dead_letter_count"].value::<i64>()?.unwrap_or(0);
             let pending_linkback_count = row["pending_linkback_count"].value::<i64>()?.unwrap_or(0);
             let reconciliation_open = row["reconciliation_open"].value::<i64>()?.unwrap_or(0);
@@ -656,10 +656,10 @@ pub fn bidi_status_impl() -> Vec<(
                 None, // pending_linkback_oldest_age
                 rewrite_miss_count_24h,
                 None, // last_emit_at
-                None, // pg_trickle_last_delivery_at
-                None, // pg_trickle_last_error
-                0i64, // pg_trickle_retry_count
-                0i64, // pg_trickle_delivery_dlq_count
+                None, // pg_tide_last_delivery_at
+                None, // pg_tide_last_error
+                0i64, // pg_tide_retry_count
+                0i64, // pg_tide_delivery_dlq_count
                 reconciliation_open,
             ));
         }

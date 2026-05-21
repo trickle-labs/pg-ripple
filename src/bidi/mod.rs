@@ -385,8 +385,8 @@ mod pg_ripple {
         'static,
         (
             name!(subscription_name, String),
-            name!(pg_trickle_paused, Option<bool>),
-            name!(pg_trickle_pause_reason, Option<String>),
+            name!(pg_tide_paused, Option<bool>),
+            name!(pg_tide_pause_reason, Option<String>),
             name!(outbox_depth, i64),
             name!(outbox_oldest_age, Option<String>),
             name!(dead_letter_count, i64),
@@ -396,12 +396,12 @@ mod pg_ripple {
             name!(rewrite_miss_count_24h, i64),
             name!(last_emit_at, Option<pgrx::datum::TimestampWithTimeZone>),
             name!(
-                pg_trickle_last_delivery_at,
+                pg_tide_last_delivery_at,
                 Option<pgrx::datum::TimestampWithTimeZone>
             ),
-            name!(pg_trickle_last_error, Option<String>),
-            name!(pg_trickle_retry_count, i64),
-            name!(pg_trickle_delivery_dlq_count, i64),
+            name!(pg_tide_last_error, Option<String>),
+            name!(pg_tide_retry_count, i64),
+            name!(pg_tide_delivery_dlq_count, i64),
             name!(reconciliation_open, i64),
         ),
     > {

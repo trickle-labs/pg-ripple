@@ -424,11 +424,11 @@ pub fn register() {
         GucFlags::default(),
     );
 
-    // ── v0.52.0 GUCs — pg-trickle Relay Integration ───────────────────────────
+    // ── v0.52.0 GUCs — CDC relay integration (pg_tide since v0.127.0) ─────────
     pgrx::GucRegistry::define_bool_guc(
         c"pg_ripple.cdc_bridge_enabled",
-        c"Enable the CDC → pg-trickle outbox bridge worker (default: off). \
-      Requires pg-trickle to be installed. (v0.52.0)",
+        c"Enable the CDC → pg_tide outbox bridge worker (default: off). \
+      Requires pg_tide to be installed. (v0.52.0, migrated v0.127.0)",
         c"",
         &CDC_BRIDGE_ENABLED,
         GucContext::Sighup,
@@ -461,8 +461,8 @@ pub fn register() {
 
     pgrx::GucRegistry::define_string_guc(
         c"pg_ripple.cdc_bridge_outbox_table",
-        c"Target outbox table for the CDC bridge worker (default: 'enriched_events'). \
-      Must have (event_id TEXT, payload JSONB) columns. (v0.52.0)",
+        c"Legacy name for the target pg_tide outbox used by the CDC bridge worker. \
+      Create the outbox first with tide.outbox_create(...). (v0.52.0, migrated v0.127.0)",
         c"",
         &CDC_BRIDGE_OUTBOX_TABLE,
         GucContext::Sighup,
@@ -471,8 +471,8 @@ pub fn register() {
 
     pgrx::GucRegistry::define_bool_guc(
         c"pg_ripple.trickle_integration",
-        c"Enable pg-trickle integration features; set off to disable bridge even \
-      when pg-trickle is installed (default: on). (v0.52.0)",
+        c"Legacy relay integration switch; set off to disable the CDC bridge even \
+      when pg_tide is installed (default: on). (v0.52.0, migrated v0.127.0)",
         c"",
         &TRICKLE_INTEGRATION,
         GucContext::Userset,

@@ -508,7 +508,7 @@ mod pg_ripple {
                 None,
                 Some("BIDI-SPEC-01 (v0.77.0): source attribution, conflict resolution, \
                      late-binding IRI rewrite, sparse-CAS events, linkback with \
-                     target-assigned IDs, pg-trickle outbox/inbox transport.".to_string()),
+                     target-assigned IDs, pg_tide outbox/inbox transport.".to_string()),
                 Some("ci/regress: bidi_integration.sql".to_string()),
                 Some("docs/src/features/cdc.md".to_string()),
                 Some("src/bidi/mod.rs".to_string()),

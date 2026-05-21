@@ -351,11 +351,12 @@ pgrx::extension_sql!(
     requires = ["v050_schema_version_fresh_install_stamp"]
 );
 
-// v0.52.0: pg-trickle Relay Integration.
+// v0.52.0: CDC relay integration. Migrated from pg-trickle relay tables to
+// pg_tide outbox publishing in v0.127.0.
 // New SQL-visible features: json_to_ntriples(), json_to_ntriples_and_load(),
 // enable/disable_cdc_bridge_trigger(), cdc_bridge_triggers() SRF,
 // triple_to_jsonld(), triples_to_jsonld(), statement_dedup_key(),
-// load_vocab_template(), trickle_available().
+// load_vocab_template(), relay_available(), trickle_available() compatibility alias.
 // New catalog: _pg_ripple.cdc_bridge_triggers.
 pgrx::extension_sql!(
     r#"
@@ -365,20 +366,22 @@ CREATE TABLE IF NOT EXISTS _pg_ripple.cdc_bridge_triggers (
     name         TEXT        NOT NULL PRIMARY KEY,
     predicate_id BIGINT      NOT NULL,
     outbox_table TEXT        NOT NULL,
+    outbox_name  TEXT        NOT NULL,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- PL/pgSQL trigger function used by per-predicate CDC bridge triggers.
--- TG_ARGV[0] = predicate_id (bigint text), TG_ARGV[1] = outbox table name.
+-- TG_ARGV[0] = predicate_id (bigint text), TG_ARGV[1] = pg_tide outbox name.
 CREATE OR REPLACE FUNCTION _pg_ripple.cdc_bridge_trigger_fn()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
     pred_id    BIGINT  := TG_ARGV[0]::bigint;
-    outbox_tbl TEXT    := TG_ARGV[1];
+    outbox_name TEXT   := TG_ARGV[1];
     s_iri      TEXT;
     p_iri      TEXT;
     o_iri      TEXT;
     payload    JSONB;
+    headers    JSONB;
     dedup_key  TEXT;
     sid        BIGINT;
 BEGIN
@@ -390,13 +393,17 @@ BEGIN
     payload := jsonb_build_object(
         '@context',   'https://schema.org/',
         '@id',        COALESCE(s_iri, '_:' || NEW.s::text),
-        p_iri,        COALESCE(o_iri, NEW.o::text),
-        '_dedup_key', dedup_key
+        p_iri,        COALESCE(o_iri, NEW.o::text)
     );
-    EXECUTE format(
-        'INSERT INTO %I (event_id, payload) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        outbox_tbl
-    ) USING dedup_key, payload;
+    headers := jsonb_build_object(
+        'event_id',     dedup_key,
+        'dedup_key',    dedup_key,
+        'event_type',   'pg_ripple.triple.insert',
+        'predicate_id', pred_id,
+        'statement_id', sid,
+        'graph_id',     NEW.g
+    );
+    PERFORM tide.outbox_publish(outbox_name, payload, headers);
     RETURN NEW;
 END;
 $$;
