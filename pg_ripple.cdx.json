@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.4",
   "version": 1,
-  "serialNumber": "urn:uuid:9d79f09e-d190-486c-b73a-7408111a50cf",
+  "serialNumber": "urn:uuid:4d3753cf-13d9-4ec0-8566-71de87874577",
   "metadata": {
-    "timestamp": "2026-05-20T14:20:46.005024000Z",
+    "timestamp": "2026-05-21T20:19:28.965608000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.126.0",
+      "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.127.0",
       "name": "pg_ripple",
-      "version": "0.126.0",
+      "version": "0.127.0",
       "description": "High-performance RDF triple store with native SPARQL query execution for PostgreSQL 18",
       "scope": "required",
       "licenses": [
@@ -24,7 +24,7 @@
           "expression": "Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/pg_ripple@0.126.0?download_url=file://.",
+      "purl": "pkg:cargo/pg_ripple@0.127.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -34,10 +34,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.126.0 bin-target-0",
+          "bom-ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.127.0 bin-target-0",
           "name": "pg_ripple",
-          "version": "0.126.0",
-          "purl": "pkg:cargo/pg_ripple@0.126.0?download_url=file://.#src/lib.rs"
+          "version": "0.127.0",
+          "purl": "pkg:cargo/pg_ripple@0.127.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -6201,7 +6201,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.126.0",
+      "ref": "path+file:///Users/geir.gronmo/projects/pg-ripple2#pg_ripple@0.127.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.44",
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
