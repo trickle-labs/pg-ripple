@@ -260,6 +260,42 @@ versions, and the full error output.  For architectural questions, read
 
 ---
 
+## Documentation contributions
+
+Documentation source lives in `docs/src/`. The project uses [mdBook](https://rust-lang.github.io/mdBook/).
+The full style guide — page types, code-block conventions, callout syntax, naming rules — is in [docs/STYLE.md](docs/STYLE.md).
+
+### Page types
+
+| Type | Path | Purpose |
+|---|---|---|
+| Concept | `docs/src/concepts/` | Why it exists, mental model |
+| Task (how-to) | `docs/src/user-guide/` | Step-by-step instructions |
+| Reference | `docs/src/reference/` | Exhaustive tables (GUC, SQL API, HTTP API) |
+| Feature overview | `docs/src/features/` | What a feature does + quick-start |
+
+Every feature page should begin with a status block that lists `**Status**`, `**Requires**`, and `**SQL**` fields. See [docs/STYLE.md](docs/STYLE.md) for the format and examples.
+
+### Before opening a docs PR
+
+1. Run the full validation suite:
+
+   ```bash
+   just docs-check
+   ```
+
+   All checks must pass (`missing=0`, `orphans=0`). Drift checks (`guc-drift`, `http-routes`, `sql-coverage`, `pt-codes`) are report-only but should have no regressions.
+
+2. Build the docs locally to catch mdBook rendering issues:
+
+   ```bash
+   just docs-build
+   ```
+
+3. See the PR checklist at the bottom of [docs/STYLE.md](docs/STYLE.md).
+
+---
+
 ## AI-assisted contributions (L16-15, v0.117.0)
 
 If you are using an AI coding assistant (GitHub Copilot, Cursor, Claude, etc.)

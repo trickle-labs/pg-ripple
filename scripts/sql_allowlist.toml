@@ -1,0 +1,46 @@
+# scripts/sql_allowlist.toml
+# Classification of pg_extern functions that are NOT public user-facing APIs.
+#
+# Tiers:
+#   internal    — low-level codec helpers and internal plumbing; not in user docs
+#   legacy      — renamed or superseded; kept for compatibility; must have a
+#                 brief mention (e.g. "renamed from X") somewhere in the docs
+#   deprecated  — explicitly deprecated; must have a deprecation notice in docs
+#
+# Add a function here when:
+#   - check_sql_coverage.py reports it as undocumented, AND
+#   - you have verified it should not appear as a first-class public API.
+#
+# Do NOT add functions here just to silence the check. Document them instead.
+
+# ── Internal codec / SPI helpers ──────────────────────────────────────────────
+
+internal = [
+  # Dictionary encoding helpers — used by aggregate functions and SPI paths
+  "encode_lang_literal",
+  "decode_numeric_spi",
+  "group_concat_decode",
+  "xsd_double_fmt",
+
+  # Internal cache / stats plumbing
+  "flush_encode_cache",
+  "cache_stats_comprehensive",
+
+  # Implementation variant of explain_sparql — SQL name is explain_sparql (documented)
+  "explain_sparql_jsonb_citus",
+]
+
+# ── Legacy (renamed) functions ────────────────────────────────────────────────
+# These were renamed in v0.61.0 to avoid symbol conflicts with the newer
+# security_api RLS-based grant_graph() / revoke_graph(). Keep entries here
+# until a major version removes them.
+
+legacy = [
+  "grant_graph_permission",    # → pg_ripple.grant_graph() in security_api (v0.61.0)
+  "revoke_graph_permission",   # → pg_ripple.revoke_graph() in security_api (v0.61.0)
+]
+
+# ── Deprecated functions ──────────────────────────────────────────────────────
+# None currently.
+
+deprecated = []

@@ -1,5 +1,12 @@
 # Geospatial Queries (GeoSPARQL)
 
+**Status**: Available since v0.36.0 (GEO-01)  
+**Requires**: [PostGIS](https://postgis.net) extension (`CREATE EXTENSION postgis`). Without PostGIS, loading succeeds but `geof:` filter functions return `NULL`.  
+**SQL**: `pg_ripple.sparql_select()` with `geof:` and `geo:` FILTER functions  
+**Degraded**: GeoSPARQL filter functions silently return `NULL` when PostGIS is absent — enable PostGIS before ingesting WKT data.  
+
+---
+
 pg_ripple implements the [GeoSPARQL 1.1](https://docs.ogc.org/is/22-047r1/22-047r1.html) query function vocabulary for geographic data, delegating geometry computation to [PostGIS](https://postgis.net). You store WKT literals as triple objects, and SPARQL filter functions like `geof:sfWithin` and `geof:sfIntersects` resolve them against PostGIS at query time — without any extra schema work on your part.
 
 ---

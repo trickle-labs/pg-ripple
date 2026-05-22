@@ -1,6 +1,12 @@
 # CDC Subscriptions
 
-> Added in v0.42.0
+**Status**: Available since v0.42.0 (CDC-01)  
+**Requires**: [`pg_ripple_http`](../reference/http-api.md) for Server-Sent Events delivery. PostgreSQL `LISTEN/NOTIFY` works without it.  
+**SQL**: `pg_ripple.subscribe_cdc()`, `pg_ripple.unsubscribe_cdc()`, `pg_ripple.list_cdc_subscriptions()`  
+**HTTP**: `GET /subscribe/{id}` (Server-Sent Events, via `pg_ripple_http`)  
+**See also**: [Live SPARQL Subscriptions](live-subscriptions.md) · [Live Views](live-views-and-subscriptions.md)  
+
+---
 
 ## Overview
 

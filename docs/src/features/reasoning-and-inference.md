@@ -1,5 +1,11 @@
 # §2.5 Reasoning and Inference
 
+**Status**: Available since v0.6.0 (RULE-01)  
+**Requires**: No external dependencies. Rule sets are compiled to SQL by the Datalog engine.  
+**SQL**: `pg_ripple.add_rule()`, `pg_ripple.run_inference()`, `pg_ripple.enable_builtin_rules()`  
+
+---
+
 ## What and Why
 
 Inference lets pg_ripple derive **new facts** from existing data using logical rules.

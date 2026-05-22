@@ -322,6 +322,8 @@ SELECT pg_ripple.grant_graph('app_user', '<https://example.org/graph1>', 'read')
 SELECT pg_ripple.grant_graph('admin_user', '<https://example.org/graph1>', 'admin');
 ```
 
+> **Note**: `grant_graph_permission(role, graph, permission)` is a legacy alias for `grant_graph()`, retained for compatibility. Use `grant_graph()` in new code.
+
 ---
 
 ## revoke_graph(role, graph [, permission]) (v0.14.0)
@@ -339,6 +341,8 @@ SELECT pg_ripple.revoke_graph('app_user', '<https://example.org/graph1>', 'read'
 -- Revoke all permissions
 SELECT pg_ripple.revoke_graph('app_user', '<https://example.org/graph1>');
 ```
+
+> **Note**: `revoke_graph_permission(role, graph, permission)` is a legacy alias for `revoke_graph()`, retained for compatibility. Use `revoke_graph()` in new code.
 
 ---
 

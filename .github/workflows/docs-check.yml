@@ -8,8 +8,13 @@ on:
       - 'scripts/check_docs_summary.py'
       - 'scripts/check_guc_drift.py'
       - 'scripts/check_http_routes.py'
+      - 'scripts/check_sql_coverage.py'
+      - 'scripts/sql_allowlist.toml'
+      - 'scripts/check_pt_codes.sh'
+      - 'scripts/check_docs_examples.py'
       - 'pg_ripple_http/src/routing/mod.rs'
       - 'src/gucs/**'
+      - 'src/**/*.rs'
       - 'justfile'
   push:
     branches: [main]
@@ -19,8 +24,13 @@ on:
       - 'scripts/check_docs_summary.py'
       - 'scripts/check_guc_drift.py'
       - 'scripts/check_http_routes.py'
+      - 'scripts/check_sql_coverage.py'
+      - 'scripts/sql_allowlist.toml'
+      - 'scripts/check_pt_codes.sh'
+      - 'scripts/check_docs_examples.py'
       - 'pg_ripple_http/src/routing/mod.rs'
       - 'src/gucs/**'
+      - 'src/**/*.rs'
   workflow_dispatch:
 
 permissions:
@@ -106,3 +116,34 @@ jobs:
         # Report-only: does not fail the build yet.
         # Switch to --strict once the initial backlog in B2 is cleared.
         run: python3 scripts/check_http_routes.py
+
+  sql-coverage:
+    name: SQL function coverage (report-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Check SQL function coverage
+        # Report-only: does not fail the build yet.
+        # Switch to --strict once the initial backlog in B3 is cleared.
+        run: python3 scripts/check_sql_coverage.py
+
+  pt-codes:
+    name: PT error code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Check PT error code documentation
+        run: bash scripts/check_pt_codes.sh
+
+  examples:
+    name: Code block label coverage (informational)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Report unlabeled SQL/SPARQL code blocks
+        # Informational only — does not block the build.
+        # Run with --strict once the labeling backlog is cleared.
+        run: python3 scripts/check_docs_examples.py

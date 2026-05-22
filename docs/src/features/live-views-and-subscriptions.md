@@ -1,5 +1,10 @@
 # Live Views and Subscriptions
 
+**Status**: Live views available since v0.12.0; CDC subscriptions available since v0.42.0  
+**See also**: [Live SPARQL Subscriptions](live-subscriptions.md) · [CDC Subscriptions](cdc-subscriptions.md)  
+
+---
+
 Two features cover the *push* side of pg_ripple — getting data **out** as it changes, instead of polling for it.
 
 | Feature | Best for | Backed by |

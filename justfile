@@ -213,9 +213,24 @@ docs-check-guc-drift:
 docs-check-http-routes:
     python3 scripts/check_http_routes.py
 
-# Run all docs validation checks (links, summary, GUC drift, HTTP routes)
+# Report SQL pg_extern functions not in the docs corpus (non-blocking until --strict)
 [group: "docs"]
-docs-check: docs-check-links docs-check-summary docs-check-guc-drift docs-check-http-routes
+docs-check-sql-coverage:
+    python3 scripts/check_sql_coverage.py
+
+# Report PT error codes in src/ that are not documented in docs/ or CHANGELOG.md
+[group: "docs"]
+docs-check-pt-codes:
+    bash scripts/check_pt_codes.sh
+
+# Report SQL/SPARQL code blocks in Getting Started and Feature pages that lack a label (report-only)
+[group: "docs"]
+docs-check-examples:
+    python3 scripts/check_docs_examples.py
+
+# Run all docs validation checks (links, summary, GUC drift, HTTP routes, SQL coverage, PT codes)
+[group: "docs"]
+docs-check: docs-check-links docs-check-summary docs-check-guc-drift docs-check-http-routes docs-check-sql-coverage docs-check-pt-codes
 
 # ── Release ───────────────────────────────────────────────────────────────
 

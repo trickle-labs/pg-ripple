@@ -3,6 +3,7 @@
 **Status**: Experimental — v0.73.0 (SUB-01)  
 **API**: `pg_ripple.subscribe_sparql()` / `pg_ripple.unsubscribe_sparql()`  
 **HTTP**: `GET /subscribe/:subscription_id` (Server-Sent Events)  
+**See also**: [CDC Subscriptions](cdc-subscriptions.md) · [Live Views](live-views-and-subscriptions.md)  
 
 ---
 

@@ -1,5 +1,13 @@
 # Vector Embeddings and Hybrid Search
 
+**Status**: Available since v0.48.0 (VEC-01)  
+**Requires**: [`pgvector`](https://github.com/pgvector/pgvector) extension (required). An OpenAI-compatible embedding API is required for automatic embedding generation; manual `float4[]` insertion works without it.  
+**SQL**: `pg_ripple.store_embedding()`, `pg_ripple.vector_search()`, `pg_ripple.hybrid_search()`  
+**HTTP**: `POST /sparql` (supports `pg:similar()` inside SPARQL SELECT)  
+**Degraded**: Without `pgvector`, all embedding storage and `pg:similar()` queries fail at query time.  
+
+---
+
 Vector search and graph queries answer different questions. Vector search is good at *"things that look like X"*; graph queries are good at *"things in this exact relationship to X"*. Real-world questions usually need both — *"prescriptions semantically similar to ibuprofen, taken by patients in the cardiology cohort"*. pg_ripple does both in one query.
 
 This chapter is the practical reference. It covers:

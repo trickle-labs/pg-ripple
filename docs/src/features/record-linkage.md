@@ -1,5 +1,12 @@
 # Record Linkage and Entity Resolution
 
+**Status**: Available since v0.67.0 (ER-01)  
+**Requires**: [`pgvector`](https://github.com/pgvector/pgvector) extension for embedding-based candidate generation (optional — rule-based linking works without it). `pg_ripple_http` optional for REST access.  
+**SQL**: `pg_ripple.find_entity_candidates()`, `pg_ripple.merge_entities()`, `pg_ripple.entity_resolution_pipeline()`  
+**Degraded**: Without `pgvector`, vector-similarity candidate generation is unavailable; SHACL hard-veto rules and `owl:sameAs` canonicalization still work.  
+
+---
+
 > Other names for this problem: *entity resolution*, *deduplication*, *master data management (MDM)*, *identity resolution*, *fuzzy matching*. They all mean: **find records that refer to the same real-world thing, and merge them safely.**
 
 Record linkage is one of the most consequential and difficult problems in data management. A hospital merging two patient databases, a bank consolidating customer records, a retailer unifying online and in-store profiles — all of them must answer the same question: *do these two rows describe the same person?*
