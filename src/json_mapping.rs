@@ -1,3 +1,4 @@
+// @allow-large-file: writeback implementation adds substantial SPI boilerplate (JSON-WRITEBACK-01)
 //! Named bidirectional JSON ↔ RDF mapping registry (v0.73.0, JSON-MAPPING-01).
 //!
 //! `pg_ripple.register_json_mapping(name, context, shape_iri)` stores a named

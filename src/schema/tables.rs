@@ -929,5 +929,5 @@ COMMENT ON FUNCTION _pg_ripple.json_writeback_enqueue_fn() IS
     'Trigger function that enqueues VP delta changes into json_writeback_queue (v0.128.0 JSON-WRITEBACK-01)';
 "#,
     name = "v0128_json_writeback_schema",
-    requires = ["v0126_federation_credentials"]
+    requires = ["v0126_federation_credentials", "v073_schema_additions"]
 );
