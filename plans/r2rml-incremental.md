@@ -3,7 +3,7 @@
 **Status:** Proposed  
 **Date:** 2026-05-22  
 **Target:** Post-v0.127.0, candidate v0.128.0+  
-**Related:** [R2RML virtual graph layer](r2rml_virtual.md), [pg-tide relay integration](pg_trickle_relay_integration.md), [pg_trickle ecosystem analysis](ecosystem/pg_trickle.md)
+**Related:** [R2RML virtual graph layer](r2rml-virtual.md), [pg-tide relay integration](pg_trickle_relay_integration.md), [pg_trickle ecosystem analysis](ecosystem/pg_trickle.md)
 
 ---
 
@@ -57,7 +57,7 @@ Important terminology update: relay, inbox, and outbox transport moved from pg_t
 
 ## Non-goals
 
-1. Do not implement the virtual R2RML graph layer in this work. Query-time virtual mapping remains tracked separately in [r2rml_virtual.md](r2rml_virtual.md).
+1. Do not implement the virtual R2RML graph layer in this work. Query-time virtual mapping remains tracked separately in [r2rml-virtual.md](r2rml-virtual.md).
 2. Do not make arbitrary RML non-SQL sources incremental.
 3. Do not require pg_trickle for simple base-table mappings.
 4. Do not rely on pg_tide for same-database source table changes.

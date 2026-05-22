@@ -21,13 +21,11 @@ No separate graph database. No data pipelines. No extra infrastructure.
 
 > **New to knowledge graphs?** Think of a knowledge graph as a smarter, more connected way to store data. Instead of rows in tables, you store facts: *Alice knows Bob*, *Bob works at Acme Corp*, *Acme Corp is in Oslo*. You can then ask questions that span many hops: *"Who are all the people in Alice's extended professional network?"* — the kind of question that is painful in SQL but natural in a graph.
 
-> **Latest release (v0.111.0 — 2026-05-12):** Privacy-Preserving Record Linkage (PPRL) primitives — Bloom-filter CLK encoding, Dice coefficient similarity, and differentially-private aggregates for cross-organization entity resolution without sharing raw PII.
-
 ---
 
-## What works today (v0.111.0)
+## What works today (v0.126.0)
 
-pg_ripple passes **100% of the W3C SPARQL 1.1, SHACL Core, and OWL 2 RL conformance test suites** — the industry benchmarks for correctness in knowledge graph systems. After 111 releases it covers the full feature set described below.
+pg_ripple passes **100% of the W3C SPARQL 1.1, SHACL Core, and OWL 2 RL conformance test suites** — the industry benchmarks for correctness in knowledge graph systems. After 126 releases it covers the full feature set described below.
 
 | What you can do | How it works |
 |---|---|
@@ -67,6 +65,8 @@ pg_ripple passes **100% of the W3C SPARQL 1.1, SHACL Core, and OWL 2 RL conforma
 | **Neuro-symbolic record linkage (NS-RL)** | Six SPARQL and Datalog string-similarity built-ins: `pg:trigram_similarity()`, `pg:levenshtein()`, `pg:levenshtein_less_equal()`, `pg:soundex()`, `pg:metaphone()`, `pg:jaro_winkler()`. Three built-in ER blocking templates (`email`, `postal_name`, `name_prefix`). `resolve_entities(source_graph, target_graph)` orchestrates a five-stage pipeline: symbolic blocking, embedding-based candidate generation, SHACL validation gate, `owl:sameAs` canonicalization, RDF-star provenance annotation. Dry-run mode returns a JSON summary without writing. |
 | **NS-RL evaluation & monitoring** | `evaluate_resolution(gold_graph)` computes pairwise (precision/recall/F1), blocking (pairs_completeness/reduction_ratio/F-PQ), and B³ cluster metrics against a gold standard. `enable_er_monitoring()` creates three live stream tables: unresolved entities, cluster sizes, and a resolution dashboard. `explain_rule(rule_id)` narrates a rule in plain English. `owl:sameAs` anomaly detection logs PT550-triggering assertions to `_pg_ripple.sameas_anomaly_log`. Magellan ER benchmark CI gate (Abt-Buy F1 ≥ 0.78, DBLP-ACM F1 ≥ 0.90). |
 | **Privacy-Preserving Record Linkage (PPRL)** | `bloom_encode(value, key, hash_count, length)` produces CLK Bloom-filter encodings using HMAC-SHA-256 — enabling entity matching without exposing raw PII. `dice_similarity(a, b)` computes Dice coefficient for two Bloom-filter hex bit vectors. `pg:dice_similarity(?a, ?b)` SPARQL FILTER function and Datalog built-in predicate for cross-graph privacy-safe entity matching. `dp_noisy_count(query, epsilon)` and `dp_noisy_histogram(query, key_col, count_col, epsilon)` add Laplace differential-privacy noise to aggregate queries for privacy-preserving analytics. |
+| **Temporal graph snapshots** | `graph_at(graph_iri, snapshot_time)` materialises a point-in-time named-graph snapshot from `_pg_ripple.temporal_facts`, registering a deterministic `urn:snapshot:…` IRI usable directly in `GRAPH <iri> { … }` SPARQL queries. `graph_diff(graph_iri, from_ts, to_ts)` returns `'added'`/`'removed'` delta rows between two timestamps for audit-compliant change logs and incremental exports. Snapshots are automatically garbage-collected after `pg_ripple.snapshot_retention_days` (default 30). HTTP endpoints `GET /temporal/graphs/{iri}/snapshot` and `GET /temporal/graphs/{iri}/diff` expose both operations. Prometheus gauge `pg_ripple_graph_snapshots_total` tracks live snapshot count. |
+| **Per-endpoint federation credentials** | `set_federation_credential(endpoint_iri, auth_type, token)` registers or atomically replaces an encrypted Bearer or API-key credential for any federation endpoint; tokens are stored at-rest via `pgcrypto.pgp_sym_encrypt` and are never returned in plaintext. `rotate_federation_credential(endpoint_iri, new_token)` replaces a token and records the rotation timestamp atomically. `federation_credential_audit()` returns operational metadata (token age, last used) without exposing secrets. The federation executor automatically injects the correct HTTP header after SSRF validation — existing SPARQL queries require no changes. HTTP endpoint `GET /federation/{endpoint}/auth-status` exposes credential status for monitoring. |
 | **Live, auto-updating views** | Define a SPARQL query as a view; pg_ripple (with the optional `pg_trickle` companion) keeps it automatically up to date as data changes. |
 | **Access control** | Named graphs have row-level security backed by PostgreSQL's built-in permission system. Each graph can be granted to specific database roles, just like a table. Read-replica routing sends read queries to replicas automatically when `pg_ripple.read_replica_dsn` is configured. |
 | **Full-text search** | Search the text of literal values (names, descriptions, notes) using PostgreSQL's fast full-text search indexes. |
@@ -181,6 +181,8 @@ One release remains on the path to v1.0.0.
 
 The v0.91.0–v0.111.0 development cycle adds deep reasoning capabilities: proof trees and justification infrastructure (v0.100.0), natural-language explanation of derived facts via LLM or deterministic fallback (v0.101.0), what-if hypothetical inference (v0.102.0), Datalog conflict detection (v0.103.0), versioned domain rule libraries (v0.104.0), guided rule authoring with LLM-backed NL-to-Datalog translation (v0.105.0), first-class temporal fact store with AFTER/BEFORE/DURING operators and CDC integration (v0.106.0–v0.107.0), Bayesian confidence updates with evidence log and derivation-DAG propagation (v0.108.0), neuro-symbolic record linkage with six string-similarity built-ins and a five-stage `resolve_entities()` pipeline (v0.109.0), NS-RL evaluation harness with live ER monitoring stream tables and rule explainability (v0.110.0), and Privacy-Preserving Record Linkage via CLK Bloom-filter encoding and differential-privacy aggregates (v0.111.0). Every row in `pg_ripple.feature_status()` shows `implemented`.
 
+The v0.112.0–v0.126.0 cycle focuses on hardening, correctness, and operational completeness: security audit remediation including annotated unsafe blocks and a wired SHACL validation gate in entity resolution (v0.112.0), 5–10× bulk-load throughput via the default-on COPY path (v0.113.0), HTTP API parity and module decomposition (v0.114.0–v0.116.0), Temporal Allen's interval relations and a privacy budget registry (v0.118.0), OWL `propertyChainAxiom` n-hop chains, SERVICE circuit breaker, and schema-aware NL→SPARQL translation (v0.119.0), PageRank explain trees, admin diagnostic snapshot, tenant quota API, and rule-library federation (v0.120.0), observability hardening and test coverage closure (v0.121.0–v0.123.0), a surgical fix for the SPARQL property-path Cartesian-product bug that inflated compound-path results (v0.124.0), point-in-time named-graph snapshots and a diff API via `graph_at()` / `graph_diff()` (v0.125.0), and encrypted per-endpoint federation credentials with automatic header injection and atomic rotation (v0.126.0).
+
 ### v1.0.0 — Production Release
 
 The final milestone: full API and documentation freeze, long-term support commitment, and public production dossier. All conformance suites (SPARQL 1.1, SHACL Core, OWL 2 RL, LUBM) remain required gates; performance regression CI and the release evidence dashboard are mandatory artifacts.
@@ -200,7 +202,7 @@ This means you get:
 
 ### How it compares
 
-> **Note**: pg_ripple features marked "Yes" in the table below are implemented across v0.1.0–v0.111.0. W3C SPARQL 1.1 Query, Update, SHACL Core, and OWL 2 RL conformance is 100%. Competitor capabilities reflect publicly documented feature sets.
+> **Note**: pg_ripple features marked "Yes" in the table below are implemented across v0.1.0–v0.126.0. W3C SPARQL 1.1 Query, Update, SHACL Core, and OWL 2 RL conformance is 100%. Competitor capabilities reflect publicly documented feature sets.
 
 | Capability | pg_ripple | Blazegraph | Virtuoso | Apache Fuseki |
 |---|---|---|---|---|
@@ -219,6 +221,8 @@ This means you get:
 | Neuro-symbolic record linkage (NS-RL) | Yes | No | No | No |
 | Privacy-Preserving Record Linkage (PPRL) | Yes | No | No | No |
 | Differential-privacy aggregates | Yes | No | No | No |
+| Temporal graph snapshots | Yes | No | No | No |
+| Encrypted federation credentials | Yes | No | No | No |
 | Horizontal sharding (Citus) | Yes | No | No | No |
 | SPARQL Federation | Yes | No | Yes | Yes |
 | Named graph access control | Yes (PostgreSQL RLS) | No | ACL | Apache Shiro |
@@ -387,14 +391,14 @@ pg_ripple is built to production-grade standards:
 - **LUBM conformance suite** — all 14 canonical LUBM queries pass against a synthetic university OWL ontology; includes a Datalog validation sub-suite confirming that `infer('owl-rl')` produces correct supertype entailments (v0.44.0)
 - **W3C OWL 2 RL conformance suite** — W3C OWL 2 RL test manifests (entailment, consistency, and inconsistency tests) run in CI; **100% pass rate (66/66) achieved at v0.51.0** — blocking gate in CI (v0.51.0)
 - **Property-based testing** — `proptest` suites assert algebraic invariants: SPARQL algebra round-trips produce byte-identical SQL, dictionary encode/decode is always stable and collision-free for 10,000 random distinct terms, JSON-LD framing preserves all matching IRIs (v0.51.0)
-- **Extensive test suite** — 300+ pg_regress tests and property-based (`proptest`) suites cover every SQL-exposed function, every feature, and every edge case (as of v0.111.0)
+- **Extensive test suite** — 300+ pg_regress tests and property-based (`proptest`) suites cover every SQL-exposed function, every feature, and every edge case (as of v0.126.0)
 - **Security testing** — resistance to injection attacks, malformed inputs, and resource exhaustion
 - **Fuzz testing** — the federation result decoder, query pipeline, and URL host parser are continuously fuzz-tested (nightly, 120 s per target); arbitrary XML/JSON from remote SERVICE endpoints cannot cause a crash or panic (v0.51.0)
 - **Performance regression CI** — BSBM benchmark (1M-triple product dataset, 12 explore queries) and automated throughput benchmarks fail the build if performance drops by more than 10% (v0.51.0)
 - **Security CI** — `cargo audit --deny warnings` runs on every pull request; SBOM (CycloneDX) generated and attached to every release; GitHub Actions refs pinned to full SHA; Docker release images scanned via Trivy with immutable digest
 - **Stability** — 72-hour soak test with published artifacts (memory trend, merge latency, query p50/p95/p99, error counts), memory leak detection, and crash recovery testing (v0.67.0)
 - **Upgrade and backup acceptance** — migration chain from all supported 0.x versions, `pg_dump`/restore round trip, and rollback guidance tested in CI (v0.67.0)
-- **Public benchmark baselines** — BSBM, WatDiv, LUBM, bulk N-Triples/Turtle load, HTAP merge throughput, construct-rule incremental maintenance, Datalog DRed, vector hybrid search, Arrow IPC export, Citus fan-out, bidi relay throughput, and Magellan ER benchmark (Abt-Buy, DBLP-ACM) published with hardware, dataset size, and raw output; baselines refreshed to v0.111.0
+- **Public benchmark baselines** — BSBM, WatDiv, LUBM, bulk N-Triples/Turtle load, HTAP merge throughput, construct-rule incremental maintenance, Datalog DRed, vector hybrid search, Arrow IPC export, Citus fan-out, bidi relay throughput, and Magellan ER benchmark (Abt-Buy, DBLP-ACM) published with hardware, dataset size, and raw output; baselines refreshed to v0.126.0
 
 ---
 

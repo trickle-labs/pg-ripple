@@ -2869,7 +2869,7 @@ The release also introduces a formal bidirectional JSON⇔RDF mapping registry t
 
 - **FEATURE-STATUS-02** — `feature_status()` now includes entries for `llm_sparql_repair`, `kge_embeddings`, `sparql_nl_to_sparql`, `sparql_12`, `sparql_subscription`, `json_ld_multi_ingest`, and `json_mapping`.
 
-- **R2RML-DOC-01** — `plans/r2rml_virtual.md` documents the planned virtual R2RML layer and its scope relative to `register_json_mapping`.
+- **R2RML-DOC-01** — `plans/r2rml-virtual.md` documents the planned virtual R2RML layer and its scope relative to `register_json_mapping`.
 
 - **CONTROL-01** — `pg_ripple.control` `comment` updated to reflect v0.73.0 capabilities.
 

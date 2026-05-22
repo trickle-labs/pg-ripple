@@ -534,7 +534,7 @@ The v0.51–v0.83 release stream is genuinely linear and coherent. CHANGELOG ent
 - **Cypher/GQL transpilation** ([plans/cypher/](../plans/cypher/)) — enormous market expansion if shipped.
 - **SPARQL 1.2 features** ([plans/sparql12_tracking.md](../plans/sparql12_tracking.md)) — early-mover advantage.
 - **Native PostgreSQL partitioning** ([plans/postgresql-native-partitioning.md](../plans/postgresql-native-partitioning.md)) — eliminates the bespoke HTAP merge worker for many workloads.
-- **R2RML virtual materialisation** ([plans/r2rml_virtual.md](../plans/r2rml_virtual.md)) — opens RDB-as-graph use cases.
+- **R2RML virtual materialisation** ([plans/r2rml-virtual.md](../plans/r2rml-virtual.md)) — opens RDB-as-graph use cases.
 - **Link prediction** ([plans/link_prediction.md](../plans/link_prediction.md)) — pairs with the existing pgvector integration.
 
 ---

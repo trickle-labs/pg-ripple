@@ -25,7 +25,7 @@
 --   TAXONOMY-01: docs/src/reference/feature-status-taxonomy.md
 --   CONTRIB-01: CONTRIBUTING.md at repository root
 --   HELM-01: charts/pg_ripple/values.yaml pins pg_ripple_http to release tag
---   R2RML-DOC-01: docs/src/features/r2rml.md + plans/r2rml_virtual.md
+--   R2RML-DOC-01: docs/src/features/r2rml.md + plans/r2rml-virtual.md
 
 -- v0.73.0 SUB-01: Live SPARQL subscription catalog.
 CREATE TABLE IF NOT EXISTS _pg_ripple.sparql_subscriptions (
