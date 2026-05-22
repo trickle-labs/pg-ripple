@@ -44,6 +44,8 @@
 - [Graph Analytics (PageRank)](features/pagerank.md)
 - [Probabilistic Reasoning](features/uncertain-knowledge.md)
 - [CDC Subscriptions](features/cdc-subscriptions.md)
+- [Live SPARQL Subscriptions](features/live-subscriptions.md)
+- [JSON Mapping (Bidirectional JSON-LD)](features/json-mapping.md)
 - [Cypher / LPG → RDF Mapping](features/lpg-mapping.md)
 
 ---
@@ -82,6 +84,7 @@
 - [Common Vocabulary Bundles: DCTERMS, Schema.org, FOAF](cookbook/common-vocabularies.md)
 - [Migrate from Neo4j](cookbook/migrate-from-neo4j.md)
 - [Build a RAG Pipeline from Scratch](cookbook/rag-pipeline-from-scratch.md)
+- [Rule-Library Federation](cookbook/rule-federation.md)
 
 ---
 
@@ -89,6 +92,7 @@
 
 - [APIs and Integration Overview](features/apis-and-integration.md)
 - [SPARQL Query Debugger — `EXPLAIN SPARQL`](user-guide/explain-sparql.md)
+- [Rule Library Federation Guide](guides/rule-library-federation.md)
 
 ---
 
@@ -105,6 +109,7 @@
 - [CDC Operations](operations/cdc.md)
 - [Citus + pg-trickle Integration](operations/citus-integration.md)
 - [pg-tide Relay: Hub-and-Spoke](operations/pg-tide-relay.md)
+- [pg-trickle Relay (Legacy Redirect)](operations/pg-trickle-relay.md)
 - [Bidi Operations Runbook](operations/bidi-runbook.md)
 - [Bidi Production Checklist](operations/bidi-production-checklist.md)
 - [Configuration](operations/configuration.md)
@@ -116,6 +121,7 @@
 - [Backup and Disaster Recovery](operations/backup-recovery.md)
 - [Upgrading Safely](operations/upgrading.md)
 - [Scaling](operations/scaling.md)
+- [Read Replicas](operations/read-replicas.md)
 - [Troubleshooting](operations/troubleshooting.md)
 - [Security](operations/security.md)
 - [Compatibility Matrix](operations/compatibility.md)
@@ -140,6 +146,7 @@
 # Reference
 
 - [SQL Function Reference](reference/sql-functions.md)
+- [SQL API Reference](reference/sql-api.md)
 - [SQL Reference Index](user-guide/sql-reference/index.md)
 - [Triple CRUD](user-guide/sql-reference/triple-crud.md)
 - [Bulk Load](user-guide/sql-reference/bulk-load.md)
@@ -161,13 +168,17 @@
 - [Admin](user-guide/sql-reference/admin.md)
 - [Explain](user-guide/sql-reference/explain.md)
 - [Architecture (Internals)](reference/architecture.md)
+- [Subsystem Dependency Graph](architecture.md)
 - [GUC Reference](reference/guc-reference.md)
+- [Deprecated GUCs](reference/deprecated-gucs.md)
+- [Feature Status Taxonomy](reference/feature-status-taxonomy.md)
 - [Plan Cache](reference/plan-cache.md)
 - [Audit Log](reference/audit-log.md)
 - [Embedding Functions](reference/embedding-functions.md)
 - [GraphRAG Functions](reference/graphrag-functions.md)
 - [GraphRAG Ontology](reference/graphrag-ontology.md)
 - [GeoSPARQL Functions](reference/geosparql.md)
+- [GeoSPARQL Function Index](reference/geosparql-functions.md)
 - [Lattice-Based Datalog](reference/lattice-datalog.md)
 - [HTTP API Reference](reference/http-api.md)
 - [Limits and Quotas](reference/limits.md)
