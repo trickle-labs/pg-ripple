@@ -305,6 +305,12 @@ pub extern "C-unwind" fn pg_ripple_merge_worker_main(arg: pg_sys::Datum) {
                 BackgroundWorker::transaction(|| {
                     crate::temporal_snapshots::prune_expired_snapshots();
                 });
+                // JSON-WRITEBACK-01 (v0.128.0): drain writeback queue.
+                if crate::JSON_WRITEBACK_BATCH_SIZE.get() > 0 {
+                    BackgroundWorker::transaction(|| {
+                        crate::json_mapping::drain_json_writeback_queue();
+                    });
+                }
             }
         }));
 

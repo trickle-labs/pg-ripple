@@ -2328,4 +2328,29 @@ For convenience, here is a summary of all parameters grouped by the most common 
 | `owl_profile` | `RL` | OWL 2 rule set selection |
 | `wfs_max_iterations` | `100` | Well-founded semantics cap |
 
+### JSON Mapping Writeback (v0.128.0)
 
+| Parameter | Default | Purpose |
+|---|---|---|
+| `json_writeback_batch_size` | `100` | Queue rows drained per background merge-worker tick |
+
+---
+
+## `pg_ripple.json_writeback_batch_size`
+
+Controls how many `_pg_ripple.json_writeback_queue` rows the background merge
+worker processes per tick.
+
+| Attribute | Value |
+|---|---|
+| Type | Integer |
+| Default | `100` |
+| Range | `0`–`10000` |
+| Context | `suset` |
+| Since | v0.128.0 |
+
+Set to `0` to disable automatic background draining (rows will accumulate until
+processed manually or via a direct `pg_ripple.writeback_json_row()` call).
+
+Higher values increase writeback throughput at the cost of longer merge-worker
+transactions. The default of 100 is suitable for most workloads.

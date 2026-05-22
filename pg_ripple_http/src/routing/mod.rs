@@ -133,6 +133,8 @@ pub(crate) mod temporal_handlers;
 pub(crate) mod tenant_handlers;
 // v0.126.0 FEAT-03: Per-endpoint federation credential status.
 pub(crate) mod federation_credential_handlers;
+// v0.128.0 JSON-WRITEBACK-01: JSON mapping relational writeback.
+pub(crate) mod json_mapping_handlers;
 
 // Re-export public helpers that arrow_encode.rs and spi_bridge.rs import via
 // `crate::routing::...`.  These functions live in sparql_handlers but are
@@ -422,6 +424,15 @@ pub(crate) fn build_router(state: Arc<AppState>, max_body_bytes: usize, cors: Co
         .route(
             "/federation/{endpoint}/auth-status",
             get(federation_credential_handlers::federation_auth_status),
+        )
+        // v0.128.0 JSON-WRITEBACK-01: JSON mapping relational writeback.
+        .route(
+            "/json-mapping/{name}/writeback",
+            post(json_mapping_handlers::json_mapping_writeback_post),
+        )
+        .route(
+            "/json-mapping/{name}/writeback/status",
+            get(json_mapping_handlers::json_mapping_writeback_status_get),
         )
         .layer(RequestBodyLimitLayer::new(max_body_bytes))
         .layer(cors)

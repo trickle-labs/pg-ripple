@@ -13,6 +13,62 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ---
 
+## [0.128.0] — 2026-05-22 — JSON Mapping Relational Writeback (JSON-WRITEBACK-01)
+
+**Completes the `register_json_mapping` round-trip by adding a relational
+write-back path (RDF → Relational).  Changes to RDF triples can now be
+automatically propagated back to the source relational table via direct SQL
+calls or trigger-based async queueing.**
+
+### Added
+
+- **`pg_ripple.writeback_json_row(mapping TEXT, subject_iri TEXT) → BIGINT`** —
+  exports the subject as JSON using the named mapping context, maps JSON keys to
+  relational columns, and executes an `INSERT … ON CONFLICT` based on the
+  configured conflict policy (`replace`, `skip`, `error`).
+- **`pg_ripple.writeback_json_row_delete(mapping TEXT, subject_iri TEXT) → BIGINT`** —
+  deletes the target relational row using decoded key-column values.
+- **`pg_ripple.enable_json_writeback(mapping TEXT) → VOID`** — installs
+  `AFTER INSERT OR DELETE FOR EACH ROW` triggers on VP delta tables, enqueuing
+  events into `_pg_ripple.json_writeback_queue` for async background processing.
+- **`pg_ripple.disable_json_writeback(mapping TEXT) → VOID`** — drops all
+  writeback triggers; idempotent.
+- **`pg_ripple.json_writeback_status() → TABLE`** — operational view of queue
+  depth, error count, and `last_processed_at` per mapping.
+- **`pg_ripple.json_writeback_batch_size` GUC** (default 100, range 0–10000) —
+  rows drained per background merge-worker tick; set to 0 to disable auto-drain.
+- **`_pg_ripple.json_writeback_queue`** catalog table — asynchronous writeback
+  event queue with `mapping_name`, `subject_id`, `operation`, `queued_at`,
+  `processed_at`, `error`.
+- **`_pg_ripple.json_writeback_enqueue_fn()`** PL/pgSQL trigger function —
+  enqueues VP delta changes into the writeback queue.
+- **Five new columns on `_pg_ripple.json_mappings`**: `writeback_table`,
+  `writeback_schema` (default `'public'`), `writeback_key_columns` (default
+  `{}`), `writeback_conflict_policy` (default `'replace'`),
+  `writeback_enabled` (default `false`).
+- **HTTP `POST /json-mapping/{name}/writeback`** — synchronous single-subject
+  writeback; returns `{"rows_affected": N}`; requires write-auth.
+- **HTTP `GET /json-mapping/{name}/writeback/status`** — queue depth, error
+  count, and `last_error` JSON; requires read-auth.
+- `feature_status()` now includes `'json_mapping_writeback'` entry.
+- Blog post `blog/json-ld-reverse-mapping.md`.
+- Docs page `docs/src/features/json-mapping.md`.
+- GUC docs in `docs/src/reference/guc-reference.md`.
+- 21 pg_regress tests in `tests/pg_regress/sql/v0128_json_writeback.sql`.
+
+### Changed
+
+- Background merge worker (worker 0) now drains `_pg_ripple.json_writeback_queue`
+  after each merge cycle when `json_writeback_batch_size > 0`.
+
+### Migration
+
+- `sql/pg_ripple--0.127.0--0.128.0.sql` — `ALTER TABLE _pg_ripple.json_mappings
+  ADD COLUMN IF NOT EXISTS …`; `CREATE TABLE _pg_ripple.json_writeback_queue`;
+  index on pending rows; `json_writeback_enqueue_fn()` PL/pgSQL trigger function.
+
+---
+
 ## [0.127.0] — 2026-05-21 — pg_tide Relay Migration Cleanup
 
 **Moves relay-facing CDC bridge behavior from the obsolete pg-trickle relay model

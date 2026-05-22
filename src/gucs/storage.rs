@@ -377,3 +377,13 @@ pub static PRIVACY_BUDGET_RESET_INTERVAL: pgrx::GucSetting<Option<std::ffi::CStr
 /// worker on each tick.  Set to 0 to disable automatic GC.
 /// Default: 30. Range: 0–3650. (FEAT-02 v0.125.0)
 pub static SNAPSHOT_RETENTION_DAYS: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(30);
+
+// ─── v0.128.0 GUCs — JSON mapping relational writeback (JSON-WRITEBACK-01) ───
+
+/// GUC: number of `_pg_ripple.json_writeback_queue` rows processed per
+/// background merge-worker tick.  The worker calls
+/// `writeback_json_row()` / `writeback_json_row_delete()` for up to this
+/// many pending rows and updates `processed_at` or `error` on each.
+/// Set to 0 to disable automatic background draining.
+/// Default: 100. Range: 0–10000. (JSON-WRITEBACK-01 v0.128.0)
+pub static JSON_WRITEBACK_BATCH_SIZE: pgrx::GucSetting<i32> = pgrx::GucSetting::<i32>::new(100);

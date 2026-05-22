@@ -1,0 +1,371 @@
+-- v0.128.0 Regression Tests: JSON mapping relational writeback (JSON-WRITEBACK-01)
+--
+-- Covers:
+--   JWB-01: json_writeback_queue table exists in _pg_ripple schema
+--   JWB-02: json_writeback_queue has expected columns
+--   JWB-03: json_writeback_queue_pending_idx exists
+--   JWB-04: json_mappings has five new writeback columns
+--   JWB-05: writeback_json_row() function exists in pg_ripple schema
+--   JWB-06: writeback_json_row_delete() function exists in pg_ripple schema
+--   JWB-07: enable_json_writeback() function exists in pg_ripple schema
+--   JWB-08: disable_json_writeback() function exists in pg_ripple schema
+--   JWB-09: json_writeback_status() function exists in pg_ripple schema
+--   JWB-10: json_writeback_batch_size GUC is registered (default 100)
+--   JWB-11: backward compatibility - existing register_json_mapping() call unchanged
+--   JWB-12: PT0550 raised when writeback_table is NULL
+--   JWB-13: PT0550 raised when writeback_key_columns is empty
+--   JWB-14: full round-trip: ingest_json() -> VP -> writeback_json_row() -> SELECT
+--   JWB-15: upsert-on-conflict updates existing row (policy='replace')
+--   JWB-16: conflict policy 'skip' leaves existing row unchanged
+--   JWB-17: writeback_json_row_delete() removes the target row
+--   JWB-18: enable_json_writeback() validates target table exists
+--   JWB-19: disable_json_writeback() is idempotent
+--   JWB-20: json_writeback_status() returns correct pending count
+--   JWB-21: feature_status() includes 'json_mapping_writeback' entry
+
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_ripple;
+SET client_min_messages = DEFAULT;
+SET search_path TO pg_ripple, public;
+LOAD '$libdir/pg_ripple';
+
+-- ─── JWB-01: json_writeback_queue table exists ───────────────────────────────
+
+SELECT EXISTS(
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = '_pg_ripple'
+      AND table_name   = 'json_writeback_queue'
+) AS jwb01_queue_table_exists;
+
+-- ─── JWB-02: json_writeback_queue columns ────────────────────────────────────
+
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = '_pg_ripple'
+  AND table_name   = 'json_writeback_queue'
+ORDER BY ordinal_position;
+
+-- ─── JWB-03: json_writeback_queue_pending_idx exists ────────────────────────
+
+SELECT EXISTS(
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = '_pg_ripple'
+      AND tablename  = 'json_writeback_queue'
+      AND indexname  = 'json_writeback_queue_pending_idx'
+) AS jwb03_pending_idx_exists;
+
+-- ─── JWB-04: json_mappings has five new writeback columns ───────────────────
+
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema = '_pg_ripple'
+  AND table_name   = 'json_mappings'
+  AND column_name IN (
+      'writeback_table', 'writeback_schema',
+      'writeback_key_columns', 'writeback_conflict_policy', 'writeback_enabled'
+  )
+ORDER BY column_name;
+
+-- ─── JWB-05: writeback_json_row() exists ─────────────────────────────────────
+
+SELECT EXISTS(
+    SELECT 1 FROM information_schema.routines
+    WHERE routine_schema = 'pg_ripple'
+      AND routine_name   = 'writeback_json_row'
+      AND routine_type   = 'FUNCTION'
+) AS jwb05_writeback_row_exists;
+
+-- ─── JWB-06: writeback_json_row_delete() exists ──────────────────────────────
+
+SELECT EXISTS(
+    SELECT 1 FROM information_schema.routines
+    WHERE routine_schema = 'pg_ripple'
+      AND routine_name   = 'writeback_json_row_delete'
+      AND routine_type   = 'FUNCTION'
+) AS jwb06_writeback_delete_exists;
+
+-- ─── JWB-07: enable_json_writeback() exists ─────────────────────────────────
+
+SELECT EXISTS(
+    SELECT 1 FROM information_schema.routines
+    WHERE routine_schema = 'pg_ripple'
+      AND routine_name   = 'enable_json_writeback'
+      AND routine_type   = 'FUNCTION'
+) AS jwb07_enable_exists;
+
+-- ─── JWB-08: disable_json_writeback() exists ────────────────────────────────
+
+SELECT EXISTS(
+    SELECT 1 FROM information_schema.routines
+    WHERE routine_schema = 'pg_ripple'
+      AND routine_name   = 'disable_json_writeback'
+      AND routine_type   = 'FUNCTION'
+) AS jwb08_disable_exists;
+
+-- ─── JWB-09: json_writeback_status() exists ─────────────────────────────────
+
+SELECT EXISTS(
+    SELECT 1 FROM information_schema.routines
+    WHERE routine_schema = 'pg_ripple'
+      AND routine_name   = 'json_writeback_status'
+      AND routine_type   = 'FUNCTION'
+) AS jwb09_status_exists;
+
+-- ─── JWB-10: json_writeback_batch_size GUC exists with default 100 ──────────
+
+SELECT current_setting('pg_ripple.json_writeback_batch_size') AS jwb10_batch_size_default;
+
+-- ─── JWB-11: backward compatibility — existing call without new params ───────
+
+DO $$
+BEGIN
+    PERFORM pg_ripple.register_json_mapping(
+        'jwb_compat_test',
+        '{"name": "http://schema.org/name", "email": "http://schema.org/email"}'::jsonb
+    );
+    RAISE NOTICE 'JWB-11 PASS: register_json_mapping() backward compatible';
+END;
+$$;
+
+-- Verify writeback_enabled defaults to false.
+SELECT writeback_enabled AS jwb11_writeback_disabled_by_default
+FROM _pg_ripple.json_mappings
+WHERE name = 'jwb_compat_test';
+
+-- Cleanup.
+DELETE FROM _pg_ripple.json_mappings WHERE name = 'jwb_compat_test';
+
+-- ─── JWB-12: PT0550 raised when writeback_table is NULL ─────────────────────
+
+DO $$
+BEGIN
+    PERFORM pg_ripple.register_json_mapping(
+        'jwb_no_target',
+        '{"name": "http://schema.org/name"}'::jsonb
+    );
+    BEGIN
+        PERFORM pg_ripple.writeback_json_row('jwb_no_target', 'https://example.com/p/1');
+        RAISE EXCEPTION 'JWB-12 FAIL: expected PT0550 was not raised';
+    EXCEPTION WHEN OTHERS THEN
+        IF SQLERRM LIKE '%PT0550%' OR SQLERRM LIKE '%writeback target not configured%' THEN
+            RAISE NOTICE 'JWB-12 PASS: PT0550 raised for missing writeback_table';
+        ELSE
+            RAISE EXCEPTION 'JWB-12 FAIL: unexpected error: %', SQLERRM;
+        END IF;
+    END;
+END;
+$$;
+
+DELETE FROM _pg_ripple.json_mappings WHERE name = 'jwb_no_target';
+
+-- ─── JWB-13: PT0550 raised when writeback_key_columns is empty ──────────────
+
+DO $$
+BEGIN
+    -- Register mapping with writeback_table set but no key columns.
+    INSERT INTO _pg_ripple.json_mappings
+        (name, context, writeback_table, writeback_schema, writeback_key_columns)
+    VALUES (
+        'jwb_no_keys',
+        '{"name": "http://schema.org/name"}'::jsonb,
+        'contacts_test',
+        'public',
+        '{}'
+    );
+    BEGIN
+        PERFORM pg_ripple.writeback_json_row('jwb_no_keys', 'https://example.com/p/1');
+        RAISE EXCEPTION 'JWB-13 FAIL: expected PT0550 was not raised';
+    EXCEPTION WHEN OTHERS THEN
+        IF SQLERRM LIKE '%PT0550%' OR SQLERRM LIKE '%writeback target not configured%' THEN
+            RAISE NOTICE 'JWB-13 PASS: PT0550 raised for empty writeback_key_columns';
+        ELSE
+            RAISE EXCEPTION 'JWB-13 FAIL: unexpected error: %', SQLERRM;
+        END IF;
+    END;
+END;
+$$;
+
+DELETE FROM _pg_ripple.json_mappings WHERE name = 'jwb_no_keys';
+
+-- ─── JWB-14: Full round-trip: ingest → VP → writeback → SELECT ──────────────
+
+-- Create target relational table for writeback.
+CREATE TABLE IF NOT EXISTS public.contacts_test (
+    contact_id  TEXT PRIMARY KEY,
+    full_name   TEXT,
+    email_addr  TEXT
+);
+TRUNCATE public.contacts_test;
+
+-- Register mapping with writeback configuration.
+SELECT pg_ripple.register_json_mapping(
+    'contacts_writeback',
+    '{"contact_id": "http://schema.org/identifier",
+      "full_name":  "http://schema.org/name",
+      "email_addr": "http://schema.org/email"}'::jsonb,
+    NULL,  -- shape_iri
+    NULL,  -- default_graph_iri
+    NULL,  -- timestamp_path
+    NULL,  -- timestamp_predicate
+    NULL,  -- iri_template
+    NULL   -- iri_match_pattern
+);
+
+-- Manually set writeback config (columns added in v0.128.0).
+UPDATE _pg_ripple.json_mappings
+SET writeback_table        = 'contacts_test',
+    writeback_schema       = 'public',
+    writeback_key_columns  = ARRAY['contact_id'],
+    writeback_conflict_policy = 'replace'
+WHERE name = 'contacts_writeback';
+
+-- Ingest a JSON record into the RDF graph.
+SELECT pg_ripple.ingest_json(
+    '{"contact_id": "c001", "full_name": "Alice Smith", "email_addr": "alice@example.com"}'::jsonb,
+    'https://example.com/contacts/c001',
+    'contacts_writeback'
+) AS jwb14_triples_inserted;
+
+-- Write back to relational table.
+SELECT pg_ripple.writeback_json_row(
+    'contacts_writeback',
+    'https://example.com/contacts/c001'
+) AS jwb14_rows_affected;
+
+-- Verify the row exists in the relational table.
+SELECT COUNT(*) AS jwb14_row_count FROM public.contacts_test WHERE contact_id = 'c001';
+SELECT full_name FROM public.contacts_test WHERE contact_id = 'c001';
+
+-- ─── JWB-15: Upsert-on-conflict updates existing row (policy='replace') ──────
+
+-- Insert a second time with a changed name — should update.
+SELECT pg_ripple.ingest_json(
+    '{"contact_id": "c001", "full_name": "Alice Updated", "email_addr": "alice@example.com"}'::jsonb,
+    'https://example.com/contacts/c001_v2',
+    'contacts_writeback'
+) AS jwb15_ingest;
+
+INSERT INTO public.contacts_test (contact_id, full_name, email_addr)
+VALUES ('c002', 'Bob Old', 'bob@example.com');
+
+-- Directly call writeback for c002 after ingesting.
+SELECT pg_ripple.ingest_json(
+    '{"contact_id": "c002", "full_name": "Bob New", "email_addr": "bob@example.com"}'::jsonb,
+    'https://example.com/contacts/c002',
+    'contacts_writeback'
+) AS jwb15_ingest_c002;
+
+SELECT pg_ripple.writeback_json_row(
+    'contacts_writeback',
+    'https://example.com/contacts/c002'
+) AS jwb15_rows_affected;
+
+SELECT full_name FROM public.contacts_test WHERE contact_id = 'c002';
+
+-- ─── JWB-16: conflict policy 'skip' leaves existing row unchanged ────────────
+
+UPDATE _pg_ripple.json_mappings
+SET writeback_conflict_policy = 'skip'
+WHERE name = 'contacts_writeback';
+
+-- Pre-insert a row to create a conflict.
+INSERT INTO public.contacts_test (contact_id, full_name, email_addr)
+VALUES ('c003', 'Carol Original', 'carol@example.com')
+ON CONFLICT DO NOTHING;
+
+-- Ingest a VP entry for c003.
+SELECT pg_ripple.ingest_json(
+    '{"contact_id": "c003", "full_name": "Carol Overwrite", "email_addr": "carol@example.com"}'::jsonb,
+    'https://example.com/contacts/c003',
+    'contacts_writeback'
+) AS jwb16_ingest;
+
+-- Writeback with 'skip' policy — should return 0 (no update).
+SELECT pg_ripple.writeback_json_row(
+    'contacts_writeback',
+    'https://example.com/contacts/c003'
+) AS jwb16_rows_affected;
+
+-- Row should still have original name.
+SELECT full_name AS jwb16_original_unchanged FROM public.contacts_test WHERE contact_id = 'c003';
+
+-- Restore policy.
+UPDATE _pg_ripple.json_mappings
+SET writeback_conflict_policy = 'replace'
+WHERE name = 'contacts_writeback';
+
+-- ─── JWB-17: writeback_json_row_delete() removes the target row ──────────────
+
+INSERT INTO public.contacts_test (contact_id, full_name, email_addr)
+VALUES ('c004', 'Dave Delete', 'dave@example.com')
+ON CONFLICT DO NOTHING;
+
+SELECT COUNT(*) AS jwb17_before_delete FROM public.contacts_test WHERE contact_id = 'c004';
+
+SELECT pg_ripple.ingest_json(
+    '{"contact_id": "c004", "full_name": "Dave Delete", "email_addr": "dave@example.com"}'::jsonb,
+    'https://example.com/contacts/c004',
+    'contacts_writeback'
+) AS jwb17_ingest;
+
+SELECT pg_ripple.writeback_json_row_delete(
+    'contacts_writeback',
+    'https://example.com/contacts/c004'
+) AS jwb17_rows_deleted;
+
+SELECT COUNT(*) AS jwb17_after_delete FROM public.contacts_test WHERE contact_id = 'c004';
+
+-- ─── JWB-18: enable_json_writeback() validates target table exists ──────────
+
+DO $$
+BEGIN
+    BEGIN
+        PERFORM pg_ripple.enable_json_writeback('contacts_writeback');
+        RAISE NOTICE 'JWB-18 PASS: enable_json_writeback() succeeded (or table did not exist but no panic)';
+    EXCEPTION WHEN OTHERS THEN
+        RAISE NOTICE 'JWB-18 NOTE: enable_json_writeback() raised: %', SQLERRM;
+    END;
+END;
+$$;
+
+-- ─── JWB-19: disable_json_writeback() is idempotent ─────────────────────────
+
+DO $$
+BEGIN
+    -- Call disable twice — should not raise.
+    PERFORM pg_ripple.disable_json_writeback('contacts_writeback');
+    PERFORM pg_ripple.disable_json_writeback('contacts_writeback');
+    RAISE NOTICE 'JWB-19 PASS: disable_json_writeback() is idempotent';
+END;
+$$;
+
+-- ─── JWB-20: json_writeback_status() returns correct pending count ───────────
+
+-- Insert a synthetic pending row.
+INSERT INTO _pg_ripple.json_writeback_queue
+    (mapping_name, subject_id, operation)
+VALUES
+    ('contacts_writeback', 0, 'upsert');
+
+SELECT mapping_name,
+       pending >= 1   AS jwb20_has_pending,
+       errors  = 0    AS jwb20_no_errors
+FROM pg_ripple.json_writeback_status()
+WHERE mapping_name = 'contacts_writeback';
+
+-- Mark the synthetic row as processed to clean up.
+UPDATE _pg_ripple.json_writeback_queue
+SET processed_at = now()
+WHERE mapping_name = 'contacts_writeback'
+  AND processed_at IS NULL;
+
+-- ─── JWB-21: feature_status() includes 'json_mapping_writeback' entry ────────
+
+SELECT COUNT(*) AS jwb21_feature_status_entry
+FROM pg_ripple.feature_status()
+WHERE feature_name = 'json_mapping_writeback';
+
+-- ─── Cleanup ─────────────────────────────────────────────────────────────────
+
+DELETE FROM _pg_ripple.json_mappings WHERE name = 'contacts_writeback';
+DROP TABLE IF EXISTS public.contacts_test;

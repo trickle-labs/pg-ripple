@@ -418,4 +418,19 @@ pub(super) fn register_late() {
         GucContext::Suset,
         GucFlags::default(),
     );
+
+    // ── v0.128.0 GUCs — JSON mapping relational writeback (JSON-WRITEBACK-01) ─
+
+    pgrx::GucRegistry::define_int_guc(
+        c"pg_ripple.json_writeback_batch_size",
+        c"Number of _pg_ripple.json_writeback_queue rows processed per \
+          background merge-worker tick. Set to 0 to disable automatic background \
+          draining. Default: 100. Range: 0-10000. (JSON-WRITEBACK-01 v0.128.0)",
+        c"",
+        &crate::gucs::storage::JSON_WRITEBACK_BATCH_SIZE,
+        0,
+        10_000,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
 }

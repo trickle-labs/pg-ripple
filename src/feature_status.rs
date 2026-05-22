@@ -463,6 +463,24 @@ mod pg_ripple {
                 Some("docs/src/features/loading-data.md".to_string()),
                 Some("src/json_mapping.rs".to_string()),
             ),
+            // ── JSON mapping relational writeback (v0.128.0 JSON-WRITEBACK-01) ─
+            (
+                "json_mapping_writeback".to_string(),
+                "implemented".to_string(),
+                None,
+                Some(
+                    "JSON-WRITEBACK-01 (v0.128.0): writeback_json_row() / \
+                     writeback_json_row_delete() propagate RDF graph changes back to \
+                     the source relational table. enable_json_writeback() installs VP \
+                     delta triggers for automatic async queueing. \
+                     Conflict policies: replace (upsert), skip, error. \
+                     GUC: pg_ripple.json_writeback_batch_size (default 100)."
+                        .to_string(),
+                ),
+                Some("ci/regress: v0128_json_writeback.sql".to_string()),
+                Some("docs/src/features/json-mapping.md".to_string()),
+                Some("src/json_mapping.rs".to_string()),
+            ),
             // ── VP promotion recovery monitoring (v0.74.0 PROMO-RECOVER-01) ──
             (
                 "vp_promotion_recovery".to_string(),
