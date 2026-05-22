@@ -236,12 +236,12 @@ default_pool_size = 20
 | Concurrent SPARQL queries | Hundreds (with pooler) | Bound by `max_connections` and CPU |
 | Write throughput | ~50K–200K triples/sec (bulk load) | Single-writer architecture |
 | Read replicas | Unlimited | Standard PG replication |
-| Cross-node sharding | **Supported** (Citus 12+, v0.58.0+) | Subject-hash distribution; see [Citus sharding](citus-sharding.md) |
+| Cross-node sharding | **Supported** (Citus 12+, v0.58.0+) | Subject-hash distribution; see [Citus integration](citus-integration.md) |
 | Multi-primary writes | **Not supported** | PostgreSQL limitation |
 | Federation | Supported (SERVICE clause) | Remote endpoints add latency |
 
 ```admonish tip title="Horizontal sharding with Citus"
-pg_ripple v0.58.0+ supports distributing VP tables across Citus worker nodes. Triples are hash-sharded by subject ID so star-pattern queries co-locate on a single worker. v0.59.0 adds SPARQL shard-pruning (10–100× speedup for bound-subject queries). See [Citus Horizontal Sharding](citus-sharding.md) for setup instructions.
+pg_ripple v0.58.0+ supports distributing VP tables across Citus worker nodes. Triples are hash-sharded by subject ID so star-pattern queries co-locate on a single worker. v0.59.0 adds SPARQL shard-pruning (10–100× speedup for bound-subject queries). See [Citus integration](citus-integration.md) for setup instructions.
 ```
 
 ---

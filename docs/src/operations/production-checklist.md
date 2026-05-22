@@ -55,7 +55,7 @@ Use this checklist before deploying pg_ripple to production. Each item links to 
 ## Optional Components
 
 - [ ] **pgvector** installed if using vector/hybrid search — `CREATE EXTENSION vector` ([Vector Search](../features/vector-and-hybrid-search.md))
-- [ ] **pg_trickle** installed if using live views or CDC bridge — ([CDC Operations](cdc.md))
+- [ ] **pg_trickle** installed if using live views; **pg_tide** installed if using the CDC bridge or relay outboxes — ([CDC Operations](cdc.md))
 - [ ] **PostGIS** installed if using GeoSPARQL — ([GeoSPARQL](../features/geospatial.md))
 
 ## Smoke Test

@@ -69,6 +69,28 @@ Perform these steps in order.
 
    All five must pass with zero warnings and zero failures.
 
+2. **Documentation validation**
+
+   Run the full docs check before tagging:
+
+   ```bash
+   just docs-check
+   mdbook build docs
+   ```
+
+   Verify:
+   - `just docs-check-links` exits 0 (no broken local links).
+   - `just docs-check-summary` exits 0 (no orphan pages).
+   - `just docs-check-http-routes` lists no undocumented routes.
+   - `just docs-check-guc-drift` lists no missing GUCs with significant defaults.
+   - New HTTP routes added in this version appear in `docs/src/reference/http-api.md`.
+   - New GUCs added in this version appear in `docs/src/reference/guc-reference.md`
+     and `docs/gucs.md`.
+   - New public SQL functions appear in `docs/src/reference/sql-api.md` or are
+     explicitly marked as internal/admin.
+   - The migration script has upgrade docs if it changes user-visible schema.
+   - `CHANGELOG.md` links to any new user-facing docs pages.
+
 2. **Tag the release**
 
    Before tagging, verify the version bump and compatibility constant are correct:

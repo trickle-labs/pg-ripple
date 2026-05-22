@@ -1,9 +1,9 @@
-# Citus + pg_ripple + pg-trickle: End-to-End Integration Guide
+# Citus + pg_ripple: End-to-End Integration Guide
 
 > **Version**: v0.59.0 (CITUS-15)
 >
 > This guide covers deploying pg_ripple with Citus horizontal sharding and
-> pg-trickle CDC replication in a multi-worker environment.  It assumes you
+> optional CDC/IVM compatibility in a multi-worker environment. It assumes you
 > have already read the [Citus Integration](citus-integration.md) page.
 
 ---
@@ -17,7 +17,7 @@ The v0.58.0 + v0.59.0 releases complete the Citus sharding story:
 | VP table distribution | v0.58.0 | `enable_citus_sharding()` distributes VP delta tables |
 | Merge fence advisory lock | v0.58.0 | Prevents split-brain during rebalancing |
 | SPARQL shard-pruning | v0.59.0 | Bound-subject queries target one shard (10–100×) |
-| Rebalance NOTIFY | v0.59.0 | `merge_start`/`merge_end` signals for pg-trickle |
+| Rebalance NOTIFY | v0.59.0 | `merge_start`/`merge_end` signals for downstream maintenance hooks |
 | `explain_sparql` Citus section | v0.59.0 | Verify pruning with `EXPLAIN` |
 | `citus_rebalance_progress()` | v0.59.0 | Observe live rebalance status |
 
@@ -27,8 +27,8 @@ The v0.58.0 + v0.59.0 releases complete the Citus sharding story:
 
 1. **Citus 12+** installed on coordinator and all workers.
 2. **pg_ripple 0.59.0** installed on the coordinator.
-3. **pg-trickle 0.34.0+** (optional, for CDC streaming) with `handle_vp_promoted` 
-   wiring configured.
+3. Optional companions as needed: **pg_trickle 0.46.0+** for IVM-backed views,
+  and **pg_tide 0.33.0+** for relay/outbox CDC transport.
 
 ---
 
@@ -47,7 +47,7 @@ SELECT pg_ripple.citus_available();  -- returns true
 
 ```sql
 ALTER SYSTEM SET pg_ripple.citus_sharding_enabled = on;
--- Enable pg-trickle co-location compatibility (prevents cross-shard deletes):
+-- Enable legacy CDC/IVM co-location compatibility (prevents cross-shard deletes):
 ALTER SYSTEM SET pg_ripple.citus_trickle_compat = on;
 SELECT pg_reload_conf();
 ```
@@ -62,9 +62,9 @@ FROM pg_ripple.enable_citus_sharding();
 ```
 
 This performs for each VP delta table:
-1. `ALTER TABLE … REPLICA IDENTITY FULL` (required for pg-trickle logical replication)
+1. `ALTER TABLE … REPLICA IDENTITY FULL` (required for logical replication consumers)
 2. `create_distributed_table(…, 's', colocate_with => 'none')` (or `'default'`)
-3. `pg_notify('pg_ripple.vp_promoted', …)` — pg-trickle creates per-shard slots
+3. `pg_notify('pg_ripple.vp_promoted', …)` — downstream maintenance hooks can react
 
 ## Step 4: Verify shard-pruning (v0.59.0)
 
@@ -126,8 +126,8 @@ LISTEN "pg_ripple.merge_end";
 | GUC | Default | Description |
 |-----|---------|-------------|
 | `pg_ripple.citus_sharding_enabled` | `off` | Enable Citus shard distribution for VP tables |
-| `pg_ripple.citus_trickle_compat` | `off` | Use `colocate_with => 'none'` for pg-trickle CDC |
-| `pg_ripple.merge_fence_timeout_ms` | `0` | Max ms to wait for merge fence (0 = block indefinitely) |
+| `pg_ripple.citus_trickle_compat` | `off` | Use `colocate_with => 'none'` for legacy CDC/IVM compatibility |
+| `pg_ripple.merge_fence_timeout_ms` | `0` | Max ms to wait for merge fence (0 = no fence) |
 
 ---
 

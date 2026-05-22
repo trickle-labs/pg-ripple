@@ -33,67 +33,118 @@ Read-only endpoints (`GET /health`, `GET /metrics`, `GET /openapi.yaml`) do not 
 | `PG_RIPPLE_HTTP_PORT` | `7878` | TCP listening port |
 | `PG_RIPPLE_HTTP_POOL_SIZE` | `16` | PostgreSQL connection pool size |
 | `PG_RIPPLE_HTTP_AUTH_TOKEN` | *(none)* | Bearer token; set to enable auth |
-| `PG_RIPPLE_HTTP_RATE_LIMIT` | `0` | Per-IP rate limit (req/s; 0 = unlimited) |
-| `PG_RIPPLE_HTTP_CORS_ORIGINS` | `*` | Comma-separated allowed CORS origins |
+| `PG_RIPPLE_HTTP_DATALOG_WRITE_TOKEN` | *(falls back to auth token)* | Optional separate token for mutating Datalog/rule endpoints |
+| `PG_RIPPLE_HTTP_RATE_LIMIT` | `100` | Per-IP rate limit (req/s; 0 = unlimited) |
+| `PG_RIPPLE_HTTP_CORS_ORIGINS` | `''` | Comma-separated allowed CORS origins; `*` enables permissive CORS |
 | `PG_RIPPLE_HTTP_MAX_BODY_BYTES` | `10485760` | Max request body size (10 MiB) |
 | `PG_RIPPLE_HTTP_SKIP_COMPAT_CHECK` | *(unset)* | Set to `1` to skip extension version check |
+| `PG_RIPPLE_HTTP_STRICT_COMPAT` | *(unset)* | Set to `1` to fail startup on incompatible extension versions |
+| `PG_RIPPLE_HTTP_METRICS_TOKEN` | *(none)* | Optional bearer token for `/metrics` |
+| `PG_RIPPLE_HTTP_AUTH_REALM` | `pg_ripple` | `WWW-Authenticate` realm for 401 responses |
+| `PG_RIPPLE_HTTP_REPLICA_DSN` | *(none)* | Optional read-replica PostgreSQL DSN |
+| `PG_RIPPLE_HTTP_TRUST_PROXY` | *(none)* | Trusted upstream proxy IP/CIDR list for forwarded headers |
+| `PG_RIPPLE_HTTP_CA_BUNDLE` | *(system roots)* | Extra CA bundle for outbound HTTPS clients |
+| `PG_RIPPLE_HTTP_PIN_FINGERPRINTS` | *(none)* | Optional pinned TLS certificate fingerprints |
+| `PG_RIPPLE_HTTP_SHUTDOWN_TIMEOUT_SECS` | `30` | Graceful shutdown timeout |
+| `ARROW_FLIGHT_SECRET` | *(none)* | HMAC secret for Arrow Flight tickets |
+| `ARROW_UNSIGNED_TICKETS_ALLOWED` | `false` | Allow unsigned Arrow tickets for local development |
+| `ARROW_NONCE_CACHE_MAX` | `10000` | Replay-protection nonce cache size |
 
 ---
 
 ## Complete Endpoint Reference
 
+`Read` and `Write` mean the endpoint calls the HTTP companion's read or write
+authentication check when `PG_RIPPLE_HTTP_AUTH_TOKEN` is configured. `None` means
+the endpoint is intentionally unauthenticated.
+
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/sparql` | Optional | SPARQL 1.1 query via URL parameters |
-| `POST` | `/sparql` | Optional | SPARQL 1.1 query/update via request body |
-| `POST` | `/sparql/stream` | Optional | Streaming SPARQL SELECT (SSE) |
-| `POST` | `/rag` | Optional | RAG retrieval / NL-to-SPARQL |
+| `GET` | `/sparql` | Read | SPARQL 1.1 query via URL parameters |
+| `POST` | `/sparql` | Query-dependent | SPARQL 1.1 query/update via request body; updates require write auth |
+| `POST` | `/sparql/stream` | Read | Streaming SPARQL SELECT (SSE) |
+| `POST` | `/rag` | Read | RAG retrieval / NL-to-SPARQL |
 | `GET` | `/health` | None | Liveness probe |
-| `GET` | `/ready` | None | Readiness probe (alias) |
-| `GET` | `/health/ready` | None | Readiness probe |
-| `GET` | `/metrics` | None | Prometheus metrics |
+| `GET` | `/ready` | None | Kubernetes readiness probe |
+| `GET` | `/health/ready` | None | Deep extension readiness probe |
+| `GET` | `/metrics` | None or metrics token | Prometheus metrics |
 | `GET` | `/metrics/extension` | None | Extension-internal Prometheus metrics |
 | `GET` | `/void` | None | VoID dataset description |
 | `GET` | `/service` | None | SPARQL service description |
 | `GET` | `/openapi.yaml` | None | OpenAPI 3.1 specification |
-| `GET` | `/explorer` | None | Web-based SPARQL explorer UI |
-| `POST` | `/flight/do_get` | Required | Arrow Flight bulk export |
-| `GET` | `/subscribe/{id}` | Optional | SSE subscription stream |
-| `GET` | `/datalog/rules` | Optional | List Datalog rule sets |
-| `GET/DELETE` | `/datalog/rules/{rule_set}` | Required | Get or drop a rule set |
-| `GET` | `/datalog/rules/{rule_set}/builtin` | Optional | Get built-in rules for a rule set |
-| `POST` | `/datalog/rules/{rule_set}/add` | Required | Add a rule to a rule set |
-| `POST` | `/datalog/rules/{rule_set}/enable` | Required | Enable a rule set |
-| `POST` | `/datalog/rules/{rule_set}/disable` | Required | Disable a rule set |
-| `DELETE` | `/datalog/rules/{rule_set}/{rule_id}` | Required | Delete a specific rule |
-| `POST` | `/datalog/infer/{rule_set}` | Required | Run forward-chaining inference |
-| `POST` | `/datalog/infer/{rule_set}/agg` | Required | Run inference with aggregation |
-| `POST` | `/datalog/infer/{rule_set}/wfs` | Required | Run well-founded semantics inference |
-| `POST` | `/datalog/infer/{rule_set}/demand` | Required | Goal-directed demand inference |
-| `POST` | `/datalog/infer/{rule_set}/lattice` | Required | Lattice-based inference |
-| `GET` | `/datalog/infer/{rule_set}/stats` | Optional | Inference stats for rule set |
-| `POST` | `/datalog/query/{rule_set}` | Optional | Goal-directed Datalog query |
-| `GET` | `/datalog/constraints` | Optional | Check all constraint rules |
-| `GET` | `/datalog/constraints/{rule_set}` | Optional | Check constraints for one rule set |
-| `GET` | `/datalog/stats/cache` | Optional | Rule plan cache statistics |
-| `GET` | `/datalog/stats/tabling` | Optional | Tabling cache statistics |
-| `GET` | `/datalog/lattices` | Optional | List active lattice structures |
-| `GET` | `/datalog/views` | Optional | List Datalog-backed views |
-| `DELETE` | `/datalog/views/{name}` | Required | Drop a Datalog-backed view |
-| `POST` | `/pagerank/run` | Required | Start PageRank computation |
-| `GET` | `/pagerank/status` | Optional | PageRank computation status |
-| `GET` | `/pagerank/results` | Optional | Retrieve PageRank scores |
-| `GET` | `/pagerank/export` | Optional | Export PageRank scores |
-| `GET` | `/pagerank/explain/{node_iri}` | Optional | Explain PageRank score for a node |
-| `GET` | `/pagerank/queue-stats` | Optional | PageRank queue statistics |
-| `POST` | `/pagerank/vacuum-dirty` | Required | Vacuum stale PageRank rows |
-| `POST` | `/centrality/run` | Required | Compute centrality metrics |
-| `GET` | `/centrality/results` | Optional | Retrieve centrality results |
-| `POST` | `/pagerank/find-duplicates` | Optional | Find near-duplicate nodes |
-| `POST` | `/confidence/load` | Required | Load triples with confidence scores |
-| `GET` | `/confidence/shacl-score` | Optional | Get SHACL soft-validation scores |
-| `GET` | `/confidence/shacl-report` | Optional | Get scored SHACL validation report |
-| `POST` | `/confidence/vacuum` | Required | Vacuum stale confidence rows |
+| `GET` | `/explorer` | Read | Web-based SPARQL explorer UI |
+| `GET` | `/admin/bench-history` | Write | Recent benchmark history from `_pg_ripple.bench_history` |
+| `GET` | `/admin/diagnostic-snapshot` | Write | Diagnostic bundle with schema, GUC, version, and metrics data |
+| `POST` | `/flight/do_get` | Write | Arrow Flight bulk export |
+| `GET` | `/subscribe/{subscription_id}` | Read | Live SPARQL subscription SSE stream |
+| `GET` | `/datalog/rules` | Read | List Datalog rule sets |
+| `POST/DELETE` | `/datalog/rules/{rule_set}` | Write | Load or drop a rule set |
+| `POST` | `/datalog/rules/{rule_set}/builtin` | Write | Load built-in rules for a rule set |
+| `POST` | `/datalog/rules/{rule_set}/add` | Write | Add a rule to a rule set |
+| `PUT` | `/datalog/rules/{rule_set}/enable` | Write | Enable a rule set |
+| `PUT` | `/datalog/rules/{rule_set}/disable` | Write | Disable a rule set |
+| `DELETE` | `/datalog/rules/{rule_set}/{rule_id}` | Write | Delete a specific rule |
+| `POST` | `/datalog/infer/{rule_set}` | Write | Run forward-chaining inference |
+| `POST` | `/datalog/infer/{rule_set}/stats` | Write | Run inference and return stats |
+| `POST` | `/datalog/infer/{rule_set}/agg` | Write | Run inference with aggregation |
+| `POST` | `/datalog/infer/{rule_set}/wfs` | Write | Run well-founded semantics inference |
+| `POST` | `/datalog/infer/{rule_set}/demand` | Write | Goal-directed demand inference |
+| `POST` | `/datalog/infer/{rule_set}/lattice` | Write | Lattice-based inference |
+| `POST` | `/datalog/query/{rule_set}` | Read | Goal-directed Datalog query |
+| `GET` | `/datalog/constraints` | Read | Check all constraint rules |
+| `GET` | `/datalog/constraints/{rule_set}` | Read | Check constraints for one rule set |
+| `GET` | `/datalog/stats/cache` | Read | Rule plan cache statistics |
+| `GET` | `/datalog/stats/tabling` | Read | Tabling cache statistics |
+| `GET/POST` | `/datalog/lattices` | Read/Write | List or create lattice structures |
+| `GET/POST` | `/datalog/views` | Read/Write | List or create Datalog-backed views |
+| `DELETE` | `/datalog/views/{name}` | Write | Drop a Datalog-backed view |
+| `POST` | `/pagerank/run` | Write | Start PageRank computation |
+| `GET` | `/pagerank/status` | Read | PageRank computation status |
+| `GET` | `/pagerank/results` | Read | Retrieve PageRank scores |
+| `GET` | `/pagerank/export` | Read | Export PageRank scores |
+| `GET` | `/pagerank/explain/{node_iri}` | Read | Explain PageRank score for a node |
+| `GET` | `/pagerank/queue-stats` | Read | PageRank queue statistics |
+| `POST` | `/pagerank/vacuum-dirty` | Write | Vacuum stale PageRank rows |
+| `POST` | `/centrality/run` | Write | Compute centrality metrics |
+| `GET` | `/centrality/results` | Read | Retrieve centrality results |
+| `POST` | `/pagerank/find-duplicates` | Read | Find near-duplicate nodes |
+| `POST` | `/confidence/load` | Write | Load triples with confidence scores |
+| `GET` | `/confidence/shacl-score` | Read | Get SHACL soft-validation scores |
+| `GET` | `/confidence/shacl-report` | Read | Get scored SHACL validation report |
+| `POST` | `/confidence/vacuum` | Write | Vacuum stale confidence rows |
+| `POST` | `/confidence/update` | Write | Run Bayesian confidence update |
+| `POST` | `/confidence/bulk-update` | Write | Bulk confidence update |
+| `POST` | `/explain` | Read | Natural-language explanation of a query or result |
+| `GET` | `/explain` | Read | Explanation endpoint metadata/query form |
+| `POST` | `/hypothetical` | Write | What-if reasoning against hypothetical facts |
+| `GET` | `/rule-conflicts/{ruleset}` | Read | Detect rule conflicts in a rule set |
+| `GET` | `/rule-libraries` | Read | List rule libraries |
+| `GET` | `/rule-libraries/{name}/stream` | Read | Stream a published rule library |
+| `POST` | `/rule-libraries/{name}/subscribe` | Write | Subscribe to a remote rule library stream |
+| `POST` | `/rules/draft` | Write | Draft rules from natural-language guidance |
+| `POST` | `/rules/validate` | Write | Validate a drafted rule |
+| `GET` | `/rules/{id}/explain` | Read | Explain a rule by ID |
+| `GET/POST` | `/temporal/mark` | Read/Write | List or mark temporal predicates |
+| `POST` | `/temporal/point_in_time` | Write | Set point-in-time temporal context |
+| `GET` | `/temporal/facts` | Read | List temporal facts |
+| `GET` | `/temporal/graphs/{iri}/snapshot` | Read | Materialize a point-in-time graph snapshot |
+| `GET` | `/temporal/graphs/{iri}/diff` | Read | Diff a named graph between two timestamps |
+| `POST` | `/pprl/bloom_encode` | Write | Privacy-preserving Bloom encoding |
+| `POST` | `/pprl/dice_similarity` | Read | Dice similarity over encoded values |
+| `POST` | `/dp/noisy_count` | Read | Differential privacy noisy count |
+| `POST` | `/dp/noisy_histogram` | Read | Differential privacy noisy histogram |
+| `GET` | `/dp/budget/{dataset}/{principal}` | Read | Privacy budget status |
+| `POST` | `/entity-resolution/resolve` | Write | Run entity resolution |
+| `POST` | `/entity-resolution/evaluate` | Read | Evaluate entity-resolution output |
+| `POST` | `/entity-resolution/monitoring/enable` | Write | Enable entity-resolution monitoring |
+| `POST` | `/entity-resolution/monitoring/disable` | Write | Disable entity-resolution monitoring |
+| `GET` | `/proof-tree/{subject}/{predicate}/{object}` | Read | Explain derivation/proof tree for a triple |
+| `GET/POST` | `/tenants` | Read/Write | List or create tenants |
+| `GET/DELETE` | `/tenants/{name}` | Read/Write | Get or delete a tenant |
+| `GET/POST` | `/tenants/{name}/quota` | Read/Write | Get or update tenant quota |
+| `GET` | `/federation/{endpoint}/auth-status` | Write | Per-endpoint federation credential status |
+| `POST` | `/json-mapping/{name}/writeback` | Write | Synchronous JSON mapping relational writeback |
+| `GET` | `/json-mapping/{name}/writeback/status` | Read | JSON mapping writeback queue status |
 
 ---
 
@@ -237,6 +288,57 @@ Execute a hybrid SPARQL + vector-similarity RAG retrieval query. The endpoint em
 ```
 
 The `context` field is a concatenated plain-text summary ready for use as an LLM system prompt.
+
+---
+
+## JSON Mapping Writeback
+
+### `POST /json-mapping/{name}/writeback`
+
+Synchronously write one RDF subject back to the relational table configured for
+the named JSON mapping. This calls `pg_ripple.writeback_json_row(name,
+subject_iri)` and requires write auth when authentication is enabled.
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "subject_iri": "https://example.com/contacts/c001"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "rows_affected": 1
+}
+```
+
+**Error mapping:**
+
+| Status | Error | Cause |
+|---|---|---|
+| `422` | `writeback_target_not_configured` | The mapping has no writeback table or key columns (`PT0550`) |
+| `409` | `writeback_conflict` | Conflict policy is `error` and a conflicting row exists (`PT0551`) |
+
+### `GET /json-mapping/{name}/writeback/status`
+
+Return queue depth, error count, and last processed timestamp for one mapping.
+This is a filtered HTTP view over `pg_ripple.json_writeback_status()` and
+requires read auth when authentication is enabled.
+
+**Response (200 OK):**
+
+```json
+{
+  "mapping_name": "contacts",
+  "pending": 0,
+  "errors": 0,
+  "last_error": null,
+  "last_processed_at": null
+}
+```
 
 ---
 

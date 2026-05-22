@@ -81,4 +81,4 @@ CREATE EXTENSION postgis;
 CREATE EXTENSION pg_ripple CASCADE;
 ```
 
-See [GeoSPARQL + PostGIS Integration](../../blog/geosparql-postgis-spatial.md) for a full tutorial.
+See [GeoSPARQL + PostGIS Integration](https://github.com/trickle-labs/pg-ripple/blob/main/blog/geosparql-postgis-spatial.md) for a full tutorial.

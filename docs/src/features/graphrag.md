@@ -231,4 +231,4 @@ Pass `''` for the default graph or a named-graph IRI to scope the export.
 
 ## Further reading
 
-- [Blog: GraphRAG Knowledge Export](../../blog/graphrag-knowledge-export.md) — building a Microsoft GraphRAG pipeline with pg_ripple
+- [Blog: GraphRAG Knowledge Export](https://github.com/trickle-labs/pg-ripple/blob/main/blog/graphrag-knowledge-export.md) — building a Microsoft GraphRAG pipeline with pg_ripple

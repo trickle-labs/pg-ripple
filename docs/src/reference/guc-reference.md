@@ -1446,7 +1446,7 @@ Legacy name for the pg_tide outbox that the CDC bridge worker publishes JSON-LD 
 |---|---|
 | Type | Boolean |
 | Default | `on` |
-| Context | `sighup` |
+| Context | `userset` |
 | Since | v0.52.0 |
 
 Legacy master switch for relay bridge integration features. When `off`, CDC bridge code paths are disabled even when pg_tide is installed. Use `pg_ripple.pg_trickle_available()` separately for IVM-backed live views.
@@ -1498,10 +1498,10 @@ Enable Citus horizontal sharding of VP tables. When `on`, new VP tables are crea
 |---|---|
 | Type | Boolean |
 | Default | `off` |
-| Context | `postmaster` |
+| Context | `userset` |
 | Since | v0.58.0 |
 
-When `on`, `create_distributed_table` uses `colocate_with = 'none'` for pg-trickle/CDC compatibility. Prevents cross-shard tombstone deletes.
+When `on`, `create_distributed_table` uses `colocate_with = 'none'` for legacy CDC/IVM compatibility. Prevents cross-shard tombstone deletes.
 
 ---
 

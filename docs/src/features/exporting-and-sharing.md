@@ -590,4 +590,4 @@ may use significant memory. Switch to streaming variants or `COPY ... TO` with s
 
 ## Further reading
 
-- [Blog: JSON-LD Framing for Nested JSON](../../blog/json-ld-framing-nested-json.md) — shaping graph data into API-ready JSON documents
+- [Blog: JSON-LD Framing for Nested JSON](https://github.com/trickle-labs/pg-ripple/blob/main/blog/json-ld-framing-nested-json.md) — shaping graph data into API-ready JSON documents

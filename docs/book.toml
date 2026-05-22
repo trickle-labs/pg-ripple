@@ -9,6 +9,7 @@ build-dir = "book"
 
 [preprocessor.admonish]
 command = "mdbook-admonish"
+optional = true
 assets_version = "3.0.2"
 
 [output.html]

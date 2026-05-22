@@ -162,4 +162,4 @@ TO '/tmp/acme.nq';
 
 ## Further reading
 
-- [Blog: Multi-Tenant Knowledge Graphs](../../blog/multi-tenant-knowledge-graphs.md) — isolation, quotas, and RLS patterns for SaaS deployments
+- [Blog: Multi-Tenant Knowledge Graphs](https://github.com/trickle-labs/pg-ripple/blob/main/blog/multi-tenant-knowledge-graphs.md) — isolation, quotas, and RLS patterns for SaaS deployments

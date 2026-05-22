@@ -238,6 +238,6 @@ above by 1.0, by the Knaster–Tarski fixed-point theorem the iteration converge
 
 ## Further reading
 
-- [Blog: Probabilistic Datalog](../../blog/probabilistic-datalog.md) — noisy-OR, confidence propagation, and soft reasoning in pg_ripple
-- [Blog: Uncertain Knowledge](../../blog/uncertain-knowledge.md) — practical patterns for probabilistic reasoning
+- [Blog: Probabilistic Datalog](https://github.com/trickle-labs/pg-ripple/blob/main/blog/probabilistic-datalog.md) — noisy-OR, confidence propagation, and soft reasoning in pg_ripple
+- [Blog: Uncertain Knowledge](https://github.com/trickle-labs/pg-ripple/blob/main/blog/uncertain-knowledge.md) — practical patterns for probabilistic reasoning
 

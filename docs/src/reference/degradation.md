@@ -180,15 +180,15 @@ but O(n) in the number of embeddings. Install pgvector for production vector wor
 | Property | Value |
 |---|---|
 | Status in v0.63.0 | `experimental` |
-| Dependency | `pg_trickle` extension |
-| Return on missing pg_trickle | Subscriptions fail with informational error |
-| Warning code | `WARNING: pg_trickle is not installed; CDC subscriptions are unavailable` |
-| Readiness behavior | Reported as `experimental` in `/ready` with degraded_reason |
+| Dependency | None for subscription catalog registration; pg_tide is required only for relay/outbox transport |
+| Return when pg_tide is missing | `create_subscription()` still records the subscription; relay-dependent delivery paths are unavailable |
+| Readiness behavior | Reported as `experimental` in `/ready` while the subscription surface remains pre-1.0 |
 
-**Detail**: Live CDC subscriptions use pg_trickle stream tables for efficient
-change propagation. Without pg_trickle, `create_subscription()` returns an
-informational message rather than creating a subscription. The extension does
-not panic or raise an unrecoverable error.
+**Detail**: `create_subscription()` writes subscription metadata into
+`_pg_ripple.subscriptions` and does not require pg_trickle. Relay/outbox
+pipelines that publish changes to external systems require pg_tide; when pg_tide
+is absent, those relay paths degrade, but the subscription catalog API remains
+available.
 
 ---
 

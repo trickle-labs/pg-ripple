@@ -1,5 +1,9 @@
 # pg_ripple Documentation — Gap Analysis Report
 
+> **Status**: Historical audit. Superseded by [plans/documentation-2.md](../plans/documentation-2.md) on 2026-05-22.
+> Counts, version references, and critical issues below reflect the v0.99.1-era
+> documentation state and should not be treated as the current source of truth.
+
 > **Date**: 2026-05-11
 > **Scope**: Full audit of `docs/src/`, `blog/`, cross-referenced against `src/`, `CHANGELOG.md`, and `AGENTS.md`
 > **Current version**: v0.99.1 (approaching v1.0.0)

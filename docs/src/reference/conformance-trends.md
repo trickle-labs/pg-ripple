@@ -1,25 +1,24 @@
 # Conformance Trends
 
-> **T13-04 (v0.86.0)**: this page tracks pg_ripple's pass rates across all five conformance suites over time.
+> **T13-04 (v0.86.0)**: this page explains how pg_ripple tracks pass rates across the conformance suites over time.
 
-The raw data is in [`tests/conformance/history.csv`](../../tests/conformance/history.csv). The CI job `conformance-trends` appends a row after each successful main-branch build.
+The raw trend data lives in the repository at
+[`tests/conformance/history.csv`](https://github.com/trickle-labs/pg-ripple/blob/main/tests/conformance/history.csv).
+The CI job `conformance-trends` appends a row after successful main-branch
+builds. This page does not duplicate the CSV inline, because copied trend rows
+go stale quickly and can drift from the CI artifact.
 
 ---
 
-## Pass Rate History
+## Current Release Gates
 
-| Version | Suite | Total | Passed | Failed | Skipped | Date |
-|---|---|---|---|---|---|---|
-| 0.85.0 | w3c-sparql-11 | 357 | 357 | 0 | 0 | 2026-07-17 |
-| 0.85.0 | apache-jena | 1021 | 1019 | 2 | 0 | 2026-07-17 |
-| 0.85.0 | watdiv | 100 | 100 | 0 | 0 | 2026-07-17 |
-| 0.85.0 | lubm | 14 | 14 | 0 | 0 | 2026-07-17 |
-| 0.85.0 | owl2rl | 258 | 256 | 2 | 0 | 2026-07-17 |
-| 0.86.0 | w3c-sparql-11 | 357 | 357 | 0 | 0 | 2026-05-02 |
-| 0.86.0 | apache-jena | 1021 | 1019 | 2 | 0 | 2026-05-02 |
-| 0.86.0 | watdiv | 100 | 100 | 0 | 0 | 2026-05-02 |
-| 0.86.0 | lubm | 14 | 14 | 0 | 0 | 2026-05-02 |
-| 0.86.0 | owl2rl | 258 | 256 | 2 | 0 | 2026-05-02 |
+| Suite | Current CI role | Release expectation |
+|---|---|---|
+| W3C SPARQL 1.1 | Smoke subset is blocking; full suite is informational | Smoke subset must pass |
+| Apache Jena | Informational until the project consistently clears the threshold | Target pass rate ≥ 95% |
+| WatDiv | Correctness and performance signal | Non-blocking, reviewed for regressions |
+| LUBM | OWL RL reasoning gate | Required |
+| OWL 2 RL | Entailment conformance signal | Informational until ≥ 95% pass rate |
 
 ---
 
@@ -37,14 +36,10 @@ The raw data is in [`tests/conformance/history.csv`](../../tests/conformance/his
 
 ## CI Badges (v0.122.0)
 
-The Apache Jena pass rate is published as a CI badge after each main-branch build.
-The badge JSON is written to `results/jena-badge.json` by the `jena-suite` CI job.
-
-To reference the current pass rate in documentation or a README:
-
-```markdown
-![Jena](results/jena-badge.json)
-```
+The Apache Jena pass rate is published as a CI badge after each main-branch
+build. The `jena-suite` CI job writes the generated badge payload to
+`results/jena-badge.json` in the workflow artifact; the file may not exist in a
+fresh local checkout until that job has run.
 
 The badge data format follows the [shields.io endpoint schema](https://shields.io/endpoint):
 

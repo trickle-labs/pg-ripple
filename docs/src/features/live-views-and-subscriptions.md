@@ -164,5 +164,5 @@ The two compose: build a view of *what is currently true*, and a subscription of
 
 ## Further reading
 
-- [Blog: CONSTRUCT Views — Live Transformations](../../blog/construct-views-live-transformations.md) — incremental materialization of SPARQL views
-- [Blog: IVM with pg-trickle Integration](../../blog/ivm-pg-trickle-integration.md) — how pg_ripple keeps views up to date
+- [Blog: CONSTRUCT Views — Live Transformations](https://github.com/trickle-labs/pg-ripple/blob/main/blog/construct-views-live-transformations.md) — incremental materialization of SPARQL views
+- [Blog: IVM with pg-trickle Integration](https://github.com/trickle-labs/pg-ripple/blob/main/blog/ivm-pg-trickle-integration.md) — how pg_ripple keeps views up to date

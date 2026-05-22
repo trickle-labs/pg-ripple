@@ -8,8 +8,13 @@ second instance (instance B).
 
 - Two running pg_ripple 0.120.0+ instances with pg_ripple_http
 - Both HTTP companions accessible from each other over HTTPS
-- `ARROW_FLIGHT_SECRET` set to the same shared secret on both HTTP companions
-  (used for HMAC-authenticated stream endpoints)
+- `PG_RIPPLE_HTTP_AUTH_TOKEN` configured for read access to protected stream
+  endpoints. If `PG_RIPPLE_HTTP_DATALOG_WRITE_TOKEN` is set on the subscribing
+  instance, use it for the subscribe call; otherwise the main auth token is used.
+- The source stream must be reachable by the subscribing HTTP companion. The
+  current subscribe handler fetches `source_uri` directly and does not forward a
+  separate source Authorization header, so protect private streams with a
+  trusted internal network or gateway when source auth is required.
 
 ## Step 1 — Install a rule library on instance A
 
@@ -54,7 +59,8 @@ The HTTP companion immediately begins serving the stream at
 -- Connect to instance B
 \c ripple_b
 
--- Subscribe: fetches the rule stream from instance A and installs locally
+-- Record subscription intent. The SQL function validates the URI and catalog
+-- state, but the HTTP companion performs the actual fetch/install step.
 SELECT pg_ripple.subscribe_rule_library(
     'https://instance-a.example.com/rule-libraries/rdfs-entailment/stream',
     'rdfs-entailment'
@@ -66,7 +72,7 @@ Alternatively, use the HTTP API from instance B's companion:
 
 ```bash
 curl -X POST https://instance-b.example.com/rule-libraries/rdfs-entailment/subscribe \
-  -H "Authorization: Bearer $ARROW_FLIGHT_SECRET" \
+  -H "Authorization: Bearer $PG_RIPPLE_HTTP_AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"source_uri": "https://instance-a.example.com/rule-libraries/rdfs-entailment/stream"}'
 ```
@@ -130,7 +136,7 @@ Add an alert rule for failed subscriptions:
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
 | `PT0466: SSRF blocked` | `source_uri` resolves to a private IP | Use a public HTTPS endpoint; private addresses are blocked by the SSRF guard |
-| `remote returned HTTP 401` | Missing or wrong `ARROW_FLIGHT_SECRET` | Set matching `ARROW_FLIGHT_SECRET` on both companions |
+| `remote returned HTTP 401` | Source stream requires auth that the subscribing fetcher is not forwarding | Expose the source stream through a trusted internal route, or install the library manually from an authenticated client |
 | `PT0467: catalog write failed` | Insufficient DB permissions | Grant USAGE on `_pg_ripple` schema to the app role |
 | Inference not firing | Datalog engine not enabled | Run `SELECT pg_ripple.enable_datalog('rdfs-entailment');` |
 
@@ -139,4 +145,4 @@ Add an alert rule for failed subscriptions:
 - [`publish_rule_library` API reference](../reference/sql-api.md#publish_rule_library)
 - [`subscribe_rule_library` API reference](../reference/sql-api.md#subscribe_rule_library)
 - [Rule library Prometheus metrics](../operations/read-replicas.md)
-- [Blog: Rule Library Federation](../../blog/rule-library-federation.md)
+- [Blog: Rule Library Federation](https://github.com/trickle-labs/pg-ripple/blob/main/blog/rule-library-federation.md)

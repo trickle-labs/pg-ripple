@@ -177,5 +177,5 @@ That four-line chain is the kind of evidence a regulated industry needs and a bl
 
 ## Further reading
 
-- [Blog: Temporal Time-Travel Queries](../../blog/temporal-time-travel-queries.md) — point-in-time replay of your knowledge graph
-- [Blog: Provenance Tracking with PROV-O](../../blog/provenance-tracking-prov-o.md) — tracing where every fact came from
+- [Blog: Temporal Time-Travel Queries](https://github.com/trickle-labs/pg-ripple/blob/main/blog/temporal-time-travel-queries.md) — point-in-time replay of your knowledge graph
+- [Blog: Provenance Tracking with PROV-O](https://github.com/trickle-labs/pg-ripple/blob/main/blog/provenance-tracking-prov-o.md) — tracing where every fact came from

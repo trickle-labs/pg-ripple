@@ -57,5 +57,5 @@ existing data.
 ## Related Pages
 
 - [SHACL SQL Reference](../user-guide/sql-reference/shacl.md)
-- [SHACL Data Quality Guide](../../user-guide/shacl.md)
+- [Validating Data Quality](../features/validating-data-quality.md)
 - [Feature Status Taxonomy](feature-status-taxonomy.md)

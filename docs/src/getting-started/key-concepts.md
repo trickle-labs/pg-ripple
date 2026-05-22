@@ -155,9 +155,9 @@ You never need to interact with dictionary IDs directly — `sparql()` and `find
 
 ## Further reading
 
-- [Blog: Why RDF Inside PostgreSQL?](../../blog/why-rdf-in-postgresql.md) — the design philosophy behind pg_ripple
-- [Blog: Dictionary Encoding and Integer Joins](../../blog/dictionary-encoding-integer-joins.md) — how pg_ripple achieves fast query performance
-- [Blog: Vertical Partitioning Explained](../../blog/vertical-partitioning-explained.md) — why one table per predicate works
+- [Blog: Why RDF Inside PostgreSQL?](https://github.com/trickle-labs/pg-ripple/blob/main/blog/why-rdf-in-postgresql.md) — the design philosophy behind pg_ripple
+- [Blog: Dictionary Encoding and Integer Joins](https://github.com/trickle-labs/pg-ripple/blob/main/blog/dictionary-encoding-integer-joins.md) — how pg_ripple achieves fast query performance
+- [Blog: Vertical Partitioning Explained](https://github.com/trickle-labs/pg-ripple/blob/main/blog/vertical-partitioning-explained.md) — why one table per predicate works
 
 ## Next steps
 

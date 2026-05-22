@@ -183,4 +183,4 @@ Every vector function in pg_ripple checks for pgvector at call time. If pgvector
 
 ## Further reading
 
-- [Blog: Vector + SPARQL Hybrid Search](../../blog/vector-sparql-hybrid-search.md) — combining graph traversal with similarity search
+- [Blog: Vector + SPARQL Hybrid Search](https://github.com/trickle-labs/pg-ripple/blob/main/blog/vector-sparql-hybrid-search.md) — combining graph traversal with similarity search

@@ -170,4 +170,4 @@ ws.onmessage = (event) => {
 
 ## Further reading
 
-- [Blog: CDC and Knowledge Graphs](../../blog/cdc-knowledge-graphs.md) — real-time event streaming from your knowledge graph
+- [Blog: CDC and Knowledge Graphs](https://github.com/trickle-labs/pg-ripple/blob/main/blog/cdc-knowledge-graphs.md) — real-time event streaming from your knowledge graph

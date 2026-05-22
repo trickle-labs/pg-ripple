@@ -63,6 +63,6 @@ dependency order after each write.
 
 ## Related Pages
 
-- [SPARQL CONSTRUCT writeback guide](../../user-guide/construct-views.md)
+- [Live Views and Subscriptions](../features/live-views-and-subscriptions.md)
 - [Architecture Internals](architecture.md)
 - [Feature Status Taxonomy](feature-status-taxonomy.md)

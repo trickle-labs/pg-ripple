@@ -97,5 +97,5 @@ groups:
 ## See also
 
 - [Configuration reference](../reference/guc-reference.md)
-- [Observability](observability.md)
+- [OpenTelemetry observability](observability-otel.md)
 - [Compatibility matrix](compatibility.md)

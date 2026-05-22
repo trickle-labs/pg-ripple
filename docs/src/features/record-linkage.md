@@ -226,5 +226,5 @@ Most record-linkage systems force a choice between *neural* (high-recall, opaque
 
 ## Further reading
 
-- [Blog: Neuro-Symbolic Entity Resolution](../../blog/neuro-symbolic-entity-resolution.md) — combining embeddings with symbolic rules for deduplication
-- [Blog: owl:sameAs Entity Resolution](../../blog/owl-sameas-entity-resolution.md) — how equivalence canonicalization works
+- [Blog: Neuro-Symbolic Entity Resolution](https://github.com/trickle-labs/pg-ripple/blob/main/blog/neuro-symbolic-entity-resolution.md) — combining embeddings with symbolic rules for deduplication
+- [Blog: owl:sameAs Entity Resolution](https://github.com/trickle-labs/pg-ripple/blob/main/blog/owl-sameas-entity-resolution.md) — how equivalence canonicalization works

@@ -122,7 +122,7 @@ SELECT * FROM pg_ripple.bench_workload_result('bsbm');
 ### `publish_rule_library`
 
 Publish an installed rule library so it can be subscribed to from remote
-pg_ripple instances over Arrow Flight.
+pg_ripple instances through the HTTP companion's rule-library stream endpoint.
 
 ```sql
 pg_ripple.publish_rule_library(
@@ -136,7 +136,7 @@ pg_ripple.publish_rule_library(
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | `TEXT` | Name of an installed rule library (1–64 alphanumeric/hyphen/underscore chars) |
-| `endpoint_uri` | `TEXT` | Full HTTP URI at which the Arrow Flight stream will be served, e.g. `'https://host/rule-libraries/my-lib/stream'` |
+| `endpoint_uri` | `TEXT` | Full HTTP URI at which the rule stream will be served, e.g. `'https://host/rule-libraries/my-lib/stream'` |
 
 **Errors** — raises `PT046x` error codes for invalid name/URI, missing library,
 or catalog write failure.
@@ -151,8 +151,10 @@ SELECT pg_ripple.publish_rule_library(
 
 ### `subscribe_rule_library`
 
-Fetch a rule library from a remote Arrow Flight stream endpoint and install it
-locally.  The source URI must pass the SSRF blocklist.
+Record the intent to subscribe to a remote rule-library stream. The source URI
+must pass the SSRF policy check. The SQL function does not perform outbound
+network I/O; fetching and installing the remote rules is performed by the HTTP
+companion's `POST /rule-libraries/{name}/subscribe` endpoint.
 
 ```sql
 pg_ripple.subscribe_rule_library(
@@ -168,11 +170,11 @@ pg_ripple.subscribe_rule_library(
 | `source_uri` | `TEXT` | Full HTTP URI of the remote stream endpoint |
 | `name` | `TEXT` | Local name to use for the subscribed rule library |
 
-**Errors** — raises `PT046x` error codes for SSRF-blocked URIs, network
-failures, invalid names, or catalog write failure.
+**Errors** — raises `PT046x` error codes for SSRF-blocked URIs, invalid names,
+or catalog write failure.
 
 ```sql
--- Subscribe to a rule library published on instance A:
+-- Record subscription intent for a rule library published on instance A:
 SELECT pg_ripple.subscribe_rule_library(
     'https://instance-a.example.com/rule-libraries/rdfs-base/stream',
     'rdfs-base'

@@ -100,6 +100,43 @@ SELECT * FROM pg_ripple.json_writeback_status();
 --  mapping_name | pending | errors | last_error | last_processed_at
 ```
 
+### HTTP Writeback
+
+The HTTP companion exposes the same writeback path for applications that do not
+call SQL directly:
+
+```bash
+curl -X POST http://localhost:7878/json-mapping/contacts/writeback \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"subject_iri":"https://example.com/contacts/c001"}'
+```
+
+Successful synchronous writeback returns:
+
+```json
+{"rows_affected": 1}
+```
+
+Queue status for one mapping is available over HTTP as well:
+
+```bash
+curl http://localhost:7878/json-mapping/contacts/writeback/status \
+    -H "Authorization: Bearer $TOKEN"
+```
+
+The status response mirrors `json_writeback_status()` for the selected mapping:
+
+```json
+{
+    "mapping_name": "contacts",
+    "pending": 0,
+    "errors": 0,
+    "last_error": null,
+    "last_processed_at": null
+}
+```
+
 Disable triggers:
 
 ```sql
@@ -117,6 +154,7 @@ Both `enable_json_writeback()` and `disable_json_writeback()` are idempotent.
 
 ## See Also
 
-- [JSON-LD Reverse Mapping blog post](../../blog/json-ld-reverse-mapping.md)
+- [JSON-LD Reverse Mapping blog post](https://github.com/trickle-labs/pg-ripple/blob/main/blog/json-ld-reverse-mapping.md)
 - [GUC reference: json_writeback_batch_size](../reference/guc-reference.md#pg_ripplejson_writeback_batch_size)
-- [R2RML for complex ETL](../reference/r2rml.md)
+- [HTTP API Reference](../reference/http-api.md#json-mapping-writeback)
+- [R2RML for complex ETL](r2rml.md)

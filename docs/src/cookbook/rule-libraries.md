@@ -1,7 +1,7 @@
 # Rule Libraries
 
 > **Version**: v0.104.0  
-> **Foundation**: [plans/expert-system.md §5](../../plans/expert-system.md)
+> **Foundation**: [plans/expert-system.md §5](https://github.com/trickle-labs/pg-ripple/blob/main/plans/expert-system.md)
 
 A **rule library** is a versioned, distributable package of Datalog inference rules
 and SHACL validation shapes. Libraries allow teams to share domain-specific

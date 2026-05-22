@@ -194,5 +194,5 @@ SELECT * FROM pg_ripple.active_datalog_bundles;
 ## See Also
 
 - [SKOS Reference](https://www.w3.org/TR/skos-reference/) — W3C Recommendation
-- [Datalog Built-in Rules](../reference/datalog-built-in-rules.md) — full rule catalogue
+- [Datalog Reference](../reference/datalog.md) — built-in RDFS and OWL RL rule support
 - [SQL Functions Reference](../reference/sql-functions.md) — all pg_ripple SQL functions

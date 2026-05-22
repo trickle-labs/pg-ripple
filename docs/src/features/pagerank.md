@@ -270,7 +270,7 @@ into a canonical representative before computing PageRank. This deduplication en
 edges to equivalent entities are not double-counted, which would otherwise inflate the
 PageRank score of heavily `sameAs`-clustered nodes.
 
-See [owl:sameAs Entity Resolution](../features/datalog.md) for canonicalization details.
+See [Reasoning and Inference](reasoning-and-inference.md) for canonicalization details.
 
 ## Portability Note (STD-04, v0.92.0)
 
@@ -291,4 +291,4 @@ WHERE feature LIKE 'pagerank%' OR feature LIKE 'centrality%';
 
 ## Further reading
 
-- [Blog: PageRank in pg_ripple](../../blog/pagerank.md) — Datalog-native PageRank with IVM and Prometheus integration
+- [Blog: PageRank in pg_ripple](https://github.com/trickle-labs/pg-ripple/blob/main/blog/pagerank.md) — Datalog-native PageRank with IVM and Prometheus integration

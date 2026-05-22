@@ -138,6 +138,6 @@ None of them requires configuration. They are part of the engine's normal operat
 
 ## Further reading
 
-- [Blog: Leapfrog Triejoin](../../blog/leapfrog-triejoin.md) — how worst-case optimal joins accelerate cyclic patterns
-- [Blog: Well-Founded Semantics](../../blog/well-founded-semantics.md) — three-valued logic for cyclic rules
-- [Blog: Magic Sets for Goal-Directed Inference](../../blog/magic-sets-goal-directed.md) — demand-driven evaluation
+- [Blog: Leapfrog Triejoin](https://github.com/trickle-labs/pg-ripple/blob/main/blog/leapfrog-triejoin.md) — how worst-case optimal joins accelerate cyclic patterns
+- [Blog: Well-Founded Semantics](https://github.com/trickle-labs/pg-ripple/blob/main/blog/well-founded-semantics.md) — three-valued logic for cyclic rules
+- [Blog: Magic Sets for Goal-Directed Inference](https://github.com/trickle-labs/pg-ripple/blob/main/blog/magic-sets-goal-directed.md) — demand-driven evaluation

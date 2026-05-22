@@ -1,0 +1,108 @@
+name: Docs validation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'scripts/check_docs_links.py'
+      - 'scripts/check_docs_summary.py'
+      - 'scripts/check_guc_drift.py'
+      - 'scripts/check_http_routes.py'
+      - 'pg_ripple_http/src/routing/mod.rs'
+      - 'src/gucs/**'
+      - 'justfile'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'scripts/check_docs_links.py'
+      - 'scripts/check_docs_summary.py'
+      - 'scripts/check_guc_drift.py'
+      - 'scripts/check_http_routes.py'
+      - 'pg_ripple_http/src/routing/mod.rs'
+      - 'src/gucs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-links:
+    name: Check local Markdown links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Check docs links
+        run: python3 scripts/check_docs_links.py
+
+  docs-summary:
+    name: Check SUMMARY.md coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Check SUMMARY.md coverage
+        run: python3 scripts/check_docs_summary.py
+
+  docs-build:
+    name: Build mdBook (with admonish)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Install mdBook
+        run: |
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=/usr/local/bin
+
+      - name: Install mdbook-admonish
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+
+      - name: Install admonish
+        run: cargo install mdbook-admonish --locked
+
+      - name: Sync mirrored files
+        run: |
+          cp CHANGELOG.md docs/src/reference/changelog.md
+          cp ROADMAP.md docs/src/reference/roadmap.md
+          cp RELEASE.md docs/src/reference/release-process.md
+          cp -r blog docs/src/blog
+
+      - name: Fix relative links in mirrored files
+        run: |
+          sed -i 's|](roadmap/|](https://github.com/trickle-labs/pg-ripple/blob/main/roadmap/|g' \
+            docs/src/reference/roadmap.md
+          sed -i 's|](plans/|](https://github.com/trickle-labs/pg-ripple/blob/main/plans/|g' \
+            docs/src/reference/roadmap.md
+          sed -i 's|](ROADMAP\.md)|](roadmap.md)|g' \
+            docs/src/reference/changelog.md
+          sed -i 's|](ROADMAP\.md)|](roadmap.md)|g' \
+            docs/src/reference/release-process.md
+          sed -i 's|](AGENTS\.md|](https://github.com/trickle-labs/pg-ripple/blob/main/AGENTS.md|g' \
+            docs/src/reference/release-process.md
+
+      - name: Build docs
+        run: mdbook build docs
+
+  guc-drift:
+    name: GUC drift check (report-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Check GUC drift
+        # Report-only: does not fail the build yet.
+        # Switch to --strict once the initial backlog in B1 is cleared.
+        run: python3 scripts/check_guc_drift.py
+
+  http-routes:
+    name: HTTP route drift check (report-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Check HTTP route drift
+        # Report-only: does not fail the build yet.
+        # Switch to --strict once the initial backlog in B2 is cleared.
+        run: python3 scripts/check_http_routes.py

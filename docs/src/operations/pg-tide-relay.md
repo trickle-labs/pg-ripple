@@ -92,10 +92,11 @@ ERROR: pg_tide extension is not installed;
        then run: CREATE EXTENSION pg_tide
 ```
 
-If pg_trickle is not installed, SPARQL/Datalog/CONSTRUCT views are unavailable:
+If pg_trickle is not installed, IVM-backed SPARQL, Datalog, CONSTRUCT,
+DESCRIBE, ASK, and framing views are unavailable:
 
 ```
-WARNING: pg_trickle is not installed; CDC subscriptions are unavailable
+ERROR: pg_trickle is not installed -- SPARQL views require pg_trickle
 ```
 
 Call `pg_ripple.relay_available()` or `pg_ripple.pg_tide_available()` before

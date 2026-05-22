@@ -506,4 +506,4 @@ FROM jsonb_array_elements(
 
 ## Further reading
 
-- [Blog: SHACL Data Quality](../../blog/shacl-data-quality.md) — a deep dive into how SHACL shapes protect your data
+- [Blog: SHACL Data Quality](https://github.com/trickle-labs/pg-ripple/blob/main/blog/shacl-data-quality.md) — a deep dive into how SHACL shapes protect your data

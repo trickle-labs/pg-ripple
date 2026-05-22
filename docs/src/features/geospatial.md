@@ -108,4 +108,4 @@ If you need any of these, file an issue — most are a thin wrapper over the cor
 
 ## Further reading
 
-- [Blog: GeoSPARQL + PostGIS Spatial Queries](../../blog/geosparql-postgis-spatial.md) — combining geographic and semantic queries
+- [Blog: GeoSPARQL + PostGIS Spatial Queries](https://github.com/trickle-labs/pg-ripple/blob/main/blog/geosparql-postgis-spatial.md) — combining geographic and semantic queries

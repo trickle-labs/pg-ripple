@@ -188,6 +188,35 @@ docker tag="local": (docker-build tag) (docker-run tag)
 docs-serve:
     mdbook serve docs --open
 
+# Build docs with mdBook (succeeds without mdbook-admonish; install it for styled callouts)
+[group: "docs"]
+docs-build:
+    mdbook build docs
+
+# Check that all relative Markdown links in docs/ resolve to real files
+[group: "docs"]
+docs-check-links:
+    python3 scripts/check_docs_links.py
+
+# Check that every docs/src/*.md page is referenced in SUMMARY.md
+[group: "docs"]
+docs-check-summary:
+    python3 scripts/check_docs_summary.py
+
+# Report GUC defaults that differ between src/gucs/ and the documentation (non-blocking)
+[group: "docs"]
+docs-check-guc-drift:
+    python3 scripts/check_guc_drift.py
+
+# Report HTTP routes in routing/mod.rs that are not listed in http-api.md (non-blocking)
+[group: "docs"]
+docs-check-http-routes:
+    python3 scripts/check_http_routes.py
+
+# Run all docs validation checks (links, summary, GUC drift, HTTP routes)
+[group: "docs"]
+docs-check: docs-check-links docs-check-summary docs-check-guc-drift docs-check-http-routes
+
 # ── Release ───────────────────────────────────────────────────────────────
 
 # Prepare a new release: bump version in Cargo.toml and pg_ripple.control,

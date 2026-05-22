@@ -1,5 +1,9 @@
 # pg_ripple Documentation — Improvement Plan
 
+> **Status**: Historical plan. Superseded by [plans/documentation-2.md](../plans/documentation-2.md) on 2026-05-22.
+> The items below reflect the v0.99.1-era audit and are retained for context,
+> not as the current documentation backlog.
+
 > **Date**: 2026-05-11
 > **Input**: [GAP_ANALYSIS.md](GAP_ANALYSIS.md)
 > **Sequencing**: Critical → High → Medium → Low. Within each tier, items are ordered by impact and dependency.

@@ -749,6 +749,6 @@ graph modifications. Use `delete_triple()` for programmatic single-triple deleti
 
 ## Further reading
 
-- [Blog: SPARQL-to-SQL Translation](../../blog/sparql-to-sql-translation.md) — how pg_ripple compiles SPARQL into optimized PostgreSQL SQL
-- [Blog: Property Paths and Recursive CTEs](../../blog/property-paths-recursive-ctes.md) — the implementation of `*` and `+` path operators
-- [Blog: Explain SPARQL Query Plans](../../blog/explain-sparql-query-plans.md) — understanding the SPARQL query debugger
+- [Blog: SPARQL-to-SQL Translation](https://github.com/trickle-labs/pg-ripple/blob/main/blog/sparql-to-sql-translation.md) — how pg_ripple compiles SPARQL into optimized PostgreSQL SQL
+- [Blog: Property Paths and Recursive CTEs](https://github.com/trickle-labs/pg-ripple/blob/main/blog/property-paths-recursive-ctes.md) — the implementation of `*` and `+` path operators
+- [Blog: Explain SPARQL Query Plans](https://github.com/trickle-labs/pg-ripple/blob/main/blog/explain-sparql-query-plans.md) — understanding the SPARQL query debugger

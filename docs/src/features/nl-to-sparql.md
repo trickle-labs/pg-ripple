@@ -137,4 +137,4 @@ $$;
 
 ## Further reading
 
-- [Blog: Natural Language to SPARQL](../../blog/natural-language-to-sparql.md) — how pg_ripple translates plain-English questions into SPARQL queries
+- [Blog: Natural Language to SPARQL](https://github.com/trickle-labs/pg-ripple/blob/main/blog/natural-language-to-sparql.md) — how pg_ripple translates plain-English questions into SPARQL queries

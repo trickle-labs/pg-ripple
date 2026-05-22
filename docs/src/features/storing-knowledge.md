@@ -525,5 +525,5 @@ insert returns the existing SID. Use `deduplicate_all()` to clean up historical 
 
 ## Further reading
 
-- [Blog: RDF-star — Statements About Statements](../../blog/rdf-star-statements-about-statements.md) — edge properties and provenance on triples
-- [Blog: Vertical Partitioning Explained](../../blog/vertical-partitioning-explained.md) — why pg_ripple stores one table per predicate
+- [Blog: RDF-star — Statements About Statements](https://github.com/trickle-labs/pg-ripple/blob/main/blog/rdf-star-statements-about-statements.md) — edge properties and provenance on triples
+- [Blog: Vertical Partitioning Explained](https://github.com/trickle-labs/pg-ripple/blob/main/blog/vertical-partitioning-explained.md) — why pg_ripple stores one table per predicate

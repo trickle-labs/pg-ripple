@@ -32,21 +32,21 @@
 | GUC | Type | Default | Context | Description |
 |-----|------|---------|---------|-------------|
 | `vp_promotion_threshold` | integer | 1000 | Suset | Minimum triple count before a rare-predicate is promoted to its own VP table |
-| `vp_promotion_batch_size` | integer | 500 | Suset | Batch size for bulk VP promotion |
-| `columnar_threshold` | integer | 100000 | Suset | Row count above which main partitions use columnar storage |
-| `adaptive_indexing_enabled` | bool | on | Suset | Allow the merge worker to create secondary indexes dynamically |
-| `dedup_on_merge` | bool | on | Suset | Deduplicate triples during HTAP merge |
+| `vp_promotion_batch_size` | integer | 10000 | Suset | Batch size for bulk VP promotion |
+| `columnar_threshold` | integer | -1 | Suset | Row count above which main partitions use columnar storage (-1 = disabled) |
+| `adaptive_indexing_enabled` | bool | off | Suset | Allow the merge worker to create secondary indexes dynamically |
+| `dedup_on_merge` | bool | off | Suset | Deduplicate triples during HTAP merge |
 | `tombstone_gc_enabled` | bool | on | Suset | Enable background GC of tombstone rows |
 | `tombstone_gc_threshold` | integer | 10000 | Suset | Number of tombstones that trigger a GC cycle |
-| `tombstone_retention_seconds` | integer | 3600 | Suset | Seconds to retain tombstones before GC eligibility |
+| `tombstone_retention_seconds` | integer | 0 | Suset | Seconds to retain tombstones before GC eligibility (0 = immediate) |
 | `delta_index_threshold` | integer | 5000 | Suset | Delta-partition row count triggering automatic index creation |
-| `dict_vacuum_threshold` | integer | 50000 | Suset | Dictionary table dead-tuple threshold before auto-vacuum |
-| `vacuum_dict_batch_size` | integer | 1000 | Suset | Batch size for incremental dictionary vacuum |
+| `dict_vacuum_threshold` | integer | 10000 | Suset | Dictionary table dead-tuple threshold before auto-vacuum |
+| `vacuum_dict_batch_size` | integer | 200 | Suset | Batch size for incremental dictionary vacuum |
 | `auto_analyze` | bool | on | Suset | Enable automatic ANALYZE on VP tables after merge |
 | `stats_refresh_interval_seconds` | integer | 300 | Suset | Seconds between background stats-refresh cycles |
-| `stats_scan_limit` | integer | 10000 | Suset | Maximum rows sampled per VP table during stats refresh |
+| `stats_scan_limit` | integer | 1000 | Suset | Maximum rows sampled per VP table during stats refresh |
 | `bulk_load_use_copy` | bool | on | Suset | Use COPY instead of INSERT for bulk RDF loads |
-| `export_batch_size` | integer | 1000 | Userset | Rows per batch when serializing RDF exports |
+| `export_batch_size` | integer | 10000 | Userset | Rows per batch when serializing RDF exports |
 | `export_max_rows` | integer | 1000000 | Userset | Hard cap on rows returned by export functions |
 | `export_confidence` | real | 0.0 | Userset | Minimum confidence score for triples included in exports |
 
@@ -86,7 +86,7 @@
 | `approx_distinct` | bool | off | Userset | Use HyperLogLog approximation for `COUNT(DISTINCT ...)` |
 | `describe_strategy` | string | `'cbd'` | Userset | DESCRIBE form: `'cbd'` (concise bounded description) or `'symcbd'` |
 | `describe_form` | string | `'turtle'` | Userset | Serialization format for DESCRIBE responses |
-| `describe_max_depth` | integer | 3 | Userset | Maximum hop depth for symmetric CBD DESCRIBE |
+| `describe_max_depth` | integer | 16 | Userset | Maximum hop depth for symmetric CBD DESCRIBE |
 | `default_graph` | string | `''` | Userset | Named graph IRI used when no GRAPH clause is specified (empty = default graph) |
 | `use_graph_context` | bool | on | Userset | Include graph column in SPARQL result bindings |
 
@@ -189,21 +189,21 @@
 | GUC | Type | Default | Context | Description |
 |-----|------|---------|---------|-------------|
 | `cdc_bridge_enabled` | bool | off | Suset | Enable the CDC outbox bridge for downstream consumers |
-| `cdc_bridge_batch_size` | integer | 500 | Suset | Triples per batch written to the CDC outbox table |
-| `cdc_bridge_flush_ms` | integer | 100 | Suset | Maximum milliseconds between CDC outbox flushes |
+| `cdc_bridge_batch_size` | integer | 100 | Suset | CDC notifications batched before a pg_tide outbox flush |
+| `cdc_bridge_flush_ms` | integer | 200 | Suset | Maximum milliseconds between CDC outbox flushes |
 | `cdc_bridge_outbox_table` | string | `''` | Suset | Fully-qualified name of the CDC outbox table |
-| `cdc_slot_idle_timeout_seconds` | integer | 30 | Suset | Idle timeout (s) for logical-replication slot workers |
-| `cdc_watermark_batch_size` | integer | 1000 | Suset | CDC watermark rows processed per cycle |
-| `cdc_watermark_flush_interval_ms` | integer | 500 | Suset | Watermark flush interval (ms) |
-| `temporal_cdc_enabled` | bool | off | Suset | Enable CDC support for temporal (valid-time) triple versions |
+| `cdc_slot_idle_timeout_seconds` | integer | 3600 | Suset | Idle timeout (s) before orphaned CDC slots are dropped |
+| `cdc_watermark_batch_size` | integer | 100 | Suset | CDC watermark rows processed per cycle |
+| `cdc_watermark_flush_interval_ms` | integer | 50 | Suset | Watermark flush interval (ms) |
+| `temporal_cdc_enabled` | bool | on | Suset | Enable CDC support for temporal (valid-time) triple versions |
 | `temporal_data_model` | string | `'point'` | Suset | Temporal data model: `'point'` or `'interval'` |
 | `enable_temporal_operators` | bool | off | Userset | Enable temporal SPARQL extensions (`VALID_TIME`, `AS OF`) |
 | `replication_enabled` | bool | off | Suset | Enable built-in logical replication between pg_ripple instances |
-| `replication_batch_size` | integer | 500 | Suset | Triples per logical-replication batch |
-| `replication_batch_interval_ms` | integer | 200 | Suset | Interval (ms) between replication batch flushes |
-| `replication_conflict_strategy` | string | `'last-write-wins'` | Suset | Replication conflict resolution: `'last-write-wins'` or `'source-wins'` |
+| `replication_batch_size` | integer | 100 | Suset | Triples per logical-replication batch |
+| `replication_batch_interval_ms` | integer | 500 | Suset | Interval (ms) between replication batch flushes |
+| `replication_conflict_strategy` | string | `'last_writer_wins'` | Suset | Logical apply conflict strategy; current worker uses `'last_writer_wins'` |
 | `read_replica_dsn` | string | `''` | Suset | Connection string for directing read-only queries to a replica |
-| `trickle_integration` | bool | off | Suset | Enable integration with pg-trickle CDC subscriptions |
+| `trickle_integration` | bool | on | Userset | Legacy relay integration switch; disables the pg_tide CDC bridge when set to `off` |
 
 ---
 
@@ -267,7 +267,7 @@
 | `pagerank_selective_threshold` | real | 0.01 | Userset | Minimum personalization weight for selective PageRank |
 | `pagerank_temp_threshold` | integer | 50000 | Suset | Row count above which PageRank uses temporary tables |
 | `pagerank_shacl_threshold` | real | 0.5 | Userset | Minimum PageRank score for SHACL-constrained node filtering |
-| `pagerank_trickle_confidence_attenuation` | real | 0.9 | Suset | Confidence attenuation factor for pg-trickle–based PageRank IVM |
+| `pagerank_trickle_confidence_attenuation` | bool | on | Userset | Attenuate incremental K-hop PageRank deltas by edge confidence |
 | `pagerank_sketch_width` | integer | 2048 | Suset | Width of the Count-Min sketch for approximate PageRank |
 | `pagerank_sketch_depth` | integer | 5 | Suset | Depth of the Count-Min sketch for approximate PageRank |
 
@@ -302,7 +302,7 @@
 
 | GUC | Type | Default | Context | Description |
 |-----|------|---------|---------|-------------|
-| `arrow_batch_size` | integer | 65536 | Suset | Rows per Arrow record batch in bulk export |
+| `arrow_batch_size` | integer | 1000 | Userset | Rows per Arrow record batch in bulk export |
 | `arrow_flight_secret` | string | `''` | Suset | HMAC secret used to sign Arrow Flight session tickets |
 | `arrow_flight_expiry_secs` | integer | 3600 | Suset | Expiry time (s) for Arrow Flight session tickets |
 | `arrow_unsigned_tickets_allowed` | bool | off | Suset | Accept Arrow Flight tickets without an HMAC signature (testing only) |
@@ -314,9 +314,9 @@
 | GUC | Type | Default | Context | Description |
 |-----|------|---------|---------|-------------|
 | `citus_sharding_enabled` | bool | off | Suset | Enable Citus distributed sharding for VP tables |
-| `citus_service_pruning` | bool | on | Suset | Enable predicate-level shard pruning for SERVICE queries |
-| `citus_prune_carry_max` | integer | 64 | Suset | Maximum number of shard bindings carried across joins during pruning |
-| `citus_trickle_compat` | bool | off | Suset | Enable pg-trickle compatibility mode for Citus CDC |
+| `citus_service_pruning` | bool | off | Suset | Enable predicate-level shard pruning for SERVICE queries |
+| `citus_prune_carry_max` | integer | 1000 | Userset | Maximum number of shard bindings carried across joins during pruning |
+| `citus_trickle_compat` | bool | off | Userset | Legacy compatibility mode using `colocate_with => 'none'` for Citus CDC/IVM integrations |
 
 ---
 
