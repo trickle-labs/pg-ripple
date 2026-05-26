@@ -1,4 +1,4 @@
-# pg_ripple CloudNativePG Extension Image (v0.98.0)
+# pg_ripple CloudNativePG Extension Image (v0.128.0)
 #
 # This is a minimal "extension volume" image for use with the CloudNativePG
 # operator (CNP ≥ 1.24).  It contains only the compiled .so and SQL files
@@ -10,11 +10,11 @@
 #   spec:
 #     postgresql:
 #       extensionImages:
-#         - ghcr.io/trickle-labs/pg-ripple:0.98.0-cnpg
+#         - ghcr.io/trickle-labs/pg-ripple:0.128.0-cnpg
 #
 # See docs/src/operations/cloudnativepg.md for the full walkthrough.
 #
-# Published as: ghcr.io/trickle-labs/pg-ripple:0.98.0-cnpg
+# Published as: ghcr.io/trickle-labs/pg-ripple:0.128.0-cnpg
 
 # ── Build stage ───────────────────────────────────────────────────────────────
 FROM rust:1-bookworm AS builder

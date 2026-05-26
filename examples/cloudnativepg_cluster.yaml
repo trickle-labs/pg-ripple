@@ -1,4 +1,4 @@
-# CloudNativePG Cluster manifest for pg_ripple (v0.98.0)
+# CloudNativePG Cluster manifest for pg_ripple (v0.128.0)
 #
 # Prerequisites:
 #   - CloudNativePG operator ≥ 1.24 installed in the cluster
@@ -38,7 +38,7 @@ spec:
   postgresql:
     extensionImages:
       - name: pg-ripple-ext
-        image: ghcr.io/trickle-labs/pg-ripple:0.98.0-cnpg
+        image: ghcr.io/trickle-labs/pg-ripple:0.128.0-cnpg
     parameters:
       allow_system_table_mods: "on"
       shared_preload_libraries: "pg_ripple"
