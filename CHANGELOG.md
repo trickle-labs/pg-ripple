@@ -9,7 +9,15 @@ Versions correspond to the milestones in [ROADMAP.md](ROADMAP.md).
 
 ## [Unreleased]
 
-> Changes for the next version will appear here.
+### Fixed
+
+- **CI: CloudNativePG extension image publishing** — Added `docker-cnpg` job to
+  release workflow to build and publish the extension volume image with the
+  `-cnpg` suffix on each tagged release. The `docker/Dockerfile.cnpg` existed
+  but was never built by CI, causing `docker pull
+  ghcr.io/trickle-labs/pg-ripple:<version>-cnpg` to fail with "not found". Now
+  the extension image is published automatically alongside the main extension
+  and HTTP companion images.
 
 ---
 
